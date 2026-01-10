@@ -4,6 +4,8 @@
 
 **Демо:** [https://telegram-gift-auction.funfiesta.games](https://telegram-gift-auction.funfiesta.games)
 
+**API Документация:** [https://telegram-gift-auction.funfiesta.games/api/docs](https://telegram-gift-auction.funfiesta.games/api/docs)
+
 [English version](./README.md)
 
 ## Анализ продукта: Как работают аукционы подарков Telegram
