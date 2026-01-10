@@ -1,0 +1,91 @@
+services:
+  mongodb:
+    image: mongo:8
+    container_name: auction-mongodb
+    ports:
+      - "127.0.0.1:27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+    networks:
+      - auction-network
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=auction
+      - MONGO_INITDB_ROOT_PASSWORD=${MONGO_PASSWORD}
+    command: ["--replSet", "rs0", "--bind_ip_all", "--auth", "--keyFile", "/data/replica.key"]
+    healthcheck:
+      test: |
+        mongosh -u auction -p ${MONGO_PASSWORD} --authenticationDatabase admin --quiet --eval "
+          try { rs.status() } catch (err) {
+            rs.initiate({_id:'rs0',members:[{_id:0,host:'mongodb:27017'}]})
+          }
+        "
+      interval: 5s
+      timeout: 30s
+      start_period: 0s
+      retries: 30
+    entrypoint:
+      - bash
+      - -c
+      - |
+        openssl rand -base64 756 > /data/replica.key
+        chmod 400 /data/replica.key
+        chown 999:999 /data/replica.key
+        exec docker-entrypoint.sh $$@
+      - --
+
+  redis:
+    image: redis:8-alpine
+    container_name: auction-redis
+    ports:
+      - "127.0.0.1:6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - auction-network
+    command: redis-server --requirepass ${REDIS_PASSWORD} --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: auction-backend
+    ports:
+      - "127.0.0.1:3001:3001"
+    env_file:
+      - ./backend/.env
+    environment:
+      - MONGODB_URI=mongodb://auction:${MONGO_PASSWORD}@mongodb:27017/auction?replicaSet=rs0&authSource=admin
+      - REDIS_URL=redis://:${REDIS_PASSWORD}@redis:6379
+      - PORT=3001
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - auction-network
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: auction-frontend
+    ports:
+      - "127.0.0.1:5173:80"
+    depends_on:
+      - backend
+    networks:
+      - auction-network
+
+volumes:
+  mongodb_data:
+  redis_data:
+
+networks:
+  auction-network:
+    driver: bridge

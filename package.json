@@ -1,0 +1,27 @@
+{
+  "name": "telegram-gift-auction",
+  "version": "1.0.0",
+  "description": "Multi-round auction system inspired by Telegram Gift Auctions",
+  "private": true,
+  "workspaces": [
+    "backend",
+    "frontend"
+  ],
+  "scripts": {
+    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
+    "dev:backend": "npm run start:dev --workspace=backend",
+    "dev:frontend": "npm run dev --workspace=frontend",
+    "build": "npm run build --workspace=backend && npm run build --workspace=frontend",
+    "start": "npm run start:prod --workspace=backend",
+    "test": "npm run test --workspace=backend",
+    "test:e2e": "npm run test:e2e --workspace=backend",
+    "test:stress": "npm run test:stress --workspace=backend",
+    "lint": "npm run lint --workspaces"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.1"
+  },
+  "engines": {
+    "node": ">=22.0.0"
+  }
+}
