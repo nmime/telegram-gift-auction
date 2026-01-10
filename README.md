@@ -31,17 +31,6 @@ Telegram conducts auctions for limited-edition digital gifts. Unlike traditional
 | **Round Transition** | Automatic; losers carry over with their current bid |
 | **Anti-Sniping** | Bids in final minutes extend round duration |
 
-### Assumptions Made
-
-Where Telegram's behavior wasn't explicitly documented, I made these assumptions:
-
-1. **Unique Bid Amounts**: Two users cannot have the same active bid amount (prevents ranking ambiguity)
-2. **Minimum Increment**: Bid increases must meet a minimum increment (prevents spam)
-3. **Extension Limit**: Anti-sniping extensions are capped (prevents infinite auctions)
-4. **Immediate Freeze**: Bid amount is frozen from balance instantly (not at round end)
-5. **No Bid Cancellation**: Once placed, bids cannot be withdrawn during an active auction
-6. **Bot Participation**: Simulated bots for demonstration (configurable per auction)
-
 ---
 
 ## Architecture
