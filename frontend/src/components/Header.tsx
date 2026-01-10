@@ -16,7 +16,7 @@ export default function Header() {
     try {
       const { balance, frozenBalance } = await api.deposit(1000);
       updateBalance(balance, frozenBalance);
-      showNotification('Deposited 1000 successfully', 'success');
+      showNotification('Deposited 1000 Stars successfully', 'success');
     } catch (error) {
       const message = (error as Error).message || 'Deposit failed';
       showNotification(message, 'error');
@@ -31,7 +31,7 @@ export default function Header() {
     try {
       const { balance, frozenBalance } = await api.withdraw(1000);
       updateBalance(balance, frozenBalance);
-      showNotification('Withdrew 1000 successfully', 'success');
+      showNotification('Withdrew 1000 Stars successfully', 'success');
     } catch (error) {
       const message = (error as Error).message || 'Withdrawal failed';
       showNotification(message, 'error');
@@ -65,9 +65,9 @@ export default function Header() {
 
       <div className="user-info">
         <div className="balance-display">
-          <span>Balance: <strong>{user?.balance || 0}</strong></span>
+          <span>Balance: <strong>{user?.balance || 0} Stars</strong></span>
           {user && user.frozenBalance > 0 && (
-            <span className="text-muted"> (Frozen: {user.frozenBalance})</span>
+            <span className="text-muted"> (Frozen: {user.frozenBalance} Stars)</span>
           )}
           <div className="balance-controls">
             <button

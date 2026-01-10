@@ -77,9 +77,9 @@ export default function TransactionsPage() {
             <thead>
               <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
                 <th style={{ padding: '12px', textAlign: 'left' }}>Type</th>
-                <th style={{ padding: '12px', textAlign: 'right' }}>Amount</th>
-                <th style={{ padding: '12px', textAlign: 'right' }}>Balance</th>
-                <th style={{ padding: '12px', textAlign: 'right' }}>Frozen</th>
+                <th style={{ padding: '12px', textAlign: 'right' }}>Amount (Stars)</th>
+                <th style={{ padding: '12px', textAlign: 'right' }}>Balance (Stars)</th>
+                <th style={{ padding: '12px', textAlign: 'right' }}>Frozen (Stars)</th>
                 <th style={{ padding: '12px', textAlign: 'left' }}>Description</th>
                 <th style={{ padding: '12px', textAlign: 'right' }}>Time</th>
               </tr>

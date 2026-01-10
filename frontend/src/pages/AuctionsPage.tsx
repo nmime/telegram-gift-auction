@@ -128,7 +128,7 @@ export default function AuctionsPage() {
                   </div>
                   <div>
                     <span className="text-muted">Min Bid: </span>
-                    <strong>{auction.minBidAmount}</strong>
+                    <strong>{auction.minBidAmount} Stars</strong>
                   </div>
                 </div>
 

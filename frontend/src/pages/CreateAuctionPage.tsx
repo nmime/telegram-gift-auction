@@ -243,7 +243,7 @@ export default function CreateAuctionPage() {
 
           <div className="grid grid-cols-2 gap-4">
             <div className="form-group">
-              <label>Min Bid Amount</label>
+              <label>Min Bid Amount (Stars)</label>
               <input
                 type="number"
                 className="input"
@@ -254,7 +254,7 @@ export default function CreateAuctionPage() {
             </div>
 
             <div className="form-group">
-              <label>Min Bid Increment</label>
+              <label>Min Bid Increment (Stars)</label>
               <input
                 type="number"
                 className="input"

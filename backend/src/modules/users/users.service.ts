@@ -59,7 +59,7 @@ export class UsersService {
         amount,
         balanceBefore,
         balanceAfter: updatedUser.balance,
-        description: `Deposit of ${amount} stars`,
+        description: `Deposit of ${amount} Stars`,
       }], { session });
 
       await session.commitTransaction();
@@ -117,7 +117,7 @@ export class UsersService {
         amount,
         balanceBefore,
         balanceAfter: updatedUser.balance,
-        description: `Withdrawal of ${amount} stars`,
+        description: `Withdrawal of ${amount} Stars`,
       }], { session });
 
       await session.commitTransaction();
@@ -176,15 +176,15 @@ export class UsersService {
   private getTransactionDescription(type: string, amount: number): string {
     switch (type) {
       case 'bid_freeze':
-        return `Bid placed: ${amount} stars frozen`;
+        return `Bid placed: ${amount} Stars frozen`;
       case 'bid_unfreeze':
-        return `Bid cancelled: ${amount} stars unfrozen`;
+        return `Bid cancelled: ${amount} Stars unfrozen`;
       case 'bid_win':
-        return `Won auction item for ${amount} stars`;
+        return `Won auction item for ${amount} Stars`;
       case 'bid_refund':
-        return `Bid refunded: ${amount} stars returned`;
+        return `Bid refunded: ${amount} Stars returned`;
       default:
-        return `Transaction of ${amount} stars`;
+        return `Transaction of ${amount} Stars`;
     }
   }
 
@@ -237,7 +237,7 @@ export class UsersService {
       frozenAfter: updatedUser.frozenBalance,
       auctionId,
       bidId,
-      description: `Bid freeze of ${amount} stars`,
+      description: `Bid freeze of ${amount} Stars`,
     }], { session: session || undefined });
   }
 
@@ -286,7 +286,7 @@ export class UsersService {
       frozenAfter: updatedUser.frozenBalance,
       auctionId,
       bidId,
-      description: `Bid unfreeze of ${amount} stars`,
+      description: `Bid unfreeze of ${amount} Stars`,
     }], { session: session || undefined });
   }
 
@@ -333,7 +333,7 @@ export class UsersService {
       frozenAfter: updatedUser.frozenBalance,
       auctionId,
       bidId,
-      description: `Won auction item for ${amount} stars`,
+      description: `Won auction item for ${amount} Stars`,
     }], { session: session || undefined });
   }
 
@@ -382,7 +382,7 @@ export class UsersService {
       frozenAfter: updatedUser.frozenBalance,
       auctionId,
       bidId,
-      description: `Refund of ${amount} stars`,
+      description: `Refund of ${amount} Stars`,
     }], { session: session || undefined });
   }
 

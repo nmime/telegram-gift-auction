@@ -773,14 +773,30 @@ table tbody tr:hover {
   .header nav {
     order: 3;
     justify-content: center;
+    flex-wrap: wrap;
+  }
+
+  .header nav .btn {
+    padding: 10px 14px;
+    font-size: 13px;
   }
 
   .user-info {
     justify-content: center;
+    flex-direction: column;
+    gap: var(--spacing-sm);
+  }
+
+  .balance-display {
+    flex-wrap: wrap;
+    justify-content: center;
+    width: 100%;
+    padding: 12px;
   }
 
   h1 {
     font-size: 1.5rem;
+    text-align: center;
   }
 
   .timer {
@@ -788,7 +804,167 @@ table tbody tr:hover {
   }
 
   .round-stat-value {
-    font-size: 22px;
+    font-size: 18px;
+  }
+
+  .round-stat {
+    min-width: 80px;
+  }
+
+  .round-info {
+    gap: var(--spacing-md);
+    padding: var(--spacing-md);
+  }
+
+  .leaderboard-item {
+    padding: 10px 12px;
+    flex-wrap: wrap;
+  }
+
+  .rank {
+    width: 36px;
+    height: 36px;
+    font-size: 12px;
+    margin-right: var(--spacing-sm);
+  }
+
+  .card {
+    padding: var(--spacing-md);
+  }
+
+  /* Table responsive */
+  table {
+    display: block;
+    overflow-x: auto;
+    white-space: nowrap;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  table th,
+  table td {
+    padding: 10px 8px;
+    font-size: 12px;
+  }
+}
+
+/* Small mobile breakpoint */
+@media (max-width: 480px) {
+  .container {
+    padding: var(--spacing-sm);
+  }
+
+  .header nav {
+    gap: var(--spacing-xs);
+  }
+
+  .header nav .btn {
+    padding: 8px 10px;
+    font-size: 12px;
+  }
+
+  .logo {
+    font-size: 20px;
+    text-align: center;
+    width: 100%;
+  }
+
+  .balance-display {
+    flex-direction: column;
+    gap: var(--spacing-sm);
+  }
+
+  .balance-controls {
+    margin-top: var(--spacing-xs);
+  }
+
+  .round-stat-value {
+    font-size: 16px;
+  }
+
+  .round-stat-label {
+    font-size: 9px;
+  }
+
+  .round-stat {
+    min-width: 60px;
+    padding: 0 var(--spacing-xs);
+  }
+
+  h1 {
+    font-size: 1.25rem;
+  }
+
+  h3 {
+    font-size: 1rem;
+  }
+
+  .btn {
+    padding: 10px 16px;
+    font-size: 14px;
+  }
+
+  .input {
+    padding: 12px 14px;
+    font-size: 14px;
+  }
+
+  .notification-container {
+    left: 12px;
+    right: 12px;
+    bottom: 12px;
+    max-width: none;
+  }
+
+  .toast {
+    padding: 12px 14px;
+    font-size: 13px;
+  }
+
+  .modal {
+    width: 95%;
+    padding: var(--spacing-md);
+    margin: var(--spacing-sm);
+  }
+
+  .auction-card {
+    padding: var(--spacing-md);
+  }
+
+  .leaderboard-item {
+    padding: 8px 10px;
+  }
+
+  .rank {
+    width: 32px;
+    height: 32px;
+    font-size: 11px;
+  }
+
+  .anti-sniping-alert {
+    padding: 10px 14px;
+    font-size: 13px;
+  }
+
+  /* Auction list page filter buttons */
+  .flex.gap-2 {
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  /* Create auction page grid */
+  .grid-cols-2,
+  .grid-cols-3 {
+    grid-template-columns: 1fr;
+  }
+
+  /* Form adjustments */
+  .form-group label {
+    font-size: 12px;
+  }
+
+  /* Round config row */
+  [style*="display: flex"][style*="gap: 12px"] {
+    flex-wrap: wrap;
   }
 }
 

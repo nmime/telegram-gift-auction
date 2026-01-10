@@ -164,7 +164,7 @@ export default function AuctionPage() {
         return [bid, ...prev];
       });
       setBidAmount('');
-      showNotification(`Bid of ${amount} placed successfully!`, 'success');
+      showNotification(`Bid of ${amount} Stars placed successfully!`, 'success');
       await refreshBalance();
       await loadData();
     } catch (err) {
@@ -264,7 +264,7 @@ export default function AuctionPage() {
               <div className="round-stat-label">Extensions</div>
             </div>
             <div className="round-stat">
-              <div className="round-stat-value">{minWinningBid || auction.minBidAmount}</div>
+              <div className="round-stat-value">{minWinningBid || auction.minBidAmount} Stars</div>
               <div className="round-stat-label">Min Winning Bid</div>
             </div>
           </div>
@@ -274,7 +274,7 @@ export default function AuctionPage() {
 
             {myActiveBid && (
               <p style={{ marginBottom: '12px' }}>
-                Your current bid: <strong>{myActiveBid.amount}</strong>
+                Your current bid: <strong>{myActiveBid.amount} Stars</strong>
                 {leaderboard.findIndex((l) => l.username === user?.username) < currentRound.itemsCount && (
                   <span className="text-success"> (Winning!)</span>
                 )}
@@ -303,7 +303,7 @@ export default function AuctionPage() {
             </div>
 
             <p className="text-muted" style={{ marginTop: '12px', fontSize: '14px' }}>
-              Available balance: {user?.balance || 0}
+              Available balance: {user?.balance || 0} Stars
             </p>
           </div>
         </>
@@ -345,7 +345,7 @@ export default function AuctionPage() {
                     </div>
                   </div>
                   <div style={{ textAlign: 'right' }}>
-                    <div style={{ fontWeight: 'bold' }}>{entry.amount}</div>
+                    <div style={{ fontWeight: 'bold' }}>{entry.amount} Stars</div>
                     {entry.status === BidStatus.WON && (
                       <span className="text-success" style={{ fontSize: '12px' }}>Won</span>
                     )}
@@ -363,8 +363,8 @@ export default function AuctionPage() {
           <h3>Auction Info</h3>
           <div style={{ marginBottom: '16px' }}>
             <p><strong>Total Items:</strong> {auction.totalItems}</p>
-            <p><strong>Min Bid:</strong> {auction.minBidAmount}</p>
-            <p><strong>Min Increment:</strong> {auction.minBidIncrement}</p>
+            <p><strong>Min Bid:</strong> {auction.minBidAmount} Stars</p>
+            <p><strong>Min Increment:</strong> {auction.minBidIncrement} Stars</p>
             <p><strong>Anti-Sniping Window:</strong> {auction.antiSnipingWindowMinutes} min</p>
             <p><strong>Extension Duration:</strong> {auction.antiSnipingExtensionMinutes} min</p>
             <p><strong>Max Extensions:</strong> {auction.maxExtensions}</p>
@@ -415,7 +415,7 @@ export default function AuctionPage() {
                   }}
                 >
                   <div className="flex justify-between">
-                    <span>{bid.amount}</span>
+                    <span>{bid.amount} Stars</span>
                     <span
                       className={
                         bid.status === BidStatus.WON
