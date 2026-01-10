@@ -2,6 +2,10 @@
 
 A multi-round auction backend for digital collectibles, inspired by Telegram Gift Auctions.
 
+**Live Demo:** [https://telegram-gift-auction.funfiesta.games](https://telegram-gift-auction.funfiesta.games)
+
+[Русская версия (Russian)](./README.ru.md)
+
 ## Product Analysis: Understanding Telegram Gift Auctions
 
 ### How Telegram Gift Auctions Work
