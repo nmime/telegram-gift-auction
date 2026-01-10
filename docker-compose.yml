@@ -55,13 +55,13 @@ services:
       dockerfile: Dockerfile
     container_name: auction-backend
     ports:
-      - "127.0.0.1:3001:3001"
+      - "127.0.0.1:4000:4000"
     env_file:
       - ./backend/.env
     environment:
       - MONGODB_URI=mongodb://auction:${MONGO_PASSWORD}@mongodb:27017/auction?replicaSet=rs0&authSource=admin
       - REDIS_URL=redis://:${REDIS_PASSWORD}@redis:6379
-      - PORT=3001
+      - PORT=4000
     depends_on:
       mongodb:
         condition: service_healthy

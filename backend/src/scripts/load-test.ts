@@ -1,7 +1,6 @@
 import { randomInt, randomBytes } from 'crypto';
 
-const BASE_URL = process.env.API_URL || 'http://localhost:3001/api';
-const WS_URL = process.env.WS_URL || 'ws://localhost:3001';
+const BASE_URL = process.env.API_URL || 'http://localhost:4000/api';
 
 const c = {
   reset: '\x1b[0m',
@@ -40,16 +39,6 @@ interface BidResult {
   responseTimeMs: number;
   error?: string;
   statusCode?: number;
-}
-
-interface TestMetrics {
-  totalRequests: number;
-  successfulBids: number;
-  failedBids: number;
-  responseTimes: number[];
-  errors: Map<string, number>;
-  startTime: number;
-  endTime: number;
 }
 
 interface TestSuiteResult {
@@ -602,14 +591,6 @@ class LoadTester {
       totalBalance += b.balance;
       totalFrozen += b.frozen;
     });
-
-    // Get auction leaderboard for spent amounts
-    const { data: leaderboard } = await this.request<Array<{ status: string; amount: number }>>(
-      `/auctions/${auctionId}/leaderboard`
-    );
-    const totalSpent = (leaderboard || [])
-      .filter(b => b.status === 'won')
-      .reduce((sum, b) => sum + (b.amount || 0), 0);
 
     const duration = performance.now() - start;
 

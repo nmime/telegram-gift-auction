@@ -7,7 +7,7 @@ export const validationSchema = Joi.object({
 
   PORT: Joi.number()
     .port()
-    .default(3001),
+    .default(4000),
 
   MONGODB_URI: Joi.string()
     .uri({ scheme: ['mongodb', 'mongodb+srv'] })
