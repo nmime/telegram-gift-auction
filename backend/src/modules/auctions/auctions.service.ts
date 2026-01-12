@@ -398,6 +398,9 @@ export class AuctionsService {
         const antiSnipingWindow = auction.antiSnipingWindowMinutes * 60 * 1000;
 
         let auctionUpdated: AuctionDocument = auction;
+        let antiSnipingTriggered = false;
+        let antiSnipingNewEndTime: Date | null = null;
+
         if (timeUntilEnd <= antiSnipingWindow && currentRound.extensionsCount < auction.maxExtensions) {
           const extension = auction.antiSnipingExtensionMinutes * 60 * 1000;
           const newEndTime = new Date(currentRound.endTime!.getTime() + extension);
@@ -413,6 +416,8 @@ export class AuctionsService {
 
           if (updated) {
             auctionUpdated = updated;
+            antiSnipingTriggered = true;
+            antiSnipingNewEndTime = newEndTime;
           }
 
           this.eventsGateway.emitAntiSnipingExtension(auctionUpdated, currentRound.extensionsCount + 1);
@@ -453,6 +458,19 @@ export class AuctionsService {
           }
         }
 
+        // Collect all bidders for anti-sniping notification (except current user and bots)
+        const antiSnipingNotifyUsers: string[] = [];
+        if (antiSnipingTriggered) {
+          for (const activeBid of allActiveBids) {
+            if (activeBid.userId.toString() !== userId) {
+              const bidUser = await this.userModel.findById(activeBid.userId).session(session);
+              if (bidUser && !bidUser.isBot && bidUser.telegramId) {
+                antiSnipingNotifyUsers.push(activeBid.userId.toString());
+              }
+            }
+          }
+        }
+
         return {
           bid,
           auction: auctionUpdated,
@@ -460,6 +478,9 @@ export class AuctionsService {
           minBidToWin: allActiveBids.length >= itemsInRound
             ? allActiveBids[itemsInRound - 1].amount + auction.minBidIncrement
             : auction.minBidAmount,
+          antiSnipingTriggered,
+          antiSnipingNewEndTime,
+          antiSnipingNotifyUsers: [...new Set(antiSnipingNotifyUsers)], // dedupe
         };
       });
 
@@ -476,6 +497,20 @@ export class AuctionsService {
           }).catch(err => this.logger.warn('Failed to send outbid notification', err))
         );
         Promise.all(notifyPromises);
+      }
+
+      // Send anti-sniping notifications asynchronously
+      if (result.antiSnipingTriggered && result.antiSnipingNotifyUsers.length > 0) {
+        const antiSnipingPromises = result.antiSnipingNotifyUsers.map(notifyUserId =>
+          this.notificationsService.notifyAntiSniping(notifyUserId, {
+            auctionId: result.auction._id.toString(),
+            auctionTitle: result.auction.title,
+            roundNumber: result.auction.currentRound,
+            newEndTime: result.antiSnipingNewEndTime!,
+            extensionMinutes: result.auction.antiSnipingExtensionMinutes,
+          }).catch(err => this.logger.warn('Failed to send anti-sniping notification', err))
+        );
+        Promise.all(antiSnipingPromises);
       }
 
       // Set cooldown only for non-localhost
@@ -704,12 +739,27 @@ export class AuctionsService {
         }
       }
 
+      // Collect users to notify about new round (losers who are still in the game)
+      const newRoundNotifyUsers: string[] = [];
+      if (!shouldComplete) {
+        for (const bid of losingBids) {
+          const user = await this.userModel.findById(bid.userId).session(session);
+          if (user && !user.isBot && user.telegramId) {
+            newRoundNotifyUsers.push(bid.userId.toString());
+          }
+        }
+      }
+
+      const nextRound = !shouldComplete ? finalAuction.rounds[finalAuction.currentRound - 1] : null;
+
       return {
         auction: finalAuction,
         roundNumber: currentRound.roundNumber,
         winnerNotifications,
         loserNotifications,
         isCompleted: finalAuction.status === AuctionStatus.COMPLETED,
+        newRoundNotifyUsers: [...new Set(newRoundNotifyUsers)],
+        nextRound,
       };
     });
 
@@ -718,7 +768,7 @@ export class AuctionsService {
     }
 
     // Send notifications asynchronously (don't await)
-    const { auction: finalAuction, roundNumber, winnerNotifications, loserNotifications, isCompleted } = result;
+    const { auction: finalAuction, roundNumber, winnerNotifications, loserNotifications, isCompleted, newRoundNotifyUsers, nextRound } = result;
 
     // Notify winners
     for (const winner of winnerNotifications) {
@@ -740,6 +790,19 @@ export class AuctionsService {
         yourBid: loser.bidAmount,
         refunded: loser.refunded,
       }).catch(err => this.logger.warn('Failed to send loss notification', err));
+    }
+
+    // If new round started, notify users with active bids
+    if (!isCompleted && newRoundNotifyUsers.length > 0 && nextRound) {
+      for (const notifyUserId of newRoundNotifyUsers) {
+        this.notificationsService.notifyNewRoundStarted(notifyUserId, {
+          auctionId: finalAuction._id.toString(),
+          auctionTitle: finalAuction.title,
+          roundNumber: finalAuction.currentRound,
+          itemsCount: nextRound.itemsCount,
+          endTime: nextRound.endTime!,
+        }).catch(err => this.logger.warn('Failed to send new round notification', err));
+      }
     }
 
     // If auction completed, send summary to all participants
