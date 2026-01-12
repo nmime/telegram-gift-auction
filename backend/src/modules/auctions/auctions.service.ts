@@ -241,6 +241,15 @@ export class AuctionsService {
           throw new NotFoundException('User not found');
         }
 
+        // Capture winning users BEFORE any bid changes
+        const itemsInRound = currentRound.itemsCount;
+        const winningBidsBefore = await this.bidModel
+          .find({ auctionId: auction._id, status: BidStatus.ACTIVE })
+          .sort({ amount: -1, createdAt: 1 })
+          .limit(itemsInRound)
+          .session(session);
+        const winningUserIdsBefore = new Set(winningBidsBefore.map(b => b.userId.toString()));
+
         let lockedBid: BidDocument | null = null;
         let isNewBid = false;
         let originalVersion: number;
@@ -415,26 +424,31 @@ export class AuctionsService {
           isIncrease: !isNewBid,
         });
 
-        // Collect outbid users to notify after transaction
-        const outbidUsers: Array<{ userId: string; bidAmount: number }> = [];
-
-        // Check if this bid pushed others out of winning position
+        // Check if this bid pushed someone out of winning position
         const allActiveBids = await this.bidModel
           .find({ auctionId: auction._id, status: BidStatus.ACTIVE })
           .sort({ amount: -1, createdAt: 1 })
           .session(session);
 
-        const itemsInRound = currentRound.itemsCount;
-        for (let i = itemsInRound; i < allActiveBids.length; i++) {
-          const outbidBid = allActiveBids[i];
-          // Don't notify the current user or bots
-          if (outbidBid.userId.toString() !== userId) {
-            const outbidUser = await this.userModel.findById(outbidBid.userId).session(session);
-            if (outbidUser && !outbidUser.isBot && outbidUser.telegramId) {
-              outbidUsers.push({
-                userId: outbidBid.userId.toString(),
-                bidAmount: outbidBid.amount,
-              });
+        // Find users who were winning before but not after
+        const winningUserIdsAfter = new Set(
+          allActiveBids.slice(0, itemsInRound).map(b => b.userId.toString())
+        );
+
+        const outbidUsers: Array<{ userId: string; bidAmount: number }> = [];
+
+        // Only notify users who were in winning position before but not now
+        for (const pushedOutUserId of winningUserIdsBefore) {
+          if (!winningUserIdsAfter.has(pushedOutUserId) && pushedOutUserId !== userId) {
+            const pushedOutBid = allActiveBids.find(b => b.userId.toString() === pushedOutUserId);
+            if (pushedOutBid) {
+              const pushedOutUser = await this.userModel.findById(pushedOutUserId).session(session);
+              if (pushedOutUser && !pushedOutUser.isBot && pushedOutUser.telegramId) {
+                outbidUsers.push({
+                  userId: pushedOutUserId,
+                  bidAmount: pushedOutBid.amount,
+                });
+              }
             }
           }
         }
