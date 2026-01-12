@@ -6,7 +6,7 @@ COPY package*.json ./
 RUN npm install
 
 # Setup typia to patch TypeScript compiler for Nestia transforms
-RUN npx typia setup
+RUN npx typia setup --manager npm
 
 COPY . .
 RUN npm run build
