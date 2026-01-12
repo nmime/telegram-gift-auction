@@ -1,7 +1,4 @@
 {
-  "bid": {
-    "placed": "<b>Bid Placed!</b>\n\nYour bid of <b>{amount} Stars</b> has been placed.\n\n<b>Auction:</b> {auctionTitle}\n<b>Round:</b> {roundNumber}"
-  },
   "outbid": {
     "title": "<b>You've been outbid!</b>",
     "message": "<b>Auction:</b> {auctionTitle}\n<b>Round:</b> {roundNumber}\n<b>Your bid:</b> {yourBid} Stars\n<b>New leader:</b> {newLeaderBid} Stars\n<b>Min bid to win:</b> {minBidToWin} Stars\n\n<i>Increase your bid to stay in the lead!</i>"

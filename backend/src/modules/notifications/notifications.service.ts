@@ -5,14 +5,6 @@ import { I18nService } from 'nestjs-i18n';
 import { TelegramBotService } from '@/modules/telegram';
 import { User, UserDocument } from '@/schemas';
 
-export interface BidNotificationData {
-  auctionId: string;
-  auctionTitle: string;
-  bidAmount: number;
-  newLeaderAmount?: number;
-  roundNumber: number;
-}
-
 export interface RoundWinNotificationData {
   auctionId: string;
   auctionTitle: string;
@@ -53,20 +45,6 @@ export class NotificationsService {
 
   private t(key: string, lang: string, args?: Record<string, unknown>): string {
     return this.i18n.t(key, { lang, args });
-  }
-
-  async notifyBidPlaced(userId: string, data: BidNotificationData): Promise<void> {
-    const user = await this.userModel.findById(userId);
-    if (!user?.telegramId) return;
-
-    const lang = this.getLang(user);
-    const message = this.t('notifications.bid.placed', lang, {
-      amount: data.bidAmount,
-      auctionTitle: data.auctionTitle,
-      roundNumber: data.roundNumber,
-    });
-
-    await this.sendTelegramMessage(user.telegramId, message);
   }
 
   async notifyOutbid(userId: string, data: OutbidNotificationData): Promise<void> {

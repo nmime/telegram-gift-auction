@@ -1,7 +1,4 @@
 {
-  "bid": {
-    "placed": "<b>Ставка принята!</b>\n\nВаша ставка <b>{amount} Stars</b> принята.\n\n<b>Аукцион:</b> {auctionTitle}\n<b>Раунд:</b> {roundNumber}"
-  },
   "outbid": {
     "title": "<b>Вашу ставку перебили!</b>",
     "message": "<b>Аукцион:</b> {auctionTitle}\n<b>Раунд:</b> {roundNumber}\n<b>Ваша ставка:</b> {yourBid} Stars\n<b>Новый лидер:</b> {newLeaderBid} Stars\n<b>Мин. ставка для победы:</b> {minBidToWin} Stars\n\n<i>Увеличьте ставку, чтобы остаться в лидерах!</i>"
