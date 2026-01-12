@@ -4,6 +4,10 @@
 
 **Демо:** [https://telegram-gift-auction.funfiesta.games](https://telegram-gift-auction.funfiesta.games)
 
+**Telegram Бот:** [@tggiftauctionbot](https://t.me/tggiftauctionbot)
+
+**Mini App:** [https://t.me/tggiftauctionbot/app](https://t.me/tggiftauctionbot/app)
+
 **API Документация:** [https://telegram-gift-auction.funfiesta.games/api/docs](https://telegram-gift-auction.funfiesta.games/api/docs)
 
 [English version](./README.md)

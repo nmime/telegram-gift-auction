@@ -4,6 +4,10 @@ A multi-round auction backend for digital collectibles, inspired by Telegram Gif
 
 **Live Demo:** [https://telegram-gift-auction.funfiesta.games](https://telegram-gift-auction.funfiesta.games)
 
+**Telegram Bot:** [@tggiftauctionbot](https://t.me/tggiftauctionbot)
+
+**Mini App:** [https://t.me/tggiftauctionbot/app](https://t.me/tggiftauctionbot/app)
+
 **API Docs:** [https://telegram-gift-auction.funfiesta.games/api/docs](https://telegram-gift-auction.funfiesta.games/api/docs)
 
 [Русская версия (Russian)](./README.ru.md)
