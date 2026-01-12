@@ -1,0 +1,31 @@
+{
+  "bid": {
+    "placed": "Your bid of {amount} Stars has been placed!\n\nAuction: {auctionTitle}\nRound: {roundNumber}"
+  },
+  "outbid": {
+    "title": "You've been outbid!",
+    "message": "Auction: {auctionTitle}\nRound: {roundNumber}\nYour bid: {yourBid} Stars\nNew leader: {newLeaderBid} Stars\nMin bid to win: {minBidToWin} Stars\n\nIncrease your bid to stay in the lead!"
+  },
+  "roundWin": {
+    "title": "Congratulations! You won item #{itemNumber}!",
+    "message": "Auction: {auctionTitle}\nRound: {roundNumber}\nWinning bid: {winningBid} Stars"
+  },
+  "roundLost": {
+    "title": "Round {roundNumber} has ended.",
+    "message": "Auction: {auctionTitle}\nYour bid didn't win this round.",
+    "refunded": "Your bid of {amount} Stars has been refunded."
+  },
+  "auctionComplete": {
+    "title": "Auction completed!",
+    "won": "{auctionTitle}\nYou won {totalWins} item(s)\nTotal spent: {totalSpent} Stars\n\nCongratulations on your wins!",
+    "lost": "{auctionTitle}\nUnfortunately, you didn't win any items this time.\nBetter luck next time!"
+  },
+  "newRound": {
+    "title": "New round started!",
+    "message": "Auction: {auctionTitle}\nRound: {roundNumber}\nItems available: {itemsCount}\n\nPlace your bids now!"
+  },
+  "antiSniping": {
+    "title": "Round extended!",
+    "message": "Auction: {auctionTitle}\nRound {roundNumber} extended by {extensionMinutes} minute(s) due to late bidding."
+  }
+}

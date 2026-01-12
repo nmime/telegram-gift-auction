@@ -14,22 +14,22 @@ export enum TransactionType {
 
 @Schema({ timestamps: true })
 export class Transaction {
-  _id: Types.ObjectId;
+  _id!: Types.ObjectId;
 
   @Prop({ type: Types.ObjectId, ref: 'User', required: true })
-  userId: Types.ObjectId;
+  userId!: Types.ObjectId;
 
   @Prop({ required: true, enum: TransactionType })
-  type: TransactionType;
+  type!: TransactionType;
 
   @Prop({ required: true })
-  amount: number;
+  amount!: number;
 
   @Prop({ required: true })
-  balanceBefore: number;
+  balanceBefore!: number;
 
   @Prop({ required: true })
-  balanceAfter: number;
+  balanceAfter!: number;
 
   @Prop()
   frozenBefore?: number;
@@ -46,8 +46,8 @@ export class Transaction {
   @Prop()
   description?: string;
 
-  createdAt: Date;
-  updatedAt: Date;
+  createdAt!: Date;
+  updatedAt!: Date;
 }
 
 export const TransactionSchema = SchemaFactory.createForClass(Transaction);

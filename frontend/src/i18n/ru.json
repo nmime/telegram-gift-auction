@@ -1,0 +1,118 @@
+{
+  "app": {
+    "title": "Аукцион подарков",
+    "description": "Многораундовая система аукционов, вдохновлённая Telegram Gift Auctions"
+  },
+  "auth": {
+    "authenticating": "Авторизация через Telegram...",
+    "signIn": "Войдите через Telegram, чтобы продолжить",
+    "loggingIn": "Вход...",
+    "loadingWidget": "Загрузка входа через Telegram...",
+    "logoutSuccess": "Вы вышли из системы",
+    "welcome": "Добро пожаловать, {{name}}!",
+    "botNotConfigured": "Имя бота не настроено",
+    "setBotUsername": "Установите VITE_BOT_USERNAME в .env файле",
+    "localhostWarning": "Виджет входа недоступен на localhost",
+    "useMiniApp": "Откройте приложение через Telegram Mini App для авторизации",
+    "widgetLoadFailed": "Не удалось загрузить виджет входа Telegram",
+    "loginFailed": "Ошибка входа через Telegram"
+  },
+  "nav": {
+    "auctions": "Аукционы",
+    "myBids": "Мои ставки",
+    "balance": "Баланс",
+    "logout": "Выйти",
+    "profile": "Профиль",
+    "create": "Создать"
+  },
+  "auction": {
+    "title": "Аукционы",
+    "active": "Активные",
+    "upcoming": "Предстоящие",
+    "completed": "Завершённые",
+    "noAuctions": "Нет доступных аукционов",
+    "round": "Раунд {{current}} из {{total}}",
+    "timeLeft": "Осталось",
+    "endsIn": "Заканчивается через",
+    "startsIn": "Начнётся через",
+    "ended": "Завершён",
+    "winners": "Победители",
+    "itemsPerRound": "{{count}} предметов за раунд",
+    "totalItems": "{{count}} предметов всего",
+    "minBid": "Мин. ставка",
+    "yourBid": "Ваша ставка",
+    "placeBid": "Сделать ставку",
+    "bidPlaced": "Ставка принята!",
+    "bidAmount": "Сумма ставки",
+    "insufficientBalance": "Недостаточно средств",
+    "bidTooLow": "Ставка должна быть выше {{min}}",
+    "leaderboard": "Таблица лидеров",
+    "position": "Позиция",
+    "bidder": "Участник",
+    "amount": "Сумма",
+    "you": "Вы",
+    "antiSniping": "Антиснайпинг: раунд продлён!",
+    "roundComplete": "Раунд {{round}} завершён!",
+    "youWon": "Вы победили в этом раунде!",
+    "auctionComplete": "Аукцион завершён!",
+    "create": "Создать аукцион",
+    "start": "Начать аукцион"
+  },
+  "balance": {
+    "title": "Баланс",
+    "available": "Доступно",
+    "frozen": "Заморожено",
+    "total": "Всего",
+    "deposit": "Пополнить",
+    "withdraw": "Вывести",
+    "depositAmount": "Сумма пополнения",
+    "withdrawAmount": "Сумма вывода",
+    "depositSuccess": "Пополнено на {{amount}} Stars",
+    "withdrawSuccess": "Выведено {{amount}} Stars",
+    "currency": "Stars"
+  },
+  "bids": {
+    "title": "Мои ставки",
+    "noBids": "Вы ещё не делали ставок",
+    "status": "Статус",
+    "winning": "Лидирует",
+    "outbid": "Перебита",
+    "won": "Выигрыш",
+    "lost": "Проигрыш"
+  },
+  "transactions": {
+    "title": "Транзакции",
+    "noTransactions": "Транзакций пока нет",
+    "deposit": "Пополнение",
+    "withdrawal": "Вывод",
+    "bidPlaced": "Ставка",
+    "bidRefund": "Возврат ставки",
+    "auctionWin": "Выигрыш аукциона"
+  },
+  "common": {
+    "loading": "Загрузка...",
+    "error": "Ошибка",
+    "retry": "Повторить",
+    "cancel": "Отмена",
+    "confirm": "Подтвердить",
+    "save": "Сохранить",
+    "delete": "Удалить",
+    "edit": "Редактировать",
+    "back": "Назад",
+    "next": "Далее",
+    "submit": "Отправить",
+    "close": "Закрыть"
+  },
+  "errors": {
+    "networkError": "Ошибка сети. Попробуйте ещё раз.",
+    "unauthorized": "Сессия истекла. Пожалуйста, войдите снова.",
+    "serverError": "Ошибка сервера. Попробуйте позже.",
+    "unknown": "Произошла ошибка"
+  },
+  "time": {
+    "days": "{{count}}д",
+    "hours": "{{count}}ч",
+    "minutes": "{{count}}м",
+    "seconds": "{{count}}с"
+  }
+}

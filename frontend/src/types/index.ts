@@ -4,6 +4,22 @@ export interface User {
   balance: number;
   frozenBalance: number;
   isBot?: boolean;
+  telegramId?: number;
+  firstName?: string;
+  lastName?: string;
+  photoUrl?: string;
+}
+
+export interface TelegramWidgetUser {
+  id: number;
+  first_name: string;
+  last_name?: string;
+  username?: string;
+  photo_url?: string;
+  language_code?: string;
+  is_premium?: boolean;
+  auth_date: number;
+  hash: string;
 }
 
 export interface LoginResponse {

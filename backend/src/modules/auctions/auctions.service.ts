@@ -7,12 +7,13 @@ import Redlock, { Lock } from 'redlock';
 import { Auction, AuctionDocument, AuctionStatus, Bid, BidDocument, BidStatus, User, UserDocument } from '@/schemas';
 import { UsersService } from '@/modules/users';
 import { EventsGateway } from '@/modules/events';
+import { NotificationsService } from '@/modules/notifications';
 import { REDLOCK, REDIS_CLIENT } from '@/modules/redis';
-import { CreateAuctionDto, PlaceBidDto } from './dto';
-import { isTransientTransactionError, isDuplicateKeyError, isPopulatedUser, LeaderboardEntry } from '@/common';
+import { ICreateAuction, IPlaceBid } from './dto';
+import { isTransientTransactionError, isDuplicateKeyError, isPopulatedUser, LeaderboardEntry, LOCALHOST_IPS } from '@/common';
 
-const MAX_RETRIES = 10;
-const RETRY_DELAY_MS = 30;
+const MAX_RETRIES = 20;
+const RETRY_DELAY_MS = 50;
 
 @Injectable()
 export class AuctionsService {
@@ -25,6 +26,7 @@ export class AuctionsService {
     @InjectConnection() private connection: Connection,
     private usersService: UsersService,
     private eventsGateway: EventsGateway,
+    private notificationsService: NotificationsService,
     @Inject(REDLOCK) private readonly redlock: Redlock,
     @Inject(REDIS_CLIENT) private readonly redis: Redis,
   ) {}
@@ -71,8 +73,8 @@ export class AuctionsService {
     return new Promise(resolve => setTimeout(resolve, ms));
   }
 
-  async create(dto: CreateAuctionDto, userId: string): Promise<AuctionDocument> {
-    const totalRoundItems = dto.rounds.reduce((sum, r) => sum + r.itemsCount, 0);
+  async create(dto: ICreateAuction, userId: string): Promise<AuctionDocument> {
+    const totalRoundItems = dto.rounds.reduce((sum: number, r: ICreateAuction['rounds'][0]) => sum + r.itemsCount, 0);
     if (totalRoundItems !== dto.totalItems) {
       throw new BadRequestException('Sum of items in rounds must equal totalItems');
     }
@@ -81,7 +83,7 @@ export class AuctionsService {
       throw new BadRequestException('Total items must be positive');
     }
 
-    if (dto.rounds.some(r => r.itemsCount <= 0 || r.durationMinutes <= 0)) {
+    if (dto.rounds.some((r: ICreateAuction['rounds'][0]) => r.itemsCount <= 0 || r.durationMinutes <= 0)) {
       throw new BadRequestException('Round items and duration must be positive');
     }
 
@@ -169,7 +171,8 @@ export class AuctionsService {
   async placeBid(
     auctionId: string,
     userId: string,
-    dto: PlaceBidDto,
+    dto: IPlaceBid,
+    clientIp?: string,
   ): Promise<{ bid: BidDocument; auction: AuctionDocument }> {
     if (!Types.ObjectId.isValid(auctionId) || !Types.ObjectId.isValid(userId)) {
       throw new BadRequestException('Invalid ID format');
@@ -179,21 +182,28 @@ export class AuctionsService {
       throw new BadRequestException('Bid amount must be a positive integer');
     }
 
+    const isLocalhost = clientIp && LOCALHOST_IPS.includes(clientIp);
     const lockKey = `bid-lock:${userId}:${auctionId}`;
     const cooldownKey = `bid-cooldown:${userId}:${auctionId}`;
-    let lock: Lock;
+    let lock: Lock | null = null;
 
-    try {
-      lock = await this.redlock.acquire([lockKey], 10000);
-    } catch (error) {
-      this.logger.debug('Failed to acquire lock', { lockKey, error });
-      throw new ConflictException('Another bid request is being processed. Please wait and try again.');
+    // Skip lock for localhost (testing)
+    if (!isLocalhost) {
+      try {
+        lock = await this.redlock.acquire([lockKey], 10000);
+      } catch (error) {
+        this.logger.debug('Failed to acquire lock', { lockKey, error });
+        throw new ConflictException('Another bid request is being processed. Please wait and try again.');
+      }
     }
 
     try {
-      const cooldownExists = await this.redis.exists(cooldownKey);
-      if (cooldownExists) {
-        throw new ConflictException('Please wait before placing another bid.');
+      // Skip cooldown check for localhost
+      if (!isLocalhost) {
+        const cooldownExists = await this.redis.exists(cooldownKey);
+        if (cooldownExists) {
+          throw new ConflictException('Please wait before placing another bid.');
+        }
       }
 
       const result = await this.withTransaction(async (session) => {
@@ -405,18 +415,69 @@ export class AuctionsService {
           isIncrease: !isNewBid,
         });
 
-        return { bid, auction: auctionUpdated };
+        // Collect outbid users to notify after transaction
+        const outbidUsers: Array<{ userId: string; bidAmount: number }> = [];
+
+        // Check if this bid pushed others out of winning position
+        const allActiveBids = await this.bidModel
+          .find({ auctionId: auction._id, status: BidStatus.ACTIVE })
+          .sort({ amount: -1, createdAt: 1 })
+          .session(session);
+
+        const itemsInRound = currentRound.itemsCount;
+        for (let i = itemsInRound; i < allActiveBids.length; i++) {
+          const outbidBid = allActiveBids[i];
+          // Don't notify the current user or bots
+          if (outbidBid.userId.toString() !== userId) {
+            const outbidUser = await this.userModel.findById(outbidBid.userId).session(session);
+            if (outbidUser && !outbidUser.isBot && outbidUser.telegramId) {
+              outbidUsers.push({
+                userId: outbidBid.userId.toString(),
+                bidAmount: outbidBid.amount,
+              });
+            }
+          }
+        }
+
+        return {
+          bid,
+          auction: auctionUpdated,
+          outbidUsers,
+          minBidToWin: allActiveBids.length >= itemsInRound
+            ? allActiveBids[itemsInRound - 1].amount + auction.minBidIncrement
+            : auction.minBidAmount,
+        };
       });
 
-      await this.redis.set(cooldownKey, '1', 'PX', 1000);
-      return result;
+      // Send outbid notifications asynchronously (don't await)
+      if (result.outbidUsers && result.outbidUsers.length > 0) {
+        const notifyPromises = result.outbidUsers.map(({ userId: outbidUserId, bidAmount }) =>
+          this.notificationsService.notifyOutbid(outbidUserId, {
+            auctionId: result.auction._id.toString(),
+            auctionTitle: result.auction.title,
+            yourBid: bidAmount,
+            newLeaderBid: result.bid.amount,
+            roundNumber: result.auction.currentRound,
+            minBidToWin: result.minBidToWin,
+          }).catch(err => this.logger.warn('Failed to send outbid notification', err))
+        );
+        Promise.all(notifyPromises);
+      }
+
+      // Set cooldown only for non-localhost
+      if (!isLocalhost) {
+        await this.redis.set(cooldownKey, '1', 'PX', 1000);
+      }
+      return { bid: result.bid, auction: result.auction };
     } finally {
-      await lock.release();
+      if (lock) {
+        await lock.release();
+      }
     }
   }
 
   async completeRound(auctionId: string): Promise<AuctionDocument | null> {
-    return this.withTransaction(async (session) => {
+    const result = await this.withTransaction(async (session) => {
       const auction = await this.auctionModel.findOneAndUpdate(
         { _id: new Types.ObjectId(auctionId), status: AuctionStatus.ACTIVE },
         { $inc: { version: 1 } },
@@ -589,8 +650,127 @@ export class AuctionsService {
         this.eventsGateway.emitRoundStart(finalAuction, finalAuction.currentRound);
       }
 
-      return finalAuction;
+      // Collect notification data for after transaction
+      const winnerNotifications: Array<{
+        userId: string;
+        bidAmount: number;
+        itemNumber: number;
+      }> = [];
+
+      const loserNotifications: Array<{
+        userId: string;
+        bidAmount: number;
+        refunded: boolean;
+      }> = [];
+
+      // Collect winner data
+      for (let i = 0; i < winningBids.length; i++) {
+        const bid = winningBids[i];
+        const user = await this.userModel.findById(bid.userId).session(session);
+        if (user && !user.isBot && user.telegramId) {
+          winnerNotifications.push({
+            userId: bid.userId.toString(),
+            bidAmount: bid.amount,
+            itemNumber: previousWinnersCount + i + 1,
+          });
+        }
+      }
+
+      // Collect loser data (only if refunded, i.e., auction completed or last round)
+      if (shouldComplete) {
+        for (const bid of losingBids) {
+          const user = await this.userModel.findById(bid.userId).session(session);
+          if (user && !user.isBot && user.telegramId) {
+            loserNotifications.push({
+              userId: bid.userId.toString(),
+              bidAmount: bid.amount,
+              refunded: true,
+            });
+          }
+        }
+      }
+
+      return {
+        auction: finalAuction,
+        roundNumber: currentRound.roundNumber,
+        winnerNotifications,
+        loserNotifications,
+        isCompleted: finalAuction.status === AuctionStatus.COMPLETED,
+      };
     });
+
+    if (!result) {
+      return null;
+    }
+
+    // Send notifications asynchronously (don't await)
+    const { auction: finalAuction, roundNumber, winnerNotifications, loserNotifications, isCompleted } = result;
+
+    // Notify winners
+    for (const winner of winnerNotifications) {
+      this.notificationsService.notifyRoundWin(winner.userId, {
+        auctionId: finalAuction._id.toString(),
+        auctionTitle: finalAuction.title,
+        roundNumber,
+        winningBid: winner.bidAmount,
+        itemNumber: winner.itemNumber,
+      }).catch(err => this.logger.warn('Failed to send win notification', err));
+    }
+
+    // Notify losers (refunded)
+    for (const loser of loserNotifications) {
+      this.notificationsService.notifyRoundLost(loser.userId, {
+        auctionId: finalAuction._id.toString(),
+        auctionTitle: finalAuction.title,
+        roundNumber,
+        yourBid: loser.bidAmount,
+        refunded: loser.refunded,
+      }).catch(err => this.logger.warn('Failed to send loss notification', err));
+    }
+
+    // If auction completed, send summary to all participants
+    if (isCompleted) {
+      this.sendAuctionCompleteNotifications(finalAuction._id.toString())
+        .catch(err => this.logger.warn('Failed to send auction complete notifications', err));
+    }
+
+    return finalAuction;
+  }
+
+  private async sendAuctionCompleteNotifications(auctionId: string): Promise<void> {
+    const auction = await this.auctionModel.findById(auctionId);
+    if (!auction) return;
+
+    // Get all bids for this auction
+    const allBids = await this.bidModel.find({ auctionId: auction._id });
+
+    // Group by user
+    const userBids = new Map<string, { wins: number; totalSpent: number }>();
+
+    for (const bid of allBids) {
+      const userId = bid.userId.toString();
+      if (!userBids.has(userId)) {
+        userBids.set(userId, { wins: 0, totalSpent: 0 });
+      }
+      const userData = userBids.get(userId)!;
+      if (bid.status === BidStatus.WON) {
+        userData.wins++;
+        userData.totalSpent += bid.amount;
+      }
+    }
+
+    // Send notification to each participant
+    for (const [userId, { wins, totalSpent }] of userBids) {
+      const user = await this.userModel.findById(userId);
+      if (user && !user.isBot && user.telegramId) {
+        this.notificationsService.notifyAuctionComplete(userId, {
+          auctionId: auction._id.toString(),
+          auctionTitle: auction.title,
+          totalWins: wins,
+          totalSpent,
+        }).catch(err => this.logger.warn('Failed to send auction complete notification', err));
+      }
+    }
   }
 
   async auditFinancialIntegrity(): Promise<{

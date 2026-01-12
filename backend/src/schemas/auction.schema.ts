@@ -12,18 +12,18 @@ export enum AuctionStatus {
 
 export class RoundConfig {
   @Prop({ required: true })
-  itemsCount: number;
+  itemsCount!: number;
 
   @Prop({ required: true })
-  durationMinutes: number;
+  durationMinutes!: number;
 }
 
 export class RoundState {
   @Prop({ required: true })
-  roundNumber: number;
+  roundNumber!: number;
 
   @Prop({ required: true })
-  itemsCount: number;
+  itemsCount!: number;
 
   @Prop()
   startTime?: Date;
@@ -35,54 +35,54 @@ export class RoundState {
   actualEndTime?: Date;
 
   @Prop({ default: 0 })
-  extensionsCount: number;
+  extensionsCount!: number;
 
   @Prop({ default: false })
-  completed: boolean;
+  completed!: boolean;
 
   @Prop({ type: [Types.ObjectId], default: [] })
-  winnerBidIds: Types.ObjectId[];
+  winnerBidIds!: Types.ObjectId[];
 }
 
 @Schema({ timestamps: true })
 export class Auction {
-  _id: Types.ObjectId;
+  _id!: Types.ObjectId;
 
   @Prop({ required: true })
-  title: string;
+  title!: string;
 
   @Prop()
   description?: string;
 
   @Prop({ required: true })
-  totalItems: number;
+  totalItems!: number;
 
   @Prop({ required: true, type: [Object] })
-  roundsConfig: RoundConfig[];
+  roundsConfig!: RoundConfig[];
 
   @Prop({ type: [Object], default: [] })
-  rounds: RoundState[];
+  rounds!: RoundState[];
 
   @Prop({ required: true, enum: AuctionStatus, default: AuctionStatus.PENDING })
-  status: AuctionStatus;
+  status!: AuctionStatus;
 
   @Prop({ default: 0 })
-  currentRound: number;
+  currentRound!: number;
 
   @Prop({ default: 100 })
-  minBidAmount: number;
+  minBidAmount!: number;
 
   @Prop({ default: 10 })
-  minBidIncrement: number;
+  minBidIncrement!: number;
 
   @Prop({ default: 5 })
-  antiSnipingWindowMinutes: number;
+  antiSnipingWindowMinutes!: number;
 
   @Prop({ default: 5 })
-  antiSnipingExtensionMinutes: number;
+  antiSnipingExtensionMinutes!: number;
 
   @Prop({ default: 6 })
-  maxExtensions: number;
+  maxExtensions!: number;
 
   @Prop()
   startTime?: Date;
@@ -91,19 +91,19 @@ export class Auction {
   endTime?: Date;
 
   @Prop({ default: true })
-  botsEnabled: boolean;
+  botsEnabled!: boolean;
 
   @Prop({ default: 5 })
-  botCount: number;
+  botCount!: number;
 
   @Prop({ type: Types.ObjectId, ref: 'User' })
-  createdBy: Types.ObjectId;
+  createdBy!: Types.ObjectId;
 
   @Prop({ default: 0 })
-  version: number;
+  version!: number;
 
-  createdAt: Date;
-  updatedAt: Date;
+  createdAt!: Date;
+  updatedAt!: Date;
 }
 
 export const AuctionSchema = SchemaFactory.createForClass(Auction);

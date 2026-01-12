@@ -1,21 +1,29 @@
-import { Controller, Get, Post, Body, Param, Query, Req, UseGuards } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiParam, ApiQuery } from '@nestjs/swagger';
+import { Controller, Req, UseGuards } from '@nestjs/common';
+import { TypedRoute, TypedBody, TypedParam, TypedQuery } from '@nestia/core';
+import { FastifyRequest } from 'fastify';
 import { AuctionsService } from './auctions.service';
 import { BotService } from './bot.service';
-import { AuthGuard, AuthenticatedRequest } from '@/common';
+import { AuthGuard, AuthenticatedRequest, getClientIp } from '@/common';
 import {
-  CreateAuctionDto,
-  PlaceBidDto,
-  AuctionResponseDto,
-  LeaderboardEntryDto,
-  MinWinningBidResponseDto,
-  PlaceBidResponseDto,
-  AuditResponseDto,
+  ICreateAuction,
+  IPlaceBid,
+  IAuctionResponse,
+  ILeaderboardEntry,
+  IMinWinningBidResponse,
+  IPlaceBidResponse,
+  IAuditResponse,
 } from './dto';
-import { UserBidResponseDto } from '@/modules/bids';
+import { IUserBidResponse } from '@/modules/bids';
 import { AuctionStatus, AuctionDocument } from '@/schemas';
 
-@ApiTags('auctions')
+/**
+ * Auction status query parameter
+ */
+export interface IAuctionStatusQuery {
+  /** Filter auctions by status */
+  status?: AuctionStatus;
+}
+
 @Controller('auctions')
 export class AuctionsController {
   constructor(
@@ -23,69 +31,84 @@ export class AuctionsController {
     private readonly botService: BotService,
   ) {}
 
-  @Get()
-  @ApiOperation({
-    summary: 'List all auctions',
-    description: 'Returns a list of all auctions, optionally filtered by status.',
-  })
-  @ApiQuery({ name: 'status', required: false, enum: AuctionStatus, description: 'Filter auctions by status' })
-  @ApiResponse({ status: 200, description: 'List of auctions', type: [AuctionResponseDto] })
-  async findAll(@Query('status') status?: AuctionStatus) {
-    const auctions = await this.auctionsService.findAll(status);
+  /**
+   * List all auctions
+   *
+   * Returns a list of all auctions, optionally filtered by status.
+   *
+   * @tag auctions
+   * @param query Query parameters for filtering
+   * @returns List of auctions
+   */
+  @TypedRoute.Get()
+  async findAll(@TypedQuery() query: IAuctionStatusQuery): Promise<IAuctionResponse[]> {
+    const auctions = await this.auctionsService.findAll(query.status);
     return auctions.map(a => this.formatAuction(a));
   }
 
-  @Get('system/audit')
-  @ApiOperation({
-    summary: 'Financial audit',
-    description: 'Verifies system-wide financial integrity. Checks that frozen balances match active bids and no money is lost or duplicated.',
-  })
-  @ApiResponse({ status: 200, description: 'Audit results', type: AuditResponseDto })
-  async auditFinancialIntegrity() {
+  /**
+   * Financial audit
+   *
+   * Verifies system-wide financial integrity. Checks that frozen balances
+   * match active bids and no money is lost or duplicated.
+   *
+   * @tag auctions
+   * @returns Audit results
+   */
+  @TypedRoute.Get('system/audit')
+  async auditFinancialIntegrity(): Promise<IAuditResponse> {
     return this.auctionsService.auditFinancialIntegrity();
   }
 
-  @Get(':id')
-  @ApiOperation({
-    summary: 'Get auction details',
-    description: 'Returns detailed information about a specific auction including round states.',
-  })
-  @ApiParam({ name: 'id', description: 'Auction ID' })
-  @ApiResponse({ status: 200, description: 'Auction details', type: AuctionResponseDto })
-  @ApiResponse({ status: 404, description: 'Auction not found' })
-  async findOne(@Param('id') id: string) {
+  /**
+   * Get auction details
+   *
+   * Returns detailed information about a specific auction including round states.
+   *
+   * @tag auctions
+   * @param id Auction ID
+   * @returns Auction details
+   */
+  @TypedRoute.Get(':id')
+  async findOne(@TypedParam('id') id: string): Promise<IAuctionResponse> {
     const auction = await this.auctionsService.findById(id);
     return this.formatAuction(auction);
   }
 
-  @Post()
+  /**
+   * Create new auction
+   *
+   * Creates a new auction with the specified configuration.
+   * The sum of items across all rounds must equal totalItems.
+   *
+   * @tag auctions
+   * @security bearer
+   * @param body Auction configuration
+   * @returns Created auction
+   */
+  @TypedRoute.Post()
   @UseGuards(AuthGuard)
-  @ApiBearerAuth()
-  @ApiOperation({
-    summary: 'Create new auction',
-    description: 'Creates a new auction with the specified configuration. The sum of items across all rounds must equal totalItems.',
-  })
-  @ApiResponse({ status: 201, description: 'Auction created successfully', type: AuctionResponseDto })
-  @ApiResponse({ status: 400, description: 'Invalid configuration' })
-  @ApiResponse({ status: 401, description: 'Unauthorized' })
-  async create(@Body() dto: CreateAuctionDto, @Req() req: AuthenticatedRequest) {
-    const auction = await this.auctionsService.create(dto, req.user.sub);
+  async create(
+    @TypedBody() body: ICreateAuction,
+    @Req() req: AuthenticatedRequest,
+  ): Promise<IAuctionResponse> {
+    const auction = await this.auctionsService.create(body, req.user.sub);
     return this.formatAuction(auction);
   }
 
-  @Post(':id/start')
+  /**
+   * Start auction
+   *
+   * Starts a pending auction. The first round begins immediately.
+   *
+   * @tag auctions
+   * @security bearer
+   * @param id Auction ID
+   * @returns Started auction
+   */
+  @TypedRoute.Post(':id/start')
   @UseGuards(AuthGuard)
-  @ApiBearerAuth()
-  @ApiOperation({
-    summary: 'Start auction',
-    description: 'Starts a pending auction. The first round begins immediately.',
-  })
-  @ApiParam({ name: 'id', description: 'Auction ID' })
-  @ApiResponse({ status: 200, description: 'Auction started', type: AuctionResponseDto })
-  @ApiResponse({ status: 400, description: 'Auction cannot be started (wrong status)' })
-  @ApiResponse({ status: 401, description: 'Unauthorized' })
-  @ApiResponse({ status: 404, description: 'Auction not found' })
-  async start(@Param('id') id: string) {
+  async start(@TypedParam('id') id: string): Promise<IAuctionResponse> {
     const auction = await this.auctionsService.start(id);
 
     if (auction.botsEnabled) {
@@ -95,33 +118,35 @@ export class AuctionsController {
     return this.formatAuction(auction);
   }
 
-  @Post(':id/bid')
+  /**
+   * Place or increase bid
+   *
+   * Places a new bid or increases an existing bid on an active auction.
+   *
+   * **Rules:**
+   * - Minimum bid amount must be met
+   * - If you have an existing bid, the new amount must be greater than your current bid by at least the minimum increment
+   * - Only the difference between your current and new bid is deducted from your balance
+   * - Bids within the anti-sniping window extend the round
+   *
+   * @tag auctions
+   * @security bearer
+   * @param id Auction ID
+   * @param body Bid amount
+   * @returns Placed bid and updated auction
+   */
+  @TypedRoute.Post(':id/bid')
   @UseGuards(AuthGuard)
-  @ApiBearerAuth()
-  @ApiOperation({
-    summary: 'Place or increase bid',
-    description: `Places a new bid or increases an existing bid on an active auction.
-
-**Rules:**
-- Minimum bid amount must be met
-- If you have an existing bid, the new amount must be greater than your current bid by at least the minimum increment
-- Only the difference between your current and new bid is deducted from your balance
-- Bids within the anti-sniping window extend the round`,
-  })
-  @ApiParam({ name: 'id', description: 'Auction ID' })
-  @ApiResponse({ status: 201, description: 'Bid placed successfully', type: PlaceBidResponseDto })
-  @ApiResponse({ status: 400, description: 'Invalid bid (too low, auction not active, insufficient balance)' })
-  @ApiResponse({ status: 401, description: 'Unauthorized' })
-  @ApiResponse({ status: 404, description: 'Auction not found' })
   async placeBid(
-    @Param('id') id: string,
-    @Body() dto: PlaceBidDto,
+    @TypedParam('id') id: string,
+    @TypedBody() body: IPlaceBid,
     @Req() req: AuthenticatedRequest,
-  ) {
-    const { bid, auction } = await this.auctionsService.placeBid(id, req.user.sub, dto);
+  ): Promise<IPlaceBidResponse> {
+    const clientIp = getClientIp(req as unknown as FastifyRequest);
+    const { bid, auction } = await this.auctionsService.placeBid(id, req.user.sub, body, clientIp);
     return {
       bid: {
-        id: bid._id,
+        id: bid._id.toString(),
         amount: bid.amount,
         status: bid.status,
         createdAt: bid.createdAt,
@@ -131,33 +156,49 @@ export class AuctionsController {
     };
   }
 
-  @Get(':id/leaderboard')
-  @ApiOperation({
-    summary: 'Get auction leaderboard',
-    description: 'Returns the current ranking of all active bids, sorted by amount descending.',
-  })
-  @ApiParam({ name: 'id', description: 'Auction ID' })
-  @ApiResponse({ status: 200, description: 'Leaderboard entries', type: [LeaderboardEntryDto] })
-  @ApiResponse({ status: 404, description: 'Auction not found' })
-  async getLeaderboard(@Param('id') id: string) {
-    return this.auctionsService.getLeaderboard(id);
+  /**
+   * Get auction leaderboard
+   *
+   * Returns the current ranking of all active bids, sorted by amount descending.
+   *
+   * @tag auctions
+   * @param id Auction ID
+   * @returns Leaderboard entries
+   */
+  @TypedRoute.Get(':id/leaderboard')
+  async getLeaderboard(@TypedParam('id') id: string): Promise<ILeaderboardEntry[]> {
+    const leaderboard = await this.auctionsService.getLeaderboard(id);
+    return leaderboard.map(entry => ({
+      rank: entry.rank,
+      amount: entry.amount,
+      username: entry.username,
+      isBot: entry.isBot,
+      status: entry.status,
+      itemNumber: entry.itemNumber,
+      isWinning: entry.isWinning,
+      createdAt: entry.createdAt,
+    }));
   }
 
-  @Get(':id/my-bids')
+  /**
+   * Get my bids
+   *
+   * Returns all bids placed by the authenticated user in this auction.
+   *
+   * @tag auctions
+   * @security bearer
+   * @param id Auction ID
+   * @returns List of user bids
+   */
+  @TypedRoute.Get(':id/my-bids')
   @UseGuards(AuthGuard)
-  @ApiBearerAuth()
-  @ApiOperation({
-    summary: 'Get my bids',
-    description: 'Returns all bids placed by the authenticated user in this auction.',
-  })
-  @ApiParam({ name: 'id', description: 'Auction ID' })
-  @ApiResponse({ status: 200, description: 'List of user bids', type: [UserBidResponseDto] })
-  @ApiResponse({ status: 401, description: 'Unauthorized' })
-  @ApiResponse({ status: 404, description: 'Auction not found' })
-  async getMyBids(@Param('id') id: string, @Req() req: AuthenticatedRequest) {
+  async getMyBids(
+    @TypedParam('id') id: string,
+    @Req() req: AuthenticatedRequest,
+  ): Promise<IUserBidResponse[]> {
     const bids = await this.auctionsService.getUserBids(id, req.user.sub);
     return bids.map(b => ({
-      id: b._id,
+      id: b._id.toString(),
       amount: b.amount,
       status: b.status,
       wonRound: b.wonRound,
@@ -167,27 +208,36 @@ export class AuctionsController {
     }));
   }
 
-  @Get(':id/min-winning-bid')
-  @ApiOperation({
-    summary: 'Get minimum winning bid',
-    description: 'Returns the minimum bid amount needed to be in a winning position for the current round.',
-  })
-  @ApiParam({ name: 'id', description: 'Auction ID' })
-  @ApiResponse({ status: 200, description: 'Minimum winning bid amount', type: MinWinningBidResponseDto })
-  @ApiResponse({ status: 404, description: 'Auction not found' })
-  async getMinWinningBid(@Param('id') id: string) {
+  /**
+   * Get minimum winning bid
+   *
+   * Returns the minimum bid amount needed to be in a winning position for the current round.
+   *
+   * @tag auctions
+   * @param id Auction ID
+   * @returns Minimum winning bid amount
+   */
+  @TypedRoute.Get(':id/min-winning-bid')
+  async getMinWinningBid(@TypedParam('id') id: string): Promise<IMinWinningBidResponse> {
     const minBid = await this.auctionsService.getMinWinningBid(id);
     return { minWinningBid: minBid };
   }
 
-  private formatAuction(auction: AuctionDocument) {
+  private formatAuction(auction: AuctionDocument): IAuctionResponse {
     return {
-      id: auction._id,
+      id: auction._id.toString(),
       title: auction.title,
       description: auction.description,
       totalItems: auction.totalItems,
       roundsConfig: auction.roundsConfig,
-      rounds: auction.rounds,
+      rounds: auction.rounds.map(r => ({
+        roundNumber: r.roundNumber,
+        itemsCount: r.itemsCount,
+        startTime: r.startTime,
+        endTime: r.endTime,
+        extensionsCount: r.extensionsCount,
+        completed: r.completed,
+      })),
       status: auction.status,
       currentRound: auction.currentRound,
       minBidAmount: auction.minBidAmount,

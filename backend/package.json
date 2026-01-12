@@ -5,6 +5,7 @@
   "main": "dist/src/main.js",
   "scripts": {
     "build": "nest build",
+    "build:test": "tsc -p test/tsconfig.json",
     "start": "nest start",
     "start:dev": "nest start --watch",
     "start:debug": "nest start --debug --watch",
@@ -13,11 +14,16 @@
     "test": "jest",
     "test:watch": "jest --watch",
     "test:cov": "jest --coverage",
-    "test:e2e": "jest --config ./test/jest-e2e.json",
-    "test:stress": "ts-node src/scripts/load-test.ts"
+    "test:e2e": "npm run build:test && node dist-test/test/index.js",
+    "benchmark": "npm run build:test && node dist-test/test/benchmark.js",
+    "load-test": "npx ts-node test/load-test.ts",
+    "sdk": "npx nestia sdk",
+    "sdk:e2e": "npx nestia e2e"
   },
   "dependencies": {
     "@fastify/static": "^9.0.0",
+    "@grammyjs/validator": "^1.0.1",
+    "@nestia/core": "^10.0.1",
     "@nestjs/common": "^11.1.11",
     "@nestjs/config": "^4.0.2",
     "@nestjs/core": "^11.1.11",
@@ -30,11 +36,11 @@
     "@nestjs/throttler": "^6.5.0",
     "@nestjs/websockets": "^11.1.11",
     "@socket.io/redis-adapter": "^8.3.0",
-    "class-transformer": "^0.5.1",
-    "class-validator": "^0.14.3",
+    "grammy": "^1.39.2",
     "ioredis": "^5.9.1",
     "joi": "^18.0.2",
     "mongoose": "^9.1.2",
+    "nestjs-i18n": "^10.6.0",
     "redlock": "^5.0.0-beta.2",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.2",
@@ -42,6 +48,9 @@
     "uuid": "^13.0.0"
   },
   "devDependencies": {
+    "@nestia/benchmark": "^10.0.1",
+    "@nestia/e2e": "^10.0.1",
+    "@nestia/sdk": "^10.0.1",
     "@nestjs/cli": "^11.0.14",
     "@nestjs/schematics": "^11.0.9",
     "@nestjs/testing": "^11.1.11",
@@ -53,14 +62,18 @@
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-prettier": "^5.5.4",
     "jest": "^30.2.0",
+    "nestia": "^10.0.1",
     "prettier": "^3.7.4",
     "socket.io-client": "^4.8.3",
     "source-map-support": "^0.5.21",
     "ts-jest": "^29.4.6",
     "ts-loader": "^9.5.4",
     "ts-node": "^10.9.2",
+    "ts-patch": "^3.3.0",
     "tsconfig-paths": "^4.2.0",
-    "typescript": "^5.9.3"
+    "typescript": "^5.9.3",
+    "typescript-transform-paths": "^3.5.6",
+    "typia": "^11.0.0"
   },
   "jest": {
     "moduleFileExtensions": [

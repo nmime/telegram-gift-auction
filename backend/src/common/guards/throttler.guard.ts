@@ -3,7 +3,7 @@ import { ThrottlerGuard, ThrottlerModuleOptions, ThrottlerStorage } from '@nestj
 import { Reflector } from '@nestjs/core';
 import { FastifyRequest } from 'fastify';
 
-const LOCALHOST_IPS = ['127.0.0.1', '::1', '::ffff:127.0.0.1', 'localhost'];
+export const LOCALHOST_IPS = ['127.0.0.1', '::1', '::ffff:127.0.0.1', 'localhost'];
 
 export function getClientIp(request: FastifyRequest): string {
   const realIp = request.headers['x-real-ip'] as string | undefined;

@@ -1,148 +1,166 @@
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { UserBidResponseDto } from '@/modules/bids';
+import type { IUserBidResponse } from '@/modules/bids';
+import { AuctionStatus, BidStatus } from '@/schemas';
 
-export class RoundConfigResponseDto {
-  @ApiProperty({ example: 1 })
-  roundNumber: number;
+/**
+ * Round configuration in auction response
+ */
+export interface IRoundConfigResponse {
+  /** Number of items in this round */
+  itemsCount: number;
 
-  @ApiProperty({ example: 5 })
-  itemCount: number;
-
-  @ApiProperty({ example: 60 })
+  /** Duration of the round in minutes */
   durationMinutes: number;
 }
 
-export class RoundStateResponseDto {
-  @ApiProperty({ example: 1 })
+/**
+ * Round state in auction response
+ */
+export interface IRoundStateResponse {
+  /** Round number (1-based) */
   roundNumber: number;
 
-  @ApiProperty({ example: 5 })
-  itemCount: number;
+  /** Number of items in this round */
+  itemsCount: number;
 
-  @ApiProperty({ enum: ['pending', 'active', 'completed'], example: 'active' })
-  status: string;
-
-  @ApiPropertyOptional({ type: Date, nullable: true })
+  /** Round start time (null if not started) */
   startTime?: Date | null;
 
-  @ApiPropertyOptional({ type: Date, nullable: true })
+  /** Round end time (null if not completed) */
   endTime?: Date | null;
 
-  @ApiProperty({ example: 0 })
-  extensionCount: number;
+  /** Number of anti-sniping extensions applied */
+  extensionsCount: number;
+
+  /** Whether round is completed */
+  completed: boolean;
 }
 
-export class AuctionResponseDto {
-  @ApiProperty({ example: '507f1f77bcf86cd799439011' })
+/**
+ * Auction response DTO
+ */
+export interface IAuctionResponse {
+  /** Auction ID */
   id: string;
 
-  @ApiProperty({ example: 'Premium Gift Auction' })
+  /** Auction title */
   title: string;
 
-  @ApiPropertyOptional({ example: 'Win exclusive Telegram gifts!' })
+  /** Auction description */
   description?: string;
 
-  @ApiProperty({ example: 10 })
+  /** Total number of items in the auction */
   totalItems: number;
 
-  @ApiProperty({ type: [RoundConfigResponseDto] })
-  roundsConfig: RoundConfigResponseDto[];
+  /** Configuration for each round */
+  roundsConfig: IRoundConfigResponse[];
 
-  @ApiProperty({ type: [RoundStateResponseDto] })
-  rounds: RoundStateResponseDto[];
+  /** State of each round */
+  rounds: IRoundStateResponse[];
 
-  @ApiProperty({ enum: ['pending', 'active', 'completed'], example: 'active' })
-  status: string;
+  /** Auction status */
+  status: AuctionStatus;
 
-  @ApiProperty({ example: 1 })
+  /** Current round number (1-based) */
   currentRound: number;
 
-  @ApiProperty({ example: 100 })
+  /** Minimum bid amount in Stars */
   minBidAmount: number;
 
-  @ApiProperty({ example: 10 })
+  /** Minimum increment for bid increases */
   minBidIncrement: number;
 
-  @ApiProperty({ example: 5 })
+  /** Anti-sniping window in minutes */
   antiSnipingWindowMinutes: number;
 
-  @ApiProperty({ example: 2 })
+  /** Anti-sniping extension duration in minutes */
   antiSnipingExtensionMinutes: number;
 
-  @ApiProperty({ example: 3 })
+  /** Maximum anti-sniping extensions per round */
   maxExtensions: number;
 
-  @ApiProperty({ example: true })
+  /** Whether bots are enabled */
   botsEnabled: boolean;
 
-  @ApiProperty({ example: 5 })
+  /** Number of bots */
   botCount: number;
 
-  @ApiPropertyOptional({ type: Date, nullable: true })
+  /** Auction start time */
   startTime?: Date | null;
 
-  @ApiPropertyOptional({ type: Date, nullable: true })
+  /** Auction end time */
   endTime?: Date | null;
 
-  @ApiProperty({ example: '2024-01-15T10:30:00.000Z' })
+  /** Auction creation time */
   createdAt: Date;
 }
 
-export class LeaderboardEntryDto {
-  @ApiProperty({ example: 1 })
+/**
+ * Leaderboard entry
+ */
+export interface ILeaderboardEntry {
+  /** Rank in the leaderboard (1-based) */
   rank: number;
 
-  @ApiProperty({ example: 5000 })
+  /** Bid amount in Stars */
   amount: number;
 
-  @ApiProperty({ example: 'john_doe' })
+  /** Username of the bidder */
   username: string;
 
-  @ApiProperty({ example: false })
+  /** Whether the bidder is a bot */
   isBot: boolean;
 
-  @ApiProperty({ enum: ['active', 'won', 'lost', 'refunded'], example: 'active' })
-  status: string;
+  /** Bid status */
+  status: BidStatus;
 
-  @ApiPropertyOptional({ type: Number, nullable: true, example: 1 })
+  /** Item number won (if applicable) */
   itemNumber?: number | null;
 
-  @ApiProperty({ example: true })
+  /** Whether this bid is currently in a winning position */
   isWinning: boolean;
 
-  @ApiProperty({ example: '2024-01-15T10:30:00.000Z' })
+  /** Bid creation time */
   createdAt: Date;
 }
 
-export class MinWinningBidResponseDto {
-  @ApiPropertyOptional({ type: Number, nullable: true, example: 550 })
+/**
+ * Minimum winning bid response
+ */
+export interface IMinWinningBidResponse {
+  /** Minimum bid amount needed to be in a winning position (null if no winning bid threshold) */
   minWinningBid: number | null;
 }
 
-export class PlaceBidResponseDto {
-  @ApiProperty({ type: UserBidResponseDto })
-  bid: UserBidResponseDto;
+/**
+ * Place bid response
+ */
+export interface IPlaceBidResponse {
+  /** The placed bid */
+  bid: IUserBidResponse;
 
-  @ApiProperty({ type: AuctionResponseDto })
-  auction: AuctionResponseDto;
+  /** Updated auction state */
+  auction: IAuctionResponse;
 }
 
-export class AuditResponseDto {
-  @ApiProperty({ example: true })
+/**
+ * Financial audit response
+ */
+export interface IAuditResponse {
+  /** Whether the audit passed */
   isValid: boolean;
 
-  @ApiProperty({ example: 50000 })
+  /** Total balance across all users */
   totalBalance: number;
 
-  @ApiProperty({ example: 5000 })
+  /** Total frozen balance across all users */
   totalFrozen: number;
 
-  @ApiProperty({ example: 2000 })
+  /** Total winnings distributed */
   totalWinnings: number;
 
-  @ApiProperty({ example: 0 })
+  /** Discrepancy amount (should be 0 if valid) */
   discrepancy: number;
 
-  @ApiProperty({ example: 'All balances verified' })
+  /** Audit details message */
   details: string;
 }

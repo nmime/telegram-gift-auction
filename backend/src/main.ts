@@ -1,39 +1,44 @@
 import { NestFactory } from '@nestjs/core';
 import { FastifyAdapter, NestFastifyApplication } from '@nestjs/platform-fastify';
-import { ValidationPipe, INestApplication, Logger } from '@nestjs/common';
+import { Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
+import { SwaggerModule, OpenAPIObject } from '@nestjs/swagger';
+import { NestiaSwaggerComposer } from '@nestia/sdk';
 import { Server } from 'socket.io';
 import { AppModule } from './app.module';
 import { EventsGateway } from './modules/events/events.gateway';
 
 async function bootstrap() {
   const logger = new Logger('Bootstrap');
-  const adapter = new FastifyAdapter();
-  const app = (await NestFactory.create(
+  const app = await NestFactory.create<NestFastifyApplication>(
     AppModule,
-    adapter as unknown as Parameters<typeof NestFactory.create>[1],
-  )) as unknown as NestFastifyApplication;
+    new FastifyAdapter(),
+  );
 
   const configService = app.get(ConfigService);
 
   app.enableCors({
-    origin: configService.get<string>('cors.origin'),
-    credentials: configService.get<boolean>('cors.credentials'),
+    origin: true,
+    credentials: true,
   });
-
-
-  app.useGlobalPipes(new ValidationPipe({
-    whitelist: true,
-    transform: true,
-    forbidNonWhitelisted: true,
-  }));
 
   app.setGlobalPrefix('api');
 
-  const config = new DocumentBuilder()
-    .setTitle('Gift Auction API')
-    .setDescription(`
+  const port = configService.get<number>('port')!;
+  const nodeEnv = configService.get<string>('nodeEnv');
+  const miniAppUrl = configService.get<string>('telegram.miniAppUrl');
+
+  // Server URL: use MINI_APP_URL in production, localhost in development
+  const serverUrl = nodeEnv === 'production' && miniAppUrl
+    ? miniAppUrl
+    : `http://localhost:${port}`;
+
+  // Generate Swagger document using Nestia's runtime composer
+  const document = await NestiaSwaggerComposer.document(app, {
+    openapi: '3.1',
+    info: {
+      title: 'Gift Auction API',
+      description: `
 ## Overview
 Multi-round auction system API inspired by Telegram Gift Auctions.
 
@@ -65,32 +70,26 @@ Server emits:
 - \`anti-sniping\` - Round extended
 - \`round-complete\` - Round ended with winners
 - \`auction-complete\` - Auction finished
-    `)
-    .setVersion('1.0.0')
-    .addTag('auth', 'Authentication endpoints')
-    .addTag('users', 'User management and balance operations')
-    .addTag('auctions', 'Auction management and bidding')
-    .addTag('transactions', 'Transaction history')
-    .addBearerAuth({
-      type: 'http',
-      scheme: 'bearer',
-      bearerFormat: 'JWT',
-      description: 'Enter JWT token',
-    })
-    .build();
+      `,
+      version: '1.0.0',
+    },
+    servers: [{ url: serverUrl }],
+    security: {
+      bearer: {
+        type: 'http',
+        scheme: 'bearer',
+        bearerFormat: 'JWT',
+      },
+    },
+  });
 
-  const document = SwaggerModule.createDocument(app as unknown as INestApplication, config);
-  SwaggerModule.setup('api/docs', app as unknown as INestApplication, document, {
+  SwaggerModule.setup('api/docs', app, document as OpenAPIObject, {
     swaggerOptions: {
       persistAuthorization: true,
       tagsSorter: 'alpha',
       operationsSorter: 'alpha',
     },
-    customSiteTitle: 'Gift Auction API Docs',
-    customCss: `
-      .swagger-ui .topbar { display: none }
-      .swagger-ui .info .title { font-size: 2.5rem }
-    `,
+    customSiteTitle: 'Gift Auction API Docs'
   });
 
   const shutdown = async () => {
@@ -102,14 +101,13 @@ Server emits:
   process.on('SIGTERM', shutdown);
   process.on('SIGINT', shutdown);
 
-  const port = configService.get<number>('port')!;
   await app.listen(port, '0.0.0.0');
 
   // Create Socket.IO server manually after HTTP server is listening
   const httpServer = app.getHttpServer();
   const io = new Server(httpServer, {
     cors: {
-      origin: configService.get<string>('cors.origin'),
+      origin: true,
       methods: ['GET', 'POST'],
       credentials: true,
     },

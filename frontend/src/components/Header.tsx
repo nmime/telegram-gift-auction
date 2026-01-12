@@ -1,97 +1,50 @@
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../hooks/useAuth';
-import { useNotification } from '../context/NotificationContext';
-import * as api from '../api';
-import { useState } from 'react';
 
 export default function Header() {
-  const { user, logout, updateBalance } = useAuth();
-  const { showNotification } = useNotification();
-  const navigate = useNavigate();
-  const [loading, setLoading] = useState(false);
-
-  const handleDeposit = async () => {
-    if (loading) return;
-    setLoading(true);
-    try {
-      const { balance, frozenBalance } = await api.deposit(1000);
-      updateBalance(balance, frozenBalance);
-      showNotification('Deposited 1000 Stars successfully', 'success');
-    } catch (error) {
-      const message = (error as Error).message || 'Deposit failed';
-      showNotification(message, 'error');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleWithdraw = async () => {
-    if (loading || !user || user.balance < 1000) return;
-    setLoading(true);
-    try {
-      const { balance, frozenBalance } = await api.withdraw(1000);
-      updateBalance(balance, frozenBalance);
-      showNotification('Withdrew 1000 Stars successfully', 'success');
-    } catch (error) {
-      const message = (error as Error).message || 'Withdrawal failed';
-      showNotification(message, 'error');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleLogout = async () => {
-    await logout();
-    navigate('/');
-  };
+  const { t } = useTranslation();
+  const { user } = useAuth();
 
   return (
     <header className="header">
       <Link to="/" className="logo">
-        Gift Auction
+        {t('app.title')}
       </Link>
 
-      <nav className="flex gap-4 items-center">
+      {/* Desktop navigation */}
+      <nav className="desktop-nav">
         <Link to="/auctions" className="btn btn-secondary">
-          Auctions
+          {t('nav.auctions')}
         </Link>
         <Link to="/auctions/create" className="btn btn-primary">
-          Create Auction
+          {t('nav.create')}
         </Link>
         <Link to="/transactions" className="btn btn-secondary">
-          Transactions
+          {t('transactions.title')}
         </Link>
       </nav>
 
-      <div className="user-info">
-        <div className="balance-display">
-          <span>Balance: <strong>{user?.balance || 0} Stars</strong></span>
-          {user && user.frozenBalance > 0 && (
-            <span className="text-muted"> (Frozen: {user.frozenBalance} Stars)</span>
-          )}
-          <div className="balance-controls">
-            <button
-              className="balance-btn plus"
-              onClick={handleDeposit}
-              disabled={loading}
-              title="Add 1000"
-            >
-              +
-            </button>
-            <button
-              className="balance-btn minus"
-              onClick={handleWithdraw}
-              disabled={loading || !user || user.balance < 1000}
-              title="Remove 1000"
-            >
-              -
-            </button>
-          </div>
-        </div>
-        <span>{user?.username}</span>
-        <button className="btn btn-secondary" onClick={handleLogout}>
-          Logout
-        </button>
+      {/* Desktop balance & user */}
+      <div className="desktop-user-info">
+        <Link to="/balance" className="balance-chip">
+          <span className="balance-amount">{user?.balance || 0}</span>
+          <span className="balance-currency">{t('balance.currency')}</span>
+        </Link>
+        <Link to="/profile" className="user-avatar">
+          {(user?.firstName || user?.username || '?').charAt(0).toUpperCase()}
+        </Link>
+      </div>
+
+      {/* Mobile: show balance and avatar */}
+      <div className="mobile-header-right">
+        <Link to="/balance" className="balance-chip">
+          <span className="balance-amount">{user?.balance || 0}</span>
+          <span className="balance-currency">{t('balance.currency')}</span>
+        </Link>
+        <Link to="/profile" className="user-avatar">
+          {(user?.firstName || user?.username || '?').charAt(0).toUpperCase()}
+        </Link>
       </div>
     </header>
   );

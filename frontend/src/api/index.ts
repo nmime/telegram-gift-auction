@@ -10,6 +10,7 @@ import type {
   MinWinningBidResponse,
   LoginResponse,
   ApiError,
+  TelegramWidgetUser,
 } from '../types';
 
 const API_BASE = import.meta.env.VITE_API_URL;
@@ -105,6 +106,26 @@ export async function login(username: string): Promise<LoginResponse> {
   const response = await fetchApi<LoginResponse>('/auth/login', {
     method: 'POST',
     body: JSON.stringify({ username }),
+    skipAuthCheck: true,
+  });
+  setToken(response.accessToken);
+  return response;
+}
+
+export async function loginWithTelegramWidget(user: TelegramWidgetUser): Promise<LoginResponse> {
+  const response = await fetchApi<LoginResponse>('/auth/telegram/widget', {
+    method: 'POST',
+    body: JSON.stringify(user),
+    skipAuthCheck: true,
+  });
+  setToken(response.accessToken);
+  return response;
+}
+
+export async function loginWithTelegramMiniApp(initData: string): Promise<LoginResponse> {
+  const response = await fetchApi<LoginResponse>('/auth/telegram/webapp', {
+    method: 'POST',
+    body: JSON.stringify({ initData }),
     skipAuthCheck: true,
   });
   setToken(response.accessToken);

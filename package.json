@@ -19,7 +19,8 @@
     "lint": "npm run lint --workspaces"
   },
   "devDependencies": {
-    "concurrently": "^9.2.1"
+    "concurrently": "^9.2.1",
+    "vite-plugin-mkcert": "^1.17.9"
   },
   "engines": {
     "node": ">=22.0.0"

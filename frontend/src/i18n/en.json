@@ -1,0 +1,118 @@
+{
+  "app": {
+    "title": "Gift Auction",
+    "description": "Multi-round auction system inspired by Telegram Gift Auctions"
+  },
+  "auth": {
+    "authenticating": "Authenticating with Telegram...",
+    "signIn": "Sign in with your Telegram account to continue",
+    "loggingIn": "Logging in...",
+    "loadingWidget": "Loading Telegram login...",
+    "logoutSuccess": "You have been logged out",
+    "welcome": "Welcome, {{name}}!",
+    "botNotConfigured": "Bot username not configured",
+    "setBotUsername": "Set VITE_BOT_USERNAME in .env file",
+    "localhostWarning": "Login Widget unavailable on localhost",
+    "useMiniApp": "Open the app via Telegram Mini App to authenticate",
+    "widgetLoadFailed": "Failed to load Telegram login widget",
+    "loginFailed": "Telegram login failed"
+  },
+  "nav": {
+    "auctions": "Auctions",
+    "myBids": "My Bids",
+    "balance": "Balance",
+    "logout": "Logout",
+    "profile": "Profile",
+    "create": "Create"
+  },
+  "auction": {
+    "title": "Auctions",
+    "active": "Active",
+    "upcoming": "Upcoming",
+    "completed": "Completed",
+    "noAuctions": "No auctions available",
+    "round": "Round {{current}} of {{total}}",
+    "timeLeft": "Time left",
+    "endsIn": "Ends in",
+    "startsIn": "Starts in",
+    "ended": "Ended",
+    "winners": "Winners",
+    "itemsPerRound": "{{count}} items per round",
+    "totalItems": "{{count}} total items",
+    "minBid": "Min bid",
+    "yourBid": "Your bid",
+    "placeBid": "Place Bid",
+    "bidPlaced": "Bid placed successfully!",
+    "bidAmount": "Bid amount",
+    "insufficientBalance": "Insufficient balance",
+    "bidTooLow": "Bid must be higher than {{min}}",
+    "leaderboard": "Leaderboard",
+    "position": "Position",
+    "bidder": "Bidder",
+    "amount": "Amount",
+    "you": "You",
+    "antiSniping": "Anti-sniping: Round extended!",
+    "roundComplete": "Round {{round}} complete!",
+    "youWon": "You won this round!",
+    "auctionComplete": "Auction complete!",
+    "create": "Create Auction",
+    "start": "Start Auction"
+  },
+  "balance": {
+    "title": "Balance",
+    "available": "Available",
+    "frozen": "Frozen",
+    "total": "Total",
+    "deposit": "Deposit",
+    "withdraw": "Withdraw",
+    "depositAmount": "Deposit amount",
+    "withdrawAmount": "Withdraw amount",
+    "depositSuccess": "Deposited {{amount}} Stars",
+    "withdrawSuccess": "Withdrew {{amount}} Stars",
+    "currency": "Stars"
+  },
+  "bids": {
+    "title": "My Bids",
+    "noBids": "You haven't placed any bids yet",
+    "status": "Status",
+    "winning": "Winning",
+    "outbid": "Outbid",
+    "won": "Won",
+    "lost": "Lost"
+  },
+  "transactions": {
+    "title": "Transactions",
+    "noTransactions": "No transactions yet",
+    "deposit": "Deposit",
+    "withdrawal": "Withdrawal",
+    "bidPlaced": "Bid Placed",
+    "bidRefund": "Bid Refund",
+    "auctionWin": "Auction Win"
+  },
+  "common": {
+    "loading": "Loading...",
+    "error": "Error",
+    "retry": "Retry",
+    "cancel": "Cancel",
+    "confirm": "Confirm",
+    "save": "Save",
+    "delete": "Delete",
+    "edit": "Edit",
+    "back": "Back",
+    "next": "Next",
+    "submit": "Submit",
+    "close": "Close"
+  },
+  "errors": {
+    "networkError": "Network error. Please try again.",
+    "unauthorized": "Session expired. Please log in again.",
+    "serverError": "Server error. Please try again later.",
+    "unknown": "An error occurred"
+  },
+  "time": {
+    "days": "{{count}}d",
+    "hours": "{{count}}h",
+    "minutes": "{{count}}m",
+    "seconds": "{{count}}s"
+  }
+}

@@ -1,36 +1,56 @@
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { TransactionType } from '@/schemas';
 
-export class TransactionResponseDto {
-  @ApiProperty({ example: '507f1f77bcf86cd799439011' })
+/**
+ * Transaction response
+ */
+export interface ITransactionResponse {
+  /** Transaction ID */
   id: string;
 
-  @ApiProperty({
-    enum: ['deposit', 'withdraw', 'bid_freeze', 'bid_unfreeze', 'bid_win', 'bid_refund'],
-    example: 'deposit',
-  })
-  type: string;
+  /** Transaction type */
+  type: TransactionType;
 
-  @ApiProperty({ example: 1000 })
+  /** Transaction amount in Stars */
   amount: number;
 
-  @ApiProperty({ example: 0 })
+  /** Balance before transaction */
   balanceBefore: number;
 
-  @ApiProperty({ example: 1000 })
+  /** Balance after transaction */
   balanceAfter: number;
 
-  @ApiProperty({ example: 0 })
-  frozenBefore: number;
+  /** Frozen balance before transaction */
+  frozenBefore?: number;
 
-  @ApiProperty({ example: 0 })
-  frozenAfter: number;
+  /** Frozen balance after transaction */
+  frozenAfter?: number;
 
-  @ApiPropertyOptional({ type: String, nullable: true })
+  /** Related auction ID (if applicable) */
   auctionId?: string | null;
 
-  @ApiPropertyOptional({ type: String, nullable: true, example: 'Initial deposit' })
+  /** Transaction description */
   description?: string | null;
 
-  @ApiProperty({ example: '2024-01-15T10:30:00.000Z' })
+  /** Transaction creation time */
   createdAt: Date;
+}
+
+/**
+ * Transaction query parameters
+ */
+export interface ITransactionQuery {
+  /**
+   * Maximum number of transactions to return
+   * @minimum 1
+   * @maximum 100
+   * @default 50
+   */
+  limit?: number;
+
+  /**
+   * Number of transactions to skip
+   * @minimum 0
+   * @default 0
+   */
+  offset?: number;
 }

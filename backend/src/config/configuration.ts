@@ -15,14 +15,15 @@ export const configuration = () => ({
     expiresIn: '24h',
   },
 
-  cors: {
-    origin: process.env.CORS_ORIGIN || 'http://localhost:5173',
-    credentials: true,
-  },
-
   throttle: {
     ttl: parseInt(process.env.THROTTLE_TTL || '60000', 10),
     limit: parseInt(process.env.THROTTLE_LIMIT || '100', 10),
+  },
+
+  telegram: {
+    botToken: process.env.BOT_TOKEN || '',
+    webhookSecret: process.env.WEBHOOK_SECRET || '',
+    miniAppUrl: process.env.MINI_APP_URL || '',
   },
 });
 

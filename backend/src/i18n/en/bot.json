@@ -1,0 +1,20 @@
+{
+  "welcome": {
+    "title": "Welcome to Gift Auction!",
+    "description": "Participate in multi-round auctions for exclusive digital collectibles.",
+    "openApp": "Click the button below to open the auction app:",
+    "button": "Open Auction App"
+  },
+  "help": {
+    "title": "Gift Auction Help",
+    "commands": "Commands:",
+    "start": "/start - Open the auction app",
+    "helpCmd": "/help - Show this help message",
+    "howItWorks": "How it works:",
+    "step1": "1. Open the auction app",
+    "step2": "2. Browse active auctions",
+    "step3": "3. Place bids to win exclusive gifts",
+    "step4": "4. Highest bidders at round end win!",
+    "goodLuck": "Good luck!"
+  }
+}

@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <defs>
+    <linearGradient id="giftGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#6ab3f3"/>
+      <stop offset="100%" style="stop-color:#5288c1"/>
+    </linearGradient>
+  </defs>
+  <!-- Gift box body -->
+  <rect x="8" y="28" width="48" height="32" rx="4" fill="url(#giftGrad)"/>
+  <!-- Gift box lid -->
+  <rect x="4" y="20" width="56" height="12" rx="3" fill="url(#giftGrad)"/>
+  <!-- Vertical ribbon -->
+  <rect x="28" y="20" width="8" height="40" fill="#f5f5f5"/>
+  <!-- Horizontal ribbon -->
+  <rect x="4" y="23" width="56" height="6" fill="#f5f5f5"/>
+  <!-- Bow left -->
+  <ellipse cx="24" cy="14" rx="10" ry="8" fill="#f5f5f5"/>
+  <!-- Bow right -->
+  <ellipse cx="40" cy="14" rx="10" ry="8" fill="#f5f5f5"/>
+  <!-- Bow center -->
+  <circle cx="32" cy="16" r="6" fill="url(#giftGrad)"/>
+  <!-- Star sparkle -->
+  <path d="M52 8 L53 11 L56 12 L53 13 L52 16 L51 13 L48 12 L51 11 Z" fill="#ffd700"/>
+</svg>

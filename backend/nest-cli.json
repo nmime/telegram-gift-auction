@@ -3,6 +3,18 @@
   "collection": "@nestjs/schematics",
   "sourceRoot": "src",
   "compilerOptions": {
-    "deleteOutDir": true
+    "deleteOutDir": true,
+    "builder": {
+      "type": "tsc",
+      "options": {
+        "compiler": "ts-patch/compiler"
+      }
+    },
+    "assets": [
+      {
+        "include": "i18n/**/*",
+        "watchAssets": true
+      }
+    ]
   }
 }

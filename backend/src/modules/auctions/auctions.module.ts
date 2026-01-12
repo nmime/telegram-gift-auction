@@ -8,6 +8,7 @@ import { Auction, AuctionSchema, Bid, BidSchema, User, UserSchema, Transaction, 
 import { BidsModule } from '@/modules/bids';
 import { UsersModule } from '@/modules/users';
 import { EventsModule } from '@/modules/events';
+import { NotificationsModule } from '@/modules/notifications';
 
 @Module({
   imports: [
@@ -20,6 +21,7 @@ import { EventsModule } from '@/modules/events';
     forwardRef(() => BidsModule),
     UsersModule,
     EventsModule,
+    NotificationsModule,
   ],
   controllers: [AuctionsController],
   providers: [AuctionsService, AuctionSchedulerService, BotService],

@@ -1,61 +1,112 @@
-import { Controller, Post, Get, Body, Req, HttpCode, UseGuards } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
+import { Controller, Req, UseGuards } from '@nestjs/common';
+import { TypedRoute, TypedBody } from '@nestia/core';
 import { AuthService } from './auth.service';
+import { TelegramService } from './telegram.service';
 import { AuthGuard, AuthenticatedRequest } from '@/common';
-import { LoginDto, LoginResponseDto, UserResponseDto, LogoutResponseDto } from './dto';
+import {
+  ILogin,
+  ILoginResponse,
+  IUserResponse,
+  ILogoutResponse,
+  ITelegramWidgetAuth,
+  ITelegramWebAppAuth,
+} from './dto';
 
-@ApiTags('auth')
 @Controller('auth')
 export class AuthController {
-  constructor(private readonly authService: AuthService) {}
+  constructor(
+    private readonly authService: AuthService,
+    private readonly telegramService: TelegramService,
+  ) {}
 
-  @Post('login')
-  @HttpCode(200)
-  @ApiOperation({
-    summary: 'Login or register user',
-    description: 'Authenticates a user by username. Creates a new user if the username does not exist. Returns JWT access token.',
-  })
-  @ApiResponse({ status: 200, description: 'Successfully logged in', type: LoginResponseDto })
-  @ApiResponse({ status: 400, description: 'Invalid username format' })
-  @ApiResponse({ status: 429, description: 'Too many requests' })
-  async login(@Body() loginDto: LoginDto) {
-    return this.authService.login(loginDto.username);
+  /**
+   * Login or register user
+   *
+   * Authenticates a user by username. Creates a new user if the username does not exist.
+   * Returns JWT access token.
+   *
+   * @tag auth
+   * @param body Login credentials
+   * @returns Login response with user data and access token
+   */
+  @TypedRoute.Post('login')
+  async login(@TypedBody() body: ILogin): Promise<ILoginResponse> {
+    return this.authService.login(body.username);
   }
 
-  @Post('logout')
-  @HttpCode(200)
+  /**
+   * Login via Telegram Login Widget
+   *
+   * Authenticates a user using data from Telegram Login Widget.
+   * Creates a new user if not exists.
+   *
+   * @tag auth
+   * @param body Telegram widget auth data
+   * @returns Login response with user data and access token
+   */
+  @TypedRoute.Post('telegram/widget')
+  async loginWithTelegramWidget(@TypedBody() body: ITelegramWidgetAuth): Promise<ILoginResponse> {
+    const validatedUser = this.telegramService.validateWidgetAuth(body);
+    return this.authService.loginWithTelegramWidget(validatedUser);
+  }
+
+  /**
+   * Login via Telegram Mini App
+   *
+   * Authenticates a user using initData from Telegram Mini App (TWA).
+   * Creates a new user if not exists.
+   *
+   * @tag auth
+   * @param body Telegram Mini App auth data
+   * @returns Login response with user data and access token
+   */
+  @TypedRoute.Post('telegram/webapp')
+  async loginWithTelegramMiniApp(@TypedBody() body: ITelegramWebAppAuth): Promise<ILoginResponse> {
+    const validatedData = this.telegramService.validateWebAppInitData(body.initData);
+    return this.authService.loginWithTelegramMiniApp(validatedData);
+  }
+
+  /**
+   * Logout user
+   *
+   * Logs out the user. Client should discard the JWT token.
+   *
+   * @tag auth
+   * @security bearer
+   * @returns Logout success status
+   */
+  @TypedRoute.Post('logout')
   @UseGuards(AuthGuard)
-  @ApiBearerAuth()
-  @ApiOperation({
-    summary: 'Logout user',
-    description: 'Logs out the user. Client should discard the JWT token.',
-  })
-  @ApiResponse({ status: 200, description: 'Successfully logged out', type: LogoutResponseDto })
-  @ApiResponse({ status: 401, description: 'Unauthorized' })
-  async logout() {
+  async logout(): Promise<ILogoutResponse> {
     return { success: true };
   }
 
-  @Get('me')
+  /**
+   * Get current user
+   *
+   * Returns the currently authenticated user based on JWT token.
+   *
+   * @tag auth
+   * @security bearer
+   * @returns Current user data
+   */
+  @TypedRoute.Get('me')
   @UseGuards(AuthGuard)
-  @ApiBearerAuth()
-  @ApiOperation({
-    summary: 'Get current user',
-    description: 'Returns the currently authenticated user based on JWT token.',
-  })
-  @ApiResponse({ status: 200, description: 'Current user data', type: UserResponseDto })
-  @ApiResponse({ status: 401, description: 'Unauthorized' })
-  async me(@Req() req: AuthenticatedRequest) {
+  async me(@Req() req: AuthenticatedRequest): Promise<IUserResponse | null> {
     const user = await this.authService.validateUser(req.user.sub);
     if (!user) {
       return null;
     }
 
     return {
-      id: user._id,
+      id: user._id.toString(),
       username: user.username,
       balance: user.balance,
       frozenBalance: user.frozenBalance,
+      telegramId: user.telegramId,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      photoUrl: user.photoUrl,
     };
   }
 }

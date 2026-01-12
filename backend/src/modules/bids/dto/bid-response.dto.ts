@@ -1,61 +1,70 @@
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { BidStatus } from '@/schemas';
 
-export class AuctionSummaryDto {
-  @ApiProperty({ example: '507f1f77bcf86cd799439012' })
+/**
+ * Auction summary in bid response
+ */
+export interface IAuctionSummary {
+  /** Auction ID */
   id: string;
 
-  @ApiProperty({ example: 'Premium Gift Auction' })
+  /** Auction title */
   title: string;
 
-  @ApiProperty({ example: 'active' })
+  /** Auction status */
   status: string;
 }
 
-export class BidResponseDto {
-  @ApiProperty({ example: '507f1f77bcf86cd799439011' })
+/**
+ * Bid response with auction info
+ */
+export interface IBidResponse {
+  /** Bid ID */
   id: string;
 
-  @ApiProperty({ example: '507f1f77bcf86cd799439012' })
+  /** Auction ID */
   auctionId: string;
 
-  @ApiPropertyOptional({ type: AuctionSummaryDto, nullable: true })
-  auction?: AuctionSummaryDto | null;
+  /** Auction summary (if populated) */
+  auction?: IAuctionSummary | null;
 
-  @ApiProperty({ example: 500 })
+  /** Bid amount in Stars */
   amount: number;
 
-  @ApiProperty({ enum: ['active', 'won', 'lost', 'refunded'], example: 'active' })
-  status: string;
+  /** Bid status */
+  status: BidStatus;
 
-  @ApiPropertyOptional({ type: Number, nullable: true })
+  /** Round number won (if applicable) */
   wonRound?: number | null;
 
-  @ApiPropertyOptional({ type: Number, nullable: true })
+  /** Item number won (if applicable) */
   itemNumber?: number | null;
 
-  @ApiProperty({ example: '2024-01-15T10:30:00.000Z' })
+  /** Bid creation time */
   createdAt: Date;
 }
 
-export class UserBidResponseDto {
-  @ApiProperty({ example: '507f1f77bcf86cd799439011' })
+/**
+ * User's bid response (without auction details)
+ */
+export interface IUserBidResponse {
+  /** Bid ID */
   id: string;
 
-  @ApiProperty({ example: 500 })
+  /** Bid amount in Stars */
   amount: number;
 
-  @ApiProperty({ enum: ['active', 'won', 'lost', 'refunded'], example: 'active' })
-  status: string;
+  /** Bid status */
+  status: BidStatus;
 
-  @ApiPropertyOptional({ type: Number, nullable: true })
+  /** Round number won (if applicable) */
   wonRound?: number | null;
 
-  @ApiPropertyOptional({ type: Number, nullable: true })
+  /** Item number won (if applicable) */
   itemNumber?: number | null;
 
-  @ApiProperty({ example: '2024-01-15T10:30:00.000Z' })
+  /** Bid creation time */
   createdAt: Date;
 
-  @ApiProperty({ example: '2024-01-15T10:30:00.000Z' })
+  /** Bid last update time */
   updatedAt: Date;
 }

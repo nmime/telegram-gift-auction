@@ -1,28 +1,47 @@
-import { ApiProperty } from '@nestjs/swagger';
-
-export class UserResponseDto {
-  @ApiProperty({ example: '507f1f77bcf86cd799439011' })
+/**
+ * User data in auth responses
+ */
+export interface IUserResponse {
+  /** User ID */
   id: string;
 
-  @ApiProperty({ example: 'john_doe' })
+  /** Username */
   username: string;
 
-  @ApiProperty({ example: 5000 })
+  /** Available balance in Stars */
   balance: number;
 
-  @ApiProperty({ example: 500 })
+  /** Balance frozen in active bids */
   frozenBalance: number;
+
+  /** Telegram user ID (if authenticated via Telegram) */
+  telegramId?: number;
+
+  /** User first name (from Telegram) */
+  firstName?: string;
+
+  /** User last name (from Telegram) */
+  lastName?: string;
+
+  /** User photo URL (from Telegram) */
+  photoUrl?: string;
 }
 
-export class LoginResponseDto {
-  @ApiProperty({ type: UserResponseDto })
-  user: UserResponseDto;
+/**
+ * Login response with user data and access token
+ */
+export interface ILoginResponse {
+  /** User data */
+  user: IUserResponse;
 
-  @ApiProperty({ example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...' })
+  /** JWT access token */
   accessToken: string;
 }
 
-export class LogoutResponseDto {
-  @ApiProperty({ example: true })
+/**
+ * Logout response
+ */
+export interface ILogoutResponse {
+  /** Success status */
   success: boolean;
 }

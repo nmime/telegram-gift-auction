@@ -13,19 +13,19 @@ export enum BidStatus {
 
 @Schema({ timestamps: true, optimisticConcurrency: true })
 export class Bid {
-  _id: Types.ObjectId;
+  _id!: Types.ObjectId;
 
   @Prop({ type: Types.ObjectId, ref: 'Auction', required: true })
-  auctionId: Types.ObjectId;
+  auctionId!: Types.ObjectId;
 
   @Prop({ type: Types.ObjectId, ref: 'User', required: true })
-  userId: Types.ObjectId;
+  userId!: Types.ObjectId;
 
   @Prop({ required: true })
-  amount: number;
+  amount!: number;
 
   @Prop({ required: true, enum: BidStatus, default: BidStatus.ACTIVE })
-  status: BidStatus;
+  status!: BidStatus;
 
   @Prop()
   wonRound?: number;
@@ -36,8 +36,8 @@ export class Bid {
   @Prop()
   lastProcessedAt?: Date;
 
-  createdAt: Date;
-  updatedAt: Date;
+  createdAt!: Date;
+  updatedAt!: Date;
 }
 
 export const BidSchema = SchemaFactory.createForClass(Bid);

@@ -1,0 +1,16 @@
+import type { IUserBidResponse } from "@/modules/bids";
+import typia from "typia";
+import type { Primitive } from "typia";
+
+import api from "../../../../../src/api";
+
+export const test_api_api_auctions_my_bids_getMyBids = async (
+  connection: api.IConnection,
+) => {
+  const output: Primitive<Array<IUserBidResponse>> =
+    await api.functional.api.auctions.my_bids.getMyBids(
+      connection,
+      typia.random<string>(),
+    );
+  typia.assert(output);
+};

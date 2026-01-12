@@ -861,10 +861,10 @@ class LoadTester {
 
         socket.on('connect', () => {
           clearTimeout(timeout);
-          socket.emit('joinAuction', { auctionId });
+          socket.emit('join-auction', auctionId);
         });
 
-        socket.on('auctionJoined', () => {
+        socket.on('join-auction-response', () => {
           resolve({
             connected: true,
             latencyMs: performance.now() - connectStart,
@@ -872,8 +872,8 @@ class LoadTester {
           });
         });
 
-        socket.on('newBid', () => messagesReceived++);
-        socket.on('auctionUpdate', () => messagesReceived++);
+        socket.on('new-bid', () => messagesReceived++);
+        socket.on('auction-update', () => messagesReceived++);
 
         socket.on('connect_error', (err) => {
           clearTimeout(timeout);

@@ -12,6 +12,7 @@
     "baseUrl": "./",
     "incremental": true,
     "skipLibCheck": true,
+    "strict": true,
     "strictNullChecks": true,
     "noImplicitAny": true,
     "strictBindCallApply": true,
@@ -19,6 +20,15 @@
     "noFallthroughCasesInSwitch": true,
     "paths": {
       "@/*": ["src/*"]
-    }
+    },
+    "plugins": [
+      { "transform": "typia/lib/transform" },
+      {
+        "transform": "@nestia/core/lib/transform",
+        "validate": "validate",
+        "stringify": "assert"
+      },
+      { "transform": "@nestia/sdk/lib/transform" }
+    ]
   }
 }

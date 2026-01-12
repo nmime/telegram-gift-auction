@@ -391,8 +391,8 @@ docker compose up --build
 
 # Доступ:
 # - Frontend: http://localhost:5173
-# - Backend API: http://localhost:3001/api
-# - Swagger Docs: http://localhost:3001/api/docs
+# - Backend API: http://localhost:4000/api
+# - Swagger Docs: http://localhost:4000/api/docs
 ```
 
 ### Вариант 2: Локальная разработка
@@ -406,7 +406,7 @@ npm install
 npm run dev
 
 # Или запустить отдельно:
-npm run dev:backend   # http://localhost:3001
+npm run dev:backend   # http://localhost:4000
 npm run dev:frontend  # http://localhost:5173
 ```
 
@@ -437,7 +437,7 @@ npm run dev
 
 | Переменная | Описание | По умолчанию |
 |------------|----------|--------------|
-| `PORT` | Порт сервера | 3001 |
+| `PORT` | Порт сервера | 4000 |
 | `MONGODB_URI` | Строка подключения MongoDB | mongodb://localhost:27017/auction |
 | `REDIS_URL` | Строка подключения Redis | redis://localhost:6379 |
 | `JWT_SECRET` | Секрет для подписи JWT | (обязателен в продакшене) |
@@ -449,8 +449,8 @@ npm run dev
 
 | Переменная | Описание | По умолчанию |
 |------------|----------|--------------|
-| `VITE_API_URL` | URL Backend API | http://localhost:3001/api |
-| `VITE_SOCKET_URL` | URL WebSocket сервера | http://localhost:3001 |
+| `VITE_API_URL` | URL Backend API | http://localhost:4000/api |
+| `VITE_SOCKET_URL` | URL WebSocket сервера | http://localhost:4000 |
 
 ### Rate Limiting
 

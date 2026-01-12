@@ -22,10 +22,6 @@ export const validationSchema = Joi.object({
     .default('auction-jwt-secret-change-in-production')
     .description('JWT signing secret - must be at least 16 characters'),
 
-  CORS_ORIGIN: Joi.string()
-    .uri()
-    .default('http://localhost:5173'),
-
   THROTTLE_TTL: Joi.number()
     .integer()
     .min(1000)
@@ -37,4 +33,19 @@ export const validationSchema = Joi.object({
     .min(1)
     .default(100)
     .description('Max requests per window'),
+
+  BOT_TOKEN: Joi.string()
+    .pattern(/^\d+:[A-Za-z0-9_-]+$/)
+    .required()
+    .description('Telegram Bot API token from @BotFather'),
+
+  WEBHOOK_SECRET: Joi.string()
+    .min(16)
+    .optional()
+    .description('Secret token for webhook validation in production'),
+
+  MINI_APP_URL: Joi.string()
+    .uri({ scheme: ['http', 'https'] })
+    .optional()
+    .description('URL of the Telegram Mini App (for bot buttons)'),
 });
