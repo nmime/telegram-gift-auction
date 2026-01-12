@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import type { Auction, LeaderboardEntry, Bid } from '../types';
 import { AuctionStatus, BidStatus } from '../types';
 import { useAuth } from '../hooks/useAuth';
@@ -12,6 +13,7 @@ import * as api from '../api';
 export default function AuctionPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const { user, refreshBalance } = useAuth();
   const { showNotification } = useNotification();
 
@@ -57,7 +59,7 @@ export default function AuctionPage() {
       setError('');
     } catch (err) {
       console.error('Failed to load auction:', err);
-      setError('Failed to load auction data');
+      setError(t('auction.failedToLoad'));
     } finally {
       setLoading(false);
       loadingRef.current = false;
@@ -91,18 +93,18 @@ export default function AuctionPage() {
     });
 
     const unsubAntiSniping = subscribe('anti-sniping', (data) => {
-      showNotification(`Anti-sniping! Round extended. Extension #${data.extensionCount}`, 'warning');
+      showNotification(t('auction.antiSnipingExtension', { count: data.extensionCount }), 'warning');
       loadData();
     });
 
     const unsubRoundComplete = subscribe('round-complete', (data) => {
-      showNotification(`Round ${data.roundNumber} complete! ${data.winnersCount} winners.`, 'success');
+      showNotification(t('auction.roundComplete', { round: data.roundNumber, count: data.winnersCount }), 'success');
       loadData();
       refreshBalance();
     });
 
     const unsubAuctionComplete = subscribe('auction-complete', () => {
-      showNotification('Auction complete!', 'success');
+      showNotification(t('auction.auctionComplete'), 'success');
       loadData();
       refreshBalance();
     });
@@ -122,9 +124,9 @@ export default function AuctionPage() {
     try {
       const started = await api.startAuction(id);
       setAuction(started);
-      showNotification('Auction started!', 'success');
+      showNotification(t('auction.auctionStarted'), 'success');
     } catch (err) {
-      const message = (err as Error).message || 'Failed to start auction';
+      const message = (err as Error).message || t('errors.unknown');
       setError(message);
       showNotification(message, 'error');
     }
@@ -135,18 +137,18 @@ export default function AuctionPage() {
 
     const amount = parseInt(bidAmount, 10);
     if (isNaN(amount) || amount <= 0) {
-      setError('Please enter a valid bid amount');
+      setError(t('auction.invalidBid'));
       return;
     }
 
     const minBid = minWinningBid || auction?.minBidAmount || 0;
     if (amount < minBid) {
-      setError(`Bid must be at least ${minBid}`);
+      setError(t('auction.bidTooLow', { min: minBid }));
       return;
     }
 
     if (user && amount > user.balance) {
-      setError('Insufficient balance');
+      setError(t('auction.insufficientBalance'));
       return;
     }
 
@@ -164,11 +166,11 @@ export default function AuctionPage() {
         return [bid, ...prev];
       });
       setBidAmount('');
-      showNotification(`Bid of ${amount} Stars placed successfully!`, 'success');
+      showNotification(t('auction.bidPlacedAmount', { amount }), 'success');
       await refreshBalance();
       await loadData();
     } catch (err) {
-      const message = (err as Error).message || 'Failed to place bid';
+      const message = (err as Error).message || t('errors.unknown');
       setError(message);
       showNotification(message, 'error');
     } finally {
@@ -183,7 +185,7 @@ export default function AuctionPage() {
   if (loading) {
     return (
       <div className="card">
-        <LoadingSpinner text="Loading auction..." />
+        <LoadingSpinner text={t('auction.loadingAuction')} />
       </div>
     );
   }
@@ -191,9 +193,9 @@ export default function AuctionPage() {
   if (!auction) {
     return (
       <div className="card" style={{ textAlign: 'center' }}>
-        <p>Auction not found</p>
+        <p>{t('auction.auctionNotFound')}</p>
         <button className="btn btn-primary" onClick={() => navigate('/auctions')}>
-          Back to Auctions
+          {t('auction.backToAuctions')}
         </button>
       </div>
     );
@@ -209,7 +211,7 @@ export default function AuctionPage() {
         <div className="flex items-center gap-2">
           {!isConnected && auction.status === AuctionStatus.ACTIVE && (
             <span className="badge badge-pending" title="Using polling fallback">
-              Reconnecting...
+              {t('auction.reconnecting')}
             </span>
           )}
           <span
@@ -221,19 +223,19 @@ export default function AuctionPage() {
                 : 'badge-completed'
             }`}
           >
-            {auction.status}
+            {t(`auction.${auction.status}`)}
           </span>
         </div>
       </div>
 
       {auction.status === AuctionStatus.PENDING && (
         <div className="card">
-          <h3>Auction not started</h3>
+          <h3>{t('auction.auctionNotStarted')}</h3>
           <p className="text-muted" style={{ marginBottom: '16px' }}>
-            This auction is waiting to be started.
+            {t('auction.waitingToStart')}
           </p>
           <button className="btn btn-success" onClick={handleStartAuction}>
-            Start Auction
+            {t('auction.startAuction')}
           </button>
         </div>
       )}
@@ -242,41 +244,41 @@ export default function AuctionPage() {
         <>
           {isInAntiSnipingWindow && (
             <div className="anti-sniping-alert">
-              <span>Anti-sniping window active! New bids will extend the round.</span>
+              <span>{t('auction.antiSnipingActive')}</span>
             </div>
           )}
 
           <div className="round-info">
             <div className="round-stat">
               <div className="round-stat-value">{auction.currentRound}</div>
-              <div className="round-stat-label">Round</div>
+              <div className="round-stat-label">{t('auction.round')}</div>
             </div>
             <div className="round-stat">
               <div className="round-stat-value">{currentRound.itemsCount}</div>
-              <div className="round-stat-label">Items this round</div>
+              <div className="round-stat-label">{t('auction.itemsThisRound')}</div>
             </div>
             <div className="round-stat">
               <div className="timer">{timeLeft}</div>
-              <div className="round-stat-label">Time Left</div>
+              <div className="round-stat-label">{t('auction.timeLeft')}</div>
             </div>
             <div className="round-stat">
               <div className="round-stat-value">{currentRound.extensionsCount}</div>
-              <div className="round-stat-label">Extensions</div>
+              <div className="round-stat-label">{t('auction.extensions')}</div>
             </div>
             <div className="round-stat">
               <div className="round-stat-value">{minWinningBid || auction.minBidAmount} Stars</div>
-              <div className="round-stat-label">Min Winning Bid</div>
+              <div className="round-stat-label">{t('auction.minWinningBid')}</div>
             </div>
           </div>
 
           <div className="card">
-            <h3>Place Your Bid</h3>
+            <h3>{t('auction.placeYourBid')}</h3>
 
             {myActiveBid && (
               <p style={{ marginBottom: '12px' }}>
-                Your current bid: <strong>{myActiveBid.amount} Stars</strong>
+                {t('auction.currentBid', { amount: myActiveBid.amount })}
                 {leaderboard.findIndex((l) => l.username === user?.username) < currentRound.itemsCount && (
-                  <span className="text-success"> (Winning!)</span>
+                  <span className="text-success"> ({t('auction.winningBid')})</span>
                 )}
               </p>
             )}
@@ -289,7 +291,7 @@ export default function AuctionPage() {
                 className="input"
                 value={bidAmount}
                 onChange={(e) => setBidAmount(e.target.value)}
-                placeholder={`Min: ${minWinningBid || auction.minBidAmount}`}
+                placeholder={t('auction.min', { amount: minWinningBid || auction.minBidAmount })}
                 disabled={bidding}
                 min={1}
               />
@@ -298,12 +300,12 @@ export default function AuctionPage() {
                 onClick={handlePlaceBid}
                 disabled={bidding || !bidAmount}
               >
-                {bidding ? 'Placing...' : myActiveBid ? 'Increase Bid' : 'Place Bid'}
+                {bidding ? t('auction.placing') : myActiveBid ? t('auction.increaseBid') : t('auction.placeBid')}
               </button>
             </div>
 
             <p className="text-muted" style={{ marginTop: '12px', fontSize: '14px' }}>
-              Available balance: {user?.balance || 0} Stars
+              {t('auction.availableBalance', { amount: user?.balance || 0 })}
             </p>
           </div>
         </>
@@ -311,18 +313,18 @@ export default function AuctionPage() {
 
       {auction.status === AuctionStatus.COMPLETED && (
         <div className="card">
-          <h3 className="text-success">Auction Completed</h3>
+          <h3 className="text-success">{t('auction.auctionCompleted')}</h3>
           <p className="text-muted">
-            This auction has ended. Check the leaderboard to see the results.
+            {t('auction.auctionEnded')}
           </p>
         </div>
       )}
 
       <div className="grid grid-cols-2 gap-4">
         <div className="card">
-          <h3>Leaderboard</h3>
+          <h3>{t('auction.leaderboard')}</h3>
           {leaderboard.length === 0 ? (
-            <p className="text-muted">No bids yet</p>
+            <p className="text-muted">{t('auction.noBidsYet')}</p>
           ) : (
             <div>
               {leaderboard.map((entry, index) => (
@@ -333,12 +335,12 @@ export default function AuctionPage() {
                   } ${entry.username === user?.username ? 'my-bid' : ''}`}
                 >
                   <div className={`rank ${index < 3 ? 'top-3' : ''}`}>
-                    {entry.status === BidStatus.WON ? `#${entry.itemNumber}` : entry.rank}
+                    {entry.status === BidStatus.WON ? t('auction.itemNumber', { number: entry.itemNumber }) : entry.rank}
                   </div>
                   <div style={{ flex: 1 }}>
                     <div>
                       {entry.username}
-                      {entry.isBot && <span className="text-muted"> (bot)</span>}
+                      {entry.isBot && <span className="text-muted"> ({t('auction.bot')})</span>}
                     </div>
                     <div className="text-muted" style={{ fontSize: '12px' }}>
                       {new Date(entry.createdAt).toLocaleTimeString()}
@@ -347,10 +349,10 @@ export default function AuctionPage() {
                   <div style={{ textAlign: 'right' }}>
                     <div style={{ fontWeight: 'bold' }}>{entry.amount} Stars</div>
                     {entry.status === BidStatus.WON && (
-                      <span className="text-success" style={{ fontSize: '12px' }}>Won</span>
+                      <span className="text-success" style={{ fontSize: '12px' }}>{t('auction.won')}</span>
                     )}
                     {entry.isWinning && entry.status === BidStatus.ACTIVE && (
-                      <span className="text-success" style={{ fontSize: '12px' }}>Winning</span>
+                      <span className="text-success" style={{ fontSize: '12px' }}>{t('bids.winning')}</span>
                     )}
                   </div>
                 </div>
@@ -360,18 +362,18 @@ export default function AuctionPage() {
         </div>
 
         <div className="card">
-          <h3>Auction Info</h3>
+          <h3>{t('auction.info')}</h3>
           <div style={{ marginBottom: '16px' }}>
-            <p><strong>Total Items:</strong> {auction.totalItems}</p>
-            <p><strong>Min Bid:</strong> {auction.minBidAmount} Stars</p>
-            <p><strong>Min Increment:</strong> {auction.minBidIncrement} Stars</p>
-            <p><strong>Anti-Sniping Window:</strong> {auction.antiSnipingWindowMinutes} min</p>
-            <p><strong>Extension Duration:</strong> {auction.antiSnipingExtensionMinutes} min</p>
-            <p><strong>Max Extensions:</strong> {auction.maxExtensions}</p>
-            <p><strong>Bots:</strong> {auction.botsEnabled ? `Enabled (${auction.botCount})` : 'Disabled'}</p>
+            <p><strong>{t('auction.totalItems')}:</strong> {auction.totalItems}</p>
+            <p><strong>{t('auction.minBid')}:</strong> {auction.minBidAmount} Stars</p>
+            <p><strong>{t('auction.minIncrement')}:</strong> {auction.minBidIncrement} Stars</p>
+            <p><strong>{t('auction.antiSnipingWindow')}:</strong> {auction.antiSnipingWindowMinutes} min</p>
+            <p><strong>{t('auction.extensionDuration')}:</strong> {auction.antiSnipingExtensionMinutes} min</p>
+            <p><strong>{t('auction.maxExtensions')}:</strong> {auction.maxExtensions}</p>
+            <p><strong>{t('auction.bots')}:</strong> {auction.botsEnabled ? t('auction.botsEnabled', { count: auction.botCount }) : t('auction.botsDisabled')}</p>
           </div>
 
-          <h4>Rounds</h4>
+          <h4>{t('auction.rounds')}</h4>
           {auction.roundsConfig.map((round, index) => {
             const roundState = auction.rounds[index];
             return (
@@ -385,16 +387,16 @@ export default function AuctionPage() {
                 }}
               >
                 <div className="flex justify-between">
-                  <span>Round {index + 1}</span>
-                  <span>{round.itemsCount} items, {round.durationMinutes} min</span>
+                  <span>{t('auction.roundNumber', { number: index + 1 })}</span>
+                  <span>{t('auction.itemsMinutes', { items: round.itemsCount, minutes: round.durationMinutes })}</span>
                 </div>
                 {roundState && (
                   <div className="text-muted" style={{ fontSize: '12px' }}>
                     {roundState.completed
-                      ? `Completed - ${roundState.winnerBidIds.length} winners`
+                      ? t('auction.completedWinners', { count: roundState.winnerBidIds.length })
                       : index + 1 === auction.currentRound
-                      ? 'In Progress'
-                      : 'Pending'}
+                      ? t('auction.inProgress')
+                      : t('auction.pending')}
                   </div>
                 )}
               </div>
@@ -403,7 +405,7 @@ export default function AuctionPage() {
 
           {myBids.length > 0 && (
             <>
-              <h4 style={{ marginTop: '16px' }}>Your Bids</h4>
+              <h4 style={{ marginTop: '16px' }}>{t('auction.yourBids')}</h4>
               {myBids.map((bid) => (
                 <div
                   key={bid.id}
@@ -425,8 +427,8 @@ export default function AuctionPage() {
                           : ''
                       }
                     >
-                      {bid.status}
-                      {bid.itemNumber && ` (#${bid.itemNumber})`}
+                      {bid.status === BidStatus.WON ? t('auction.won') : bid.status === BidStatus.REFUNDED ? t('auction.refunded') : bid.status}
+                      {bid.itemNumber && ` (${t('auction.itemNumber', { number: bid.itemNumber })})`}
                     </span>
                   </div>
                 </div>

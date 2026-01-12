@@ -1,31 +1,31 @@
 {
   "bid": {
-    "placed": "Ваша ставка {amount} Stars принята!\n\nАукцион: {auctionTitle}\nРаунд: {roundNumber}"
+    "placed": "<b>Ставка принята!</b>\n\nВаша ставка <b>{amount} Stars</b> принята.\n\n<b>Аукцион:</b> {auctionTitle}\n<b>Раунд:</b> {roundNumber}"
   },
   "outbid": {
-    "title": "Вашу ставку перебили!",
-    "message": "Аукцион: {auctionTitle}\nРаунд: {roundNumber}\nВаша ставка: {yourBid} Stars\nНовый лидер: {newLeaderBid} Stars\nМин. ставка для победы: {minBidToWin} Stars\n\nУвеличьте ставку, чтобы остаться в лидерах!"
+    "title": "<b>Вашу ставку перебили!</b>",
+    "message": "<b>Аукцион:</b> {auctionTitle}\n<b>Раунд:</b> {roundNumber}\n<b>Ваша ставка:</b> {yourBid} Stars\n<b>Новый лидер:</b> {newLeaderBid} Stars\n<b>Мин. ставка для победы:</b> {minBidToWin} Stars\n\n<i>Увеличьте ставку, чтобы остаться в лидерах!</i>"
   },
   "roundWin": {
-    "title": "Поздравляем! Вы выиграли предмет #{itemNumber}!",
-    "message": "Аукцион: {auctionTitle}\nРаунд: {roundNumber}\nПобедная ставка: {winningBid} Stars"
+    "title": "<b>Поздравляем! Вы выиграли предмет #{itemNumber}!</b>",
+    "message": "<b>Аукцион:</b> {auctionTitle}\n<b>Раунд:</b> {roundNumber}\n<b>Победная ставка:</b> {winningBid} Stars"
   },
   "roundLost": {
-    "title": "Раунд {roundNumber} завершён.",
-    "message": "Аукцион: {auctionTitle}\nВаша ставка не выиграла в этом раунде.",
-    "refunded": "Ваша ставка {amount} Stars возвращена."
+    "title": "<b>Раунд {roundNumber} завершён</b>",
+    "message": "<b>Аукцион:</b> {auctionTitle}\n\nВаша ставка не выиграла в этом раунде.",
+    "refunded": "\n<i>Ваша ставка {amount} Stars возвращена.</i>"
   },
   "auctionComplete": {
-    "title": "Аукцион завершён!",
-    "won": "{auctionTitle}\nВы выиграли {totalWins} предмет(ов)\nВсего потрачено: {totalSpent} Stars\n\nПоздравляем с победой!",
-    "lost": "{auctionTitle}\nК сожалению, вы не выиграли ни одного предмета.\nУдачи в следующий раз!"
+    "title": "<b>Аукцион завершён!</b>",
+    "won": "<b>{auctionTitle}</b>\n\nВы выиграли <b>{totalWins} предмет(ов)</b>\nВсего потрачено: <b>{totalSpent} Stars</b>\n\n<i>Поздравляем с победой!</i>",
+    "lost": "<b>{auctionTitle}</b>\n\nК сожалению, вы не выиграли ни одного предмета.\n\n<i>Удачи в следующий раз!</i>"
   },
   "newRound": {
-    "title": "Новый раунд начался!",
-    "message": "Аукцион: {auctionTitle}\nРаунд: {roundNumber}\nДоступно предметов: {itemsCount}\n\nДелайте ставки!"
+    "title": "<b>Новый раунд начался!</b>",
+    "message": "<b>Аукцион:</b> {auctionTitle}\n<b>Раунд:</b> {roundNumber}\n<b>Доступно предметов:</b> {itemsCount}\n\n<i>Делайте ставки!</i>"
   },
   "antiSniping": {
-    "title": "Раунд продлён!",
-    "message": "Аукцион: {auctionTitle}\nРаунд {roundNumber} продлён на {extensionMinutes} мин. из-за поздних ставок."
+    "title": "<b>Раунд продлён!</b>",
+    "message": "<b>Аукцион:</b> {auctionTitle}\n\nРаунд {roundNumber} продлён на <b>{extensionMinutes} мин.</b> из-за поздних ставок."
   }
 }
