@@ -33,6 +33,9 @@ export interface IRoundStateResponse {
 
   /** Whether round is completed */
   completed: boolean;
+
+  /** IDs of winning bids for this round */
+  winnerBidIds: string[];
 }
 
 /**

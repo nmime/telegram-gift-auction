@@ -237,6 +237,7 @@ export class AuctionsController {
         endTime: r.endTime,
         extensionsCount: r.extensionsCount,
         completed: r.completed,
+        winnerBidIds: r.winnerBidIds?.map(id => id.toString()) || [],
       })),
       status: auction.status,
       currentRound: auction.currentRound,
