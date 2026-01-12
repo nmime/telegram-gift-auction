@@ -3,10 +3,11 @@ import { FastifyAdapter, NestFastifyApplication } from '@nestjs/platform-fastify
 import { Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { SwaggerModule, OpenAPIObject } from '@nestjs/swagger';
-import { NestiaSwaggerComposer } from '@nestia/sdk';
 import { Server } from 'socket.io';
 import { AppModule } from './app.module';
 import { EventsGateway } from './modules/events/events.gateway';
+import * as fs from 'fs';
+import * as path from 'path';
 
 async function bootstrap() {
   const logger = new Logger('Bootstrap');
@@ -33,64 +34,25 @@ async function bootstrap() {
     ? miniAppUrl
     : `http://localhost:${port}`;
 
-  // Generate Swagger document using Nestia's runtime composer
-  const document = await NestiaSwaggerComposer.document(app, {
-    openapi: '3.1',
-    info: {
-      title: 'Gift Auction API',
-      description: `
-## Overview
-Multi-round auction system API inspired by Telegram Gift Auctions.
+  // Load pre-generated swagger.json (generated at build time via npx nestia swagger)
+  const swaggerPath = path.join(__dirname, '..', '..', 'swagger.json');
+  if (fs.existsSync(swaggerPath)) {
+    const document = JSON.parse(fs.readFileSync(swaggerPath, 'utf-8'));
+    // Update server URL dynamically
+    document.servers = [{ url: serverUrl }];
 
-## Features
-- **Multi-round auctions** with configurable items per round
-- **Anti-sniping mechanism** that extends rounds when late bids are placed
-- **Real-time updates** via WebSocket
-- **Financial integrity** with atomic transactions
-- **JWT authentication** with rate limiting
-
-## Authentication
-This API uses JWT Bearer token authentication. Call \`POST /api/auth/login\` to obtain a token.
-
-Include the token in requests: \`Authorization: Bearer <token>\`
-
-## Rate Limiting
-- 10 requests per second (burst)
-- 50 requests per 10 seconds
-- 200 requests per minute
-
-## WebSocket Events
-Connect to the WebSocket server at \`/\` and emit:
-- \`join-auction\` - Subscribe to auction updates (pass auctionId)
-- \`leave-auction\` - Unsubscribe from auction
-
-Server emits:
-- \`auction-update\` - Auction state changed
-- \`new-bid\` - New bid placed
-- \`anti-sniping\` - Round extended
-- \`round-complete\` - Round ended with winners
-- \`auction-complete\` - Auction finished
-      `,
-      version: '1.0.0',
-    },
-    servers: [{ url: serverUrl }],
-    security: {
-      bearer: {
-        type: 'http',
-        scheme: 'bearer',
-        bearerFormat: 'JWT',
+    SwaggerModule.setup('api/docs', app, document as OpenAPIObject, {
+      swaggerOptions: {
+        persistAuthorization: true,
+        tagsSorter: 'alpha',
+        operationsSorter: 'alpha',
       },
-    },
-  });
-
-  SwaggerModule.setup('api/docs', app, document as OpenAPIObject, {
-    swaggerOptions: {
-      persistAuthorization: true,
-      tagsSorter: 'alpha',
-      operationsSorter: 'alpha',
-    },
-    customSiteTitle: 'Gift Auction API Docs'
-  });
+      customSiteTitle: 'Gift Auction API Docs'
+    });
+    logger.log('Swagger docs loaded from pre-generated swagger.json');
+  } else {
+    logger.warn('swagger.json not found - API docs disabled. Run "npx nestia swagger" to generate.');
+  }
 
   const shutdown = async () => {
     logger.log('Shutting down');

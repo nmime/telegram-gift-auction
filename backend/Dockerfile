@@ -10,6 +10,7 @@ RUN npx typia setup --manager npm
 
 COPY . .
 RUN npm run build
+RUN npx nestia swagger
 
 # Production stage
 FROM node:22-alpine
@@ -20,6 +21,7 @@ COPY package*.json ./
 RUN npm install --omit=dev
 
 COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/swagger.json ./swagger.json
 
 EXPOSE 4000
 

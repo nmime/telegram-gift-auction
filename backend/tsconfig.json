@@ -27,8 +27,7 @@
         "transform": "@nestia/core/lib/transform",
         "validate": "validate",
         "stringify": "assert"
-      },
-      { "transform": "@nestia/sdk/lib/transform" }
+      }
     ]
   }
 }

@@ -1,0 +1,1748 @@
+{
+  "openapi": "3.1.0",
+  "servers": [
+    {
+      "url": "https://github.com/samchon/nestia",
+      "description": "insert your server url"
+    }
+  ],
+  "info": {
+    "title": "Gift Auction API",
+    "description": "\n## Overview\nMulti-round auction system API inspired by Telegram Gift Auctions.\n\n## Features\n- **Multi-round auctions** with configurable items per round\n- **Anti-sniping mechanism** that extends rounds when late bids are placed\n- **Real-time updates** via WebSocket\n- **Financial integrity** with atomic transactions\n- **JWT authentication** with rate limiting\n\n## Authentication\nThis API uses JWT Bearer token authentication. Call `POST /api/auth/login` to obtain a token.\n\nInclude the token in requests: `Authorization: Bearer <token>`\n\n## Rate Limiting\n- 10 requests per second (burst)\n- 50 requests per 10 seconds\n- 200 requests per minute\n\n## WebSocket Events\nConnect to the WebSocket server at `/` and emit:\n- `join-auction` - Subscribe to auction updates (pass auctionId)\n- `leave-auction` - Unsubscribe from auction\n\nServer emits:\n- `auction-update` - Auction state changed\n- `new-bid` - New bid placed\n- `anti-sniping` - Round extended\n- `round-complete` - Round ended with winners\n- `auction-complete` - Auction finished\n      ",
+    "version": "1.0.0"
+  },
+  "paths": {
+    "/users/balance": {
+      "get": {
+        "description": "Get user balance\n\nReturns the current available and frozen balance for the authenticated user.",
+        "tags": [
+          "users"
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "User balance information",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IBalanceResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "x-samchon-accessor": [
+          "users",
+          "balance",
+          "getBalance"
+        ],
+        "x-samchon-controller": "UsersController"
+      }
+    },
+    "/users/deposit": {
+      "post": {
+        "description": "Deposit funds\n\nAdds the specified amount to the user's available balance.",
+        "tags": [
+          "users"
+        ],
+        "parameters": [],
+        "requestBody": {
+          "description": "Deposit amount",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/IBalance"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Updated balance",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IBalanceResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "x-samchon-accessor": [
+          "users",
+          "deposit"
+        ],
+        "x-samchon-controller": "UsersController"
+      }
+    },
+    "/users/withdraw": {
+      "post": {
+        "description": "Withdraw funds\n\nRemoves the specified amount from the user's available balance.",
+        "tags": [
+          "users"
+        ],
+        "parameters": [],
+        "requestBody": {
+          "description": "Withdrawal amount",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/IBalance"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Updated balance",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IBalanceResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "x-samchon-accessor": [
+          "users",
+          "withdraw"
+        ],
+        "x-samchon-controller": "UsersController"
+      }
+    },
+    "/transactions": {
+      "get": {
+        "description": "Get transaction history\n\nReturns a paginated list of transactions for the authenticated user,\nordered by most recent first.",
+        "tags": [
+          "transactions"
+        ],
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "number",
+              "minimum": 1,
+              "maximum": 100
+            },
+            "required": false,
+            "description": "Maximum number of transactions to return"
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "schema": {
+              "type": "number",
+              "minimum": 0
+            },
+            "required": false,
+            "description": "Number of transactions to skip"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of transactions",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ITransactionResponse"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "x-samchon-accessor": [
+          "transactions",
+          "getTransactions"
+        ],
+        "x-samchon-controller": "TransactionsController"
+      }
+    },
+    "/bids/my": {
+      "get": {
+        "description": "Get all my bids\n\nReturns all bids placed by the authenticated user across all auctions.",
+        "tags": [
+          "bids"
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "List of user bids",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/IBidResponse"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "x-samchon-accessor": [
+          "bids",
+          "my",
+          "getMyBids"
+        ],
+        "x-samchon-controller": "BidsController"
+      }
+    },
+    "/auth/login": {
+      "post": {
+        "description": "Login or register user\n\nAuthenticates a user by username. Creates a new user if the username does not exist.\nReturns JWT access token.",
+        "tags": [
+          "auth"
+        ],
+        "parameters": [],
+        "requestBody": {
+          "description": "Login credentials",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ILogin"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Login response with user data and access token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ILoginResponse"
+                }
+              }
+            }
+          }
+        },
+        "x-samchon-accessor": [
+          "auth",
+          "login"
+        ],
+        "x-samchon-controller": "AuthController"
+      }
+    },
+    "/auth/telegram/widget": {
+      "post": {
+        "description": "Login via Telegram Login Widget\n\nAuthenticates a user using data from Telegram Login Widget.\nCreates a new user if not exists.",
+        "tags": [
+          "auth"
+        ],
+        "parameters": [],
+        "requestBody": {
+          "description": "Telegram widget auth data",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ITelegramWidgetAuth"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Login response with user data and access token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ILoginResponse"
+                }
+              }
+            }
+          }
+        },
+        "x-samchon-accessor": [
+          "auth",
+          "telegram",
+          "widget",
+          "loginWithTelegramWidget"
+        ],
+        "x-samchon-controller": "AuthController"
+      }
+    },
+    "/auth/telegram/webapp": {
+      "post": {
+        "description": "Login via Telegram Mini App\n\nAuthenticates a user using initData from Telegram Mini App (TWA).\nCreates a new user if not exists.",
+        "tags": [
+          "auth"
+        ],
+        "parameters": [],
+        "requestBody": {
+          "description": "Telegram Mini App auth data",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ITelegramWebAppAuth"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Login response with user data and access token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ILoginResponse"
+                }
+              }
+            }
+          }
+        },
+        "x-samchon-accessor": [
+          "auth",
+          "telegram",
+          "webapp",
+          "loginWithTelegramMiniApp"
+        ],
+        "x-samchon-controller": "AuthController"
+      }
+    },
+    "/auth/logout": {
+      "post": {
+        "description": "Logout user\n\nLogs out the user. Client should discard the JWT token.",
+        "tags": [
+          "auth"
+        ],
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": "Logout success status",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ILogoutResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "x-samchon-accessor": [
+          "auth",
+          "logout"
+        ],
+        "x-samchon-controller": "AuthController"
+      }
+    },
+    "/auth/me": {
+      "get": {
+        "description": "Get current user\n\nReturns the currently authenticated user based on JWT token.",
+        "tags": [
+          "auth"
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Current user data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "type": "null"
+                    },
+                    {
+                      "$ref": "#/components/schemas/IUserResponse"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "x-samchon-accessor": [
+          "auth",
+          "me"
+        ],
+        "x-samchon-controller": "AuthController"
+      }
+    },
+    "/auctions": {
+      "get": {
+        "description": "List all auctions\n\nReturns a list of all auctions, optionally filtered by status.",
+        "tags": [
+          "auctions"
+        ],
+        "parameters": [
+          {
+            "name": "status",
+            "in": "query",
+            "schema": {
+              "oneOf": [
+                {
+                  "const": "pending"
+                },
+                {
+                  "const": "active"
+                },
+                {
+                  "const": "completed"
+                },
+                {
+                  "const": "cancelled"
+                }
+              ]
+            },
+            "required": false,
+            "description": "Filter auctions by status"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of auctions",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/IAuctionResponse"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "x-samchon-accessor": [
+          "auctions",
+          "findAll"
+        ],
+        "x-samchon-controller": "AuctionsController"
+      },
+      "post": {
+        "description": "Create new auction\n\nCreates a new auction with the specified configuration.\nThe sum of items across all rounds must equal totalItems.",
+        "tags": [
+          "auctions"
+        ],
+        "parameters": [],
+        "requestBody": {
+          "description": "Auction configuration",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ICreateAuction"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created auction",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IAuctionResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "x-samchon-accessor": [
+          "auctions",
+          "create"
+        ],
+        "x-samchon-controller": "AuctionsController"
+      }
+    },
+    "/auctions/system/audit": {
+      "get": {
+        "description": "Financial audit\n\nVerifies system-wide financial integrity. Checks that frozen balances\nmatch active bids and no money is lost or duplicated.",
+        "tags": [
+          "auctions"
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Audit results",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IAuditResponse"
+                }
+              }
+            }
+          }
+        },
+        "x-samchon-accessor": [
+          "auctions",
+          "system",
+          "audit",
+          "auditFinancialIntegrity"
+        ],
+        "x-samchon-controller": "AuctionsController"
+      }
+    },
+    "/auctions/{id}": {
+      "get": {
+        "description": "Get auction details\n\nReturns detailed information about a specific auction including round states.",
+        "tags": [
+          "auctions"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "description": "Auction ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Auction details",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IAuctionResponse"
+                }
+              }
+            }
+          }
+        },
+        "x-samchon-accessor": [
+          "auctions",
+          "findOne"
+        ],
+        "x-samchon-controller": "AuctionsController"
+      }
+    },
+    "/auctions/{id}/start": {
+      "post": {
+        "description": "Start auction\n\nStarts a pending auction. The first round begins immediately.",
+        "tags": [
+          "auctions"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "description": "Auction ID"
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Started auction",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IAuctionResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "x-samchon-accessor": [
+          "auctions",
+          "start"
+        ],
+        "x-samchon-controller": "AuctionsController"
+      }
+    },
+    "/auctions/{id}/bid": {
+      "post": {
+        "description": "Place or increase bid\n\nPlaces a new bid or increases an existing bid on an active auction.\n\n**Rules:**\n- Minimum bid amount must be met\n- If you have an existing bid, the new amount must be greater than your current bid by at least the minimum increment\n- Only the difference between your current and new bid is deducted from your balance\n- Bids within the anti-sniping window extend the round",
+        "tags": [
+          "auctions"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "description": "Auction ID"
+          }
+        ],
+        "requestBody": {
+          "description": "Bid amount",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/IPlaceBid"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Placed bid and updated auction",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IPlaceBidResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "x-samchon-accessor": [
+          "auctions",
+          "bid",
+          "placeBid"
+        ],
+        "x-samchon-controller": "AuctionsController"
+      }
+    },
+    "/auctions/{id}/leaderboard": {
+      "get": {
+        "description": "Get auction leaderboard\n\nReturns the current ranking of all active bids, sorted by amount descending.",
+        "tags": [
+          "auctions"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "description": "Auction ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Leaderboard entries",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ILeaderboardEntry"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "x-samchon-accessor": [
+          "auctions",
+          "leaderboard",
+          "getLeaderboard"
+        ],
+        "x-samchon-controller": "AuctionsController"
+      }
+    },
+    "/auctions/{id}/my-bids": {
+      "get": {
+        "description": "Get my bids\n\nReturns all bids placed by the authenticated user in this auction.",
+        "tags": [
+          "auctions"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "description": "Auction ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of user bids",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/IUserBidResponse"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "x-samchon-accessor": [
+          "auctions",
+          "my_bids",
+          "getMyBids"
+        ],
+        "x-samchon-controller": "AuctionsController"
+      }
+    },
+    "/auctions/{id}/min-winning-bid": {
+      "get": {
+        "description": "Get minimum winning bid\n\nReturns the minimum bid amount needed to be in a winning position for the current round.",
+        "tags": [
+          "auctions"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "description": "Auction ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Minimum winning bid amount",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IMinWinningBidResponse"
+                }
+              }
+            }
+          }
+        },
+        "x-samchon-accessor": [
+          "auctions",
+          "min_winning_bid",
+          "getMinWinningBid"
+        ],
+        "x-samchon-controller": "AuctionsController"
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "IBalanceResponse": {
+        "type": "object",
+        "properties": {
+          "balance": {
+            "type": "number",
+            "description": "Available balance in Stars"
+          },
+          "frozenBalance": {
+            "type": "number",
+            "description": "Balance frozen in active bids"
+          }
+        },
+        "required": [
+          "balance",
+          "frozenBalance"
+        ],
+        "description": "Balance response"
+      },
+      "IBalance": {
+        "type": "object",
+        "properties": {
+          "amount": {
+            "type": "number",
+            "minimum": 1,
+            "description": "Amount in Stars to deposit or withdraw"
+          }
+        },
+        "required": [
+          "amount"
+        ],
+        "description": "Balance operation request (deposit/withdraw)"
+      },
+      "ITransactionResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Transaction ID"
+          },
+          "type": {
+            "oneOf": [
+              {
+                "const": "deposit"
+              },
+              {
+                "const": "withdraw"
+              },
+              {
+                "const": "bid_freeze"
+              },
+              {
+                "const": "bid_unfreeze"
+              },
+              {
+                "const": "bid_win"
+              },
+              {
+                "const": "bid_refund"
+              }
+            ],
+            "description": "Transaction type"
+          },
+          "amount": {
+            "type": "number",
+            "description": "Transaction amount in Stars"
+          },
+          "balanceBefore": {
+            "type": "number",
+            "description": "Balance before transaction"
+          },
+          "balanceAfter": {
+            "type": "number",
+            "description": "Balance after transaction"
+          },
+          "frozenBefore": {
+            "type": "number",
+            "description": "Frozen balance before transaction"
+          },
+          "frozenAfter": {
+            "type": "number",
+            "description": "Frozen balance after transaction"
+          },
+          "auctionId": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "description": "Related auction ID (if applicable)"
+          },
+          "description": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "description": "Transaction description"
+          },
+          "createdAt": {
+            "type": "string",
+            "description": "Transaction creation time",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "type",
+          "amount",
+          "balanceBefore",
+          "balanceAfter",
+          "createdAt"
+        ],
+        "description": "Transaction response"
+      },
+      "ITransactionQuery": {
+        "type": "object",
+        "properties": {
+          "limit": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 100,
+            "description": "Maximum number of transactions to return"
+          },
+          "offset": {
+            "type": "number",
+            "minimum": 0,
+            "description": "Number of transactions to skip"
+          }
+        },
+        "required": [],
+        "description": "Transaction query parameters"
+      },
+      "IBidResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Bid ID"
+          },
+          "auctionId": {
+            "type": "string",
+            "description": "Auction ID"
+          },
+          "auction": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/IAuctionSummary"
+              }
+            ],
+            "description": "Auction summary (if populated)"
+          },
+          "amount": {
+            "type": "number",
+            "description": "Bid amount in Stars"
+          },
+          "status": {
+            "oneOf": [
+              {
+                "const": "active"
+              },
+              {
+                "const": "won"
+              },
+              {
+                "const": "lost"
+              },
+              {
+                "const": "refunded"
+              },
+              {
+                "const": "cancelled"
+              }
+            ],
+            "description": "Bid status"
+          },
+          "wonRound": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "type": "number"
+              }
+            ],
+            "description": "Round number won (if applicable)"
+          },
+          "itemNumber": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "type": "number"
+              }
+            ],
+            "description": "Item number won (if applicable)"
+          },
+          "createdAt": {
+            "type": "string",
+            "description": "Bid creation time",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "auctionId",
+          "amount",
+          "status",
+          "createdAt"
+        ],
+        "description": "Bid response with auction info"
+      },
+      "IAuctionSummary": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Auction ID"
+          },
+          "title": {
+            "type": "string",
+            "description": "Auction title"
+          },
+          "status": {
+            "type": "string",
+            "description": "Auction status"
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "status"
+        ],
+        "description": "Auction summary in bid response"
+      },
+      "ILoginResponse": {
+        "type": "object",
+        "properties": {
+          "user": {
+            "$ref": "#/components/schemas/IUserResponse",
+            "description": "User data"
+          },
+          "accessToken": {
+            "type": "string",
+            "description": "JWT access token"
+          }
+        },
+        "required": [
+          "user",
+          "accessToken"
+        ],
+        "description": "Login response with user data and access token"
+      },
+      "IUserResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "User ID"
+          },
+          "username": {
+            "type": "string",
+            "description": "Username"
+          },
+          "balance": {
+            "type": "number",
+            "description": "Available balance in Stars"
+          },
+          "frozenBalance": {
+            "type": "number",
+            "description": "Balance frozen in active bids"
+          },
+          "telegramId": {
+            "type": "number",
+            "description": "Telegram user ID (if authenticated via Telegram)"
+          },
+          "firstName": {
+            "type": "string",
+            "description": "User first name (from Telegram)"
+          },
+          "lastName": {
+            "type": "string",
+            "description": "User last name (from Telegram)"
+          },
+          "photoUrl": {
+            "type": "string",
+            "description": "User photo URL (from Telegram)"
+          }
+        },
+        "required": [
+          "id",
+          "username",
+          "balance",
+          "frozenBalance"
+        ],
+        "description": "User data in auth responses"
+      },
+      "ILogin": {
+        "type": "object",
+        "properties": {
+          "username": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 30,
+            "pattern": "^[a-zA-Z0-9_]+$",
+            "description": "Username for login or registration. New users are automatically created."
+          }
+        },
+        "required": [
+          "username"
+        ],
+        "description": "Login request DTO"
+      },
+      "ITelegramWidgetAuth": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "number",
+            "description": "Telegram user ID"
+          },
+          "first_name": {
+            "type": "string",
+            "description": "User first name"
+          },
+          "last_name": {
+            "type": "string",
+            "description": "User last name"
+          },
+          "username": {
+            "type": "string",
+            "description": "Telegram username"
+          },
+          "photo_url": {
+            "type": "string",
+            "description": "User photo URL"
+          },
+          "language_code": {
+            "type": "string",
+            "description": "User language code"
+          },
+          "is_premium": {
+            "type": "boolean",
+            "description": "Is premium user"
+          },
+          "auth_date": {
+            "type": "number",
+            "description": "Authentication timestamp"
+          },
+          "hash": {
+            "type": "string",
+            "description": "Data hash for validation"
+          }
+        },
+        "required": [
+          "id",
+          "first_name",
+          "auth_date",
+          "hash"
+        ],
+        "description": "Telegram Login Widget authentication data"
+      },
+      "ITelegramWebAppAuth": {
+        "type": "object",
+        "properties": {
+          "initData": {
+            "type": "string",
+            "description": "Raw initData string from Telegram.WebApp.initData"
+          }
+        },
+        "required": [
+          "initData"
+        ],
+        "description": "Telegram Mini App authentication data"
+      },
+      "ILogoutResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "description": "Success status"
+          }
+        },
+        "required": [
+          "success"
+        ],
+        "description": "Logout response"
+      },
+      "IAuctionResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Auction ID"
+          },
+          "title": {
+            "type": "string",
+            "description": "Auction title"
+          },
+          "description": {
+            "type": "string",
+            "description": "Auction description"
+          },
+          "totalItems": {
+            "type": "number",
+            "description": "Total number of items in the auction"
+          },
+          "roundsConfig": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/IRoundConfigResponse"
+            },
+            "description": "Configuration for each round"
+          },
+          "rounds": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/IRoundStateResponse"
+            },
+            "description": "State of each round"
+          },
+          "status": {
+            "oneOf": [
+              {
+                "const": "pending"
+              },
+              {
+                "const": "active"
+              },
+              {
+                "const": "completed"
+              },
+              {
+                "const": "cancelled"
+              }
+            ],
+            "description": "Auction status"
+          },
+          "currentRound": {
+            "type": "number",
+            "description": "Current round number (1-based)"
+          },
+          "minBidAmount": {
+            "type": "number",
+            "description": "Minimum bid amount in Stars"
+          },
+          "minBidIncrement": {
+            "type": "number",
+            "description": "Minimum increment for bid increases"
+          },
+          "antiSnipingWindowMinutes": {
+            "type": "number",
+            "description": "Anti-sniping window in minutes"
+          },
+          "antiSnipingExtensionMinutes": {
+            "type": "number",
+            "description": "Anti-sniping extension duration in minutes"
+          },
+          "maxExtensions": {
+            "type": "number",
+            "description": "Maximum anti-sniping extensions per round"
+          },
+          "botsEnabled": {
+            "type": "boolean",
+            "description": "Whether bots are enabled"
+          },
+          "botCount": {
+            "type": "number",
+            "description": "Number of bots"
+          },
+          "startTime": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "type": "string",
+                "format": "date-time"
+              }
+            ],
+            "description": "Auction start time"
+          },
+          "endTime": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "type": "string",
+                "format": "date-time"
+              }
+            ],
+            "description": "Auction end time"
+          },
+          "createdAt": {
+            "type": "string",
+            "description": "Auction creation time",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "totalItems",
+          "roundsConfig",
+          "rounds",
+          "status",
+          "currentRound",
+          "minBidAmount",
+          "minBidIncrement",
+          "antiSnipingWindowMinutes",
+          "antiSnipingExtensionMinutes",
+          "maxExtensions",
+          "botsEnabled",
+          "botCount",
+          "createdAt"
+        ],
+        "description": "Auction response DTO"
+      },
+      "IRoundConfigResponse": {
+        "type": "object",
+        "properties": {
+          "itemsCount": {
+            "type": "number",
+            "description": "Number of items in this round"
+          },
+          "durationMinutes": {
+            "type": "number",
+            "description": "Duration of the round in minutes"
+          }
+        },
+        "required": [
+          "itemsCount",
+          "durationMinutes"
+        ],
+        "description": "Round configuration in auction response"
+      },
+      "IRoundStateResponse": {
+        "type": "object",
+        "properties": {
+          "roundNumber": {
+            "type": "number",
+            "description": "Round number (1-based)"
+          },
+          "itemsCount": {
+            "type": "number",
+            "description": "Number of items in this round"
+          },
+          "startTime": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "type": "string",
+                "format": "date-time"
+              }
+            ],
+            "description": "Round start time (null if not started)"
+          },
+          "endTime": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "type": "string",
+                "format": "date-time"
+              }
+            ],
+            "description": "Round end time (null if not completed)"
+          },
+          "extensionsCount": {
+            "type": "number",
+            "description": "Number of anti-sniping extensions applied"
+          },
+          "completed": {
+            "type": "boolean",
+            "description": "Whether round is completed"
+          }
+        },
+        "required": [
+          "roundNumber",
+          "itemsCount",
+          "extensionsCount",
+          "completed"
+        ],
+        "description": "Round state in auction response"
+      },
+      "IAuctionStatusQuery": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "oneOf": [
+              {
+                "const": "pending"
+              },
+              {
+                "const": "active"
+              },
+              {
+                "const": "completed"
+              },
+              {
+                "const": "cancelled"
+              }
+            ],
+            "description": "Filter auctions by status"
+          }
+        },
+        "required": [],
+        "description": "Auction status query parameter"
+      },
+      "IAuditResponse": {
+        "type": "object",
+        "properties": {
+          "isValid": {
+            "type": "boolean",
+            "description": "Whether the audit passed"
+          },
+          "totalBalance": {
+            "type": "number",
+            "description": "Total balance across all users"
+          },
+          "totalFrozen": {
+            "type": "number",
+            "description": "Total frozen balance across all users"
+          },
+          "totalWinnings": {
+            "type": "number",
+            "description": "Total winnings distributed"
+          },
+          "discrepancy": {
+            "type": "number",
+            "description": "Discrepancy amount (should be 0 if valid)"
+          },
+          "details": {
+            "type": "string",
+            "description": "Audit details message"
+          }
+        },
+        "required": [
+          "isValid",
+          "totalBalance",
+          "totalFrozen",
+          "totalWinnings",
+          "discrepancy",
+          "details"
+        ],
+        "description": "Financial audit response"
+      },
+      "ICreateAuction": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string",
+            "description": "Title of the auction"
+          },
+          "description": {
+            "type": "string",
+            "description": "Optional description of the auction"
+          },
+          "totalItems": {
+            "type": "number",
+            "minimum": 1,
+            "description": "Total number of items available in the auction"
+          },
+          "rounds": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/IRoundConfig"
+            },
+            "description": "Configuration for each round (minimum 1 round required)"
+          },
+          "minBidAmount": {
+            "type": "number",
+            "minimum": 1,
+            "description": "Minimum bid amount in Stars"
+          },
+          "minBidIncrement": {
+            "type": "number",
+            "minimum": 1,
+            "description": "Minimum increment for bid increases"
+          },
+          "antiSnipingWindowMinutes": {
+            "type": "number",
+            "minimum": 1,
+            "description": "Time window before round end that triggers anti-sniping (in minutes)"
+          },
+          "antiSnipingExtensionMinutes": {
+            "type": "number",
+            "minimum": 1,
+            "description": "Duration to extend round when anti-sniping triggers (in minutes)"
+          },
+          "maxExtensions": {
+            "type": "number",
+            "minimum": 0,
+            "description": "Maximum number of anti-sniping extensions per round"
+          },
+          "botsEnabled": {
+            "type": "boolean",
+            "description": "Enable automated bots for live auction demonstration"
+          },
+          "botCount": {
+            "type": "number",
+            "minimum": 0,
+            "description": "Number of bots to simulate (only if botsEnabled is true)"
+          }
+        },
+        "required": [
+          "title",
+          "totalItems",
+          "rounds"
+        ],
+        "description": "Create auction request DTO"
+      },
+      "IRoundConfig": {
+        "type": "object",
+        "properties": {
+          "itemsCount": {
+            "type": "number",
+            "minimum": 1,
+            "description": "Number of items to be distributed in this round"
+          },
+          "durationMinutes": {
+            "type": "number",
+            "minimum": 1,
+            "description": "Duration of the round in minutes"
+          }
+        },
+        "required": [
+          "itemsCount",
+          "durationMinutes"
+        ],
+        "description": "Round configuration for auction creation"
+      },
+      "IPlaceBidResponse": {
+        "type": "object",
+        "properties": {
+          "bid": {
+            "$ref": "#/components/schemas/IUserBidResponse",
+            "description": "The placed bid"
+          },
+          "auction": {
+            "$ref": "#/components/schemas/IAuctionResponse",
+            "description": "Updated auction state"
+          }
+        },
+        "required": [
+          "bid",
+          "auction"
+        ],
+        "description": "Place bid response"
+      },
+      "IUserBidResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Bid ID"
+          },
+          "amount": {
+            "type": "number",
+            "description": "Bid amount in Stars"
+          },
+          "status": {
+            "oneOf": [
+              {
+                "const": "active"
+              },
+              {
+                "const": "won"
+              },
+              {
+                "const": "lost"
+              },
+              {
+                "const": "refunded"
+              },
+              {
+                "const": "cancelled"
+              }
+            ],
+            "description": "Bid status"
+          },
+          "wonRound": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "type": "number"
+              }
+            ],
+            "description": "Round number won (if applicable)"
+          },
+          "itemNumber": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "type": "number"
+              }
+            ],
+            "description": "Item number won (if applicable)"
+          },
+          "createdAt": {
+            "type": "string",
+            "description": "Bid creation time",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "description": "Bid last update time",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "amount",
+          "status",
+          "createdAt",
+          "updatedAt"
+        ],
+        "description": "User's bid response (without auction details)"
+      },
+      "IPlaceBid": {
+        "type": "object",
+        "properties": {
+          "amount": {
+            "type": "number",
+            "minimum": 1,
+            "description": "Bid amount in Stars. Must be greater than or equal to the minimum bid amount,\nand greater than your current bid by at least the minimum increment."
+          }
+        },
+        "required": [
+          "amount"
+        ],
+        "description": "Place bid request DTO"
+      },
+      "ILeaderboardEntry": {
+        "type": "object",
+        "properties": {
+          "rank": {
+            "type": "number",
+            "description": "Rank in the leaderboard (1-based)"
+          },
+          "amount": {
+            "type": "number",
+            "description": "Bid amount in Stars"
+          },
+          "username": {
+            "type": "string",
+            "description": "Username of the bidder"
+          },
+          "isBot": {
+            "type": "boolean",
+            "description": "Whether the bidder is a bot"
+          },
+          "status": {
+            "oneOf": [
+              {
+                "const": "active"
+              },
+              {
+                "const": "won"
+              },
+              {
+                "const": "lost"
+              },
+              {
+                "const": "refunded"
+              },
+              {
+                "const": "cancelled"
+              }
+            ],
+            "description": "Bid status"
+          },
+          "itemNumber": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "type": "number"
+              }
+            ],
+            "description": "Item number won (if applicable)"
+          },
+          "isWinning": {
+            "type": "boolean",
+            "description": "Whether this bid is currently in a winning position"
+          },
+          "createdAt": {
+            "type": "string",
+            "description": "Bid creation time",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "rank",
+          "amount",
+          "username",
+          "isBot",
+          "status",
+          "isWinning",
+          "createdAt"
+        ],
+        "description": "Leaderboard entry"
+      },
+      "IMinWinningBidResponse": {
+        "type": "object",
+        "properties": {
+          "minWinningBid": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "type": "number"
+              }
+            ],
+            "description": "Minimum bid amount needed to be in a winning position (null if no winning bid threshold)"
+          }
+        },
+        "required": [
+          "minWinningBid"
+        ],
+        "description": "Minimum winning bid response"
+      }
+    },
+    "securitySchemes": {
+      "bearer": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      }
+    }
+  },
+  "tags": [
+    {
+      "name": "users"
+    },
+    {
+      "name": "transactions"
+    },
+    {
+      "name": "bids"
+    },
+    {
+      "name": "auth"
+    },
+    {
+      "name": "auctions"
+    }
+  ],
+  "x-samchon-emended-v4": true
+}
