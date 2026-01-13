@@ -377,7 +377,7 @@ export class AuctionsService {
           try {
             updatedBid = await this.bidModel.findOneAndUpdate(
               { _id: lockedBid!._id, __v: originalVersion, amount: previousBidAmount },
-              { amount: dto.amount, lastProcessedAt: now, $inc: { __v: 1 } },
+              { amount: dto.amount, lastProcessedAt: now, outbidNotifiedAt: null, $inc: { __v: 1 } },
               { new: true, session }
             );
           } catch (error) {
@@ -440,7 +440,7 @@ export class AuctionsService {
           allActiveBids.slice(0, itemsInRound).map(b => b.userId.toString())
         );
 
-        const outbidUsers: Array<{ userId: string; bidAmount: number }> = [];
+        const outbidUsers: Array<{ bidId: string; userId: string; bidAmount: number }> = [];
 
         // Only notify users who were in winning position before but not now
         for (const pushedOutUserId of winningUserIdsBefore) {
@@ -450,6 +450,7 @@ export class AuctionsService {
               const pushedOutUser = await this.userModel.findById(pushedOutUserId).session(session);
               if (pushedOutUser && !pushedOutUser.isBot && pushedOutUser.telegramId) {
                 outbidUsers.push({
+                  bidId: pushedOutBid._id.toString(),
                   userId: pushedOutUserId,
                   bidAmount: pushedOutBid.amount,
                 });
@@ -485,17 +486,31 @@ export class AuctionsService {
       });
 
       // Send outbid notifications asynchronously (don't await)
+      // Use atomic update to prevent duplicate notifications from concurrent transactions
       if (result.outbidUsers && result.outbidUsers.length > 0) {
-        const notifyPromises = result.outbidUsers.map(({ userId: outbidUserId, bidAmount }) =>
-          this.notificationsService.notifyOutbid(outbidUserId, {
-            auctionId: result.auction._id.toString(),
-            auctionTitle: result.auction.title,
-            yourBid: bidAmount,
-            newLeaderBid: result.bid.amount,
-            roundNumber: result.auction.currentRound,
-            minBidToWin: result.minBidToWin,
-          }).catch(err => this.logger.warn('Failed to send outbid notification', err))
-        );
+        const notifyPromises = result.outbidUsers.map(async ({ bidId, userId: outbidUserId, bidAmount }) => {
+          try {
+            // Atomically mark the bid as notified - only succeeds if not already notified
+            const updated = await this.bidModel.findOneAndUpdate(
+              { _id: bidId, outbidNotifiedAt: null },
+              { outbidNotifiedAt: new Date() },
+              { new: true }
+            );
+            // Only send notification if we successfully marked it (prevents duplicates)
+            if (updated) {
+              await this.notificationsService.notifyOutbid(outbidUserId, {
+                auctionId: result.auction._id.toString(),
+                auctionTitle: result.auction.title,
+                yourBid: bidAmount,
+                newLeaderBid: result.bid.amount,
+                roundNumber: result.auction.currentRound,
+                minBidToWin: result.minBidToWin,
+              });
+            }
+          } catch (err) {
+            this.logger.warn('Failed to send outbid notification', err);
+          }
+        });
         Promise.all(notifyPromises);
       }
 

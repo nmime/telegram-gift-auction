@@ -36,6 +36,9 @@ export class Bid {
   @Prop()
   lastProcessedAt?: Date;
 
+  @Prop()
+  outbidNotifiedAt?: Date;
+
   createdAt!: Date;
   updatedAt!: Date;
 }
