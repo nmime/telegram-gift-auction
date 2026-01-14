@@ -456,18 +456,28 @@ h4 {
    ============================================================================ */
 
 .header {
+  position: sticky;
+  top: 0;
   display: flex;
   justify-content: space-between;
   align-items: center;
   padding: var(--spacing-md) 0;
   margin-bottom: var(--spacing-md);
-  border-bottom: 1px solid var(--border-color);
   gap: var(--spacing-md);
-  position: sticky;
-  top: 0;
   background: linear-gradient(135deg, var(--bg-primary) 0%, var(--bg-secondary) 100%);
   z-index: 100;
   padding-top: calc(var(--spacing-md) + env(safe-area-inset-top, 0px));
+}
+
+.header::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -20px;
+  height: 20px;
+  background: linear-gradient(to bottom, var(--bg-secondary), transparent);
+  pointer-events: none;
 }
 
 .logo {

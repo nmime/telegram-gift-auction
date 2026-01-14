@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import type { Auction, LeaderboardEntry, Bid } from '../types';
+import type { Auction, LeaderboardEntry, PastWinnerEntry, Bid } from '../types';
 import { AuctionStatus, BidStatus } from '../types';
 import { useAuth } from '../hooks/useAuth';
 import { useNotification } from '../context/NotificationContext';
@@ -19,6 +19,7 @@ export default function AuctionPage() {
 
   const [auction, setAuction] = useState<Auction | null>(null);
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
+  const [pastWinners, setPastWinners] = useState<PastWinnerEntry[]>([]);
   const [myBids, setMyBids] = useState<Bid[]>([]);
   const [minWinningBid, setMinWinningBid] = useState<number | null>(null);
   const [bidAmount, setBidAmount] = useState('');
@@ -45,7 +46,7 @@ export default function AuctionPage() {
     lastLoadRef.current = now;
 
     try {
-      const [auctionData, leaderboardData, bidsData, minBidData] = await Promise.all([
+      const [auctionData, leaderboardResponse, bidsData, minBidData] = await Promise.all([
         api.getAuction(id),
         api.getLeaderboard(id),
         api.getMyBids(id),
@@ -53,7 +54,8 @@ export default function AuctionPage() {
       ]);
 
       setAuction(auctionData);
-      setLeaderboard(leaderboardData);
+      setLeaderboard(leaderboardResponse.leaderboard);
+      setPastWinners(leaderboardResponse.pastWinners);
       setMyBids(bidsData);
       setMinWinningBid(minBidData.minWinningBid);
       setError('');
@@ -335,7 +337,7 @@ export default function AuctionPage() {
                   } ${entry.username === user?.username ? 'my-bid' : ''}`}
                 >
                   <div className={`rank ${index < 3 ? 'top-3' : ''}`}>
-                    {entry.status === BidStatus.WON ? t('auction.itemNumber', { number: entry.itemNumber }) : entry.rank}
+                    {entry.rank}
                   </div>
                   <div style={{ flex: 1 }}>
                     <div>
@@ -348,10 +350,7 @@ export default function AuctionPage() {
                   </div>
                   <div style={{ textAlign: 'right' }}>
                     <div style={{ fontWeight: 'bold' }}>{entry.amount} Stars</div>
-                    {entry.status === BidStatus.WON && (
-                      <span className="text-success" style={{ fontSize: '12px' }}>{t('auction.won')}</span>
-                    )}
-                    {entry.isWinning && entry.status === BidStatus.ACTIVE && (
+                    {entry.isWinning && (
                       <span className="text-success" style={{ fontSize: '12px' }}>{t('bids.winning')}</span>
                     )}
                   </div>
@@ -376,6 +375,9 @@ export default function AuctionPage() {
           <h4>{t('auction.rounds')}</h4>
           {auction.roundsConfig.map((round, index) => {
             const roundState = auction.rounds[index];
+            const roundNumber = index + 1;
+            const roundWinners = pastWinners.filter(w => w.round === roundNumber);
+
             return (
               <div
                 key={index}
@@ -387,16 +389,29 @@ export default function AuctionPage() {
                 }}
               >
                 <div className="flex justify-between">
-                  <span>{t('auction.roundNumber', { number: index + 1 })}</span>
+                  <span>{t('auction.roundNumber', { number: roundNumber })}</span>
                   <span>{t('auction.itemsMinutes', { items: round.itemsCount, minutes: round.durationMinutes })}</span>
                 </div>
                 {roundState && (
                   <div className="text-muted" style={{ fontSize: '12px' }}>
                     {roundState.completed
                       ? t('auction.completedWinners', { count: roundState.winnerBidIds.length })
-                      : index + 1 === auction.currentRound
+                      : roundNumber === auction.currentRound
                       ? t('auction.inProgress')
                       : t('auction.pending')}
+                  </div>
+                )}
+                {roundWinners.length > 0 && (
+                  <div style={{ marginTop: '8px', paddingTop: '8px', borderTop: '1px solid rgba(255,255,255,0.1)' }}>
+                    {roundWinners.map((winner, winnerIndex) => (
+                      <div key={winnerIndex} className="flex justify-between" style={{ fontSize: '12px', marginBottom: '4px' }}>
+                        <span>
+                          #{winner.itemNumber} {winner.username}
+                          {winner.isBot && <span className="text-muted"> ({t('auction.bot')})</span>}
+                        </span>
+                        <span className="text-success">{winner.amount} Stars</span>
+                      </div>
+                    ))}
                   </div>
                 )}
               </div>

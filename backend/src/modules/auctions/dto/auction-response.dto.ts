@@ -98,7 +98,7 @@ export interface IAuctionResponse {
 }
 
 /**
- * Leaderboard entry
+ * Leaderboard entry (active bid in current round)
  */
 export interface ILeaderboardEntry {
   /** Rank in the leaderboard (1-based) */
@@ -113,17 +113,48 @@ export interface ILeaderboardEntry {
   /** Whether the bidder is a bot */
   isBot: boolean;
 
-  /** Bid status */
-  status: BidStatus;
-
-  /** Item number won (if applicable) */
-  itemNumber?: number | null;
-
   /** Whether this bid is currently in a winning position */
   isWinning: boolean;
 
   /** Bid creation time */
   createdAt: Date;
+}
+
+/**
+ * Past round winner entry
+ */
+export interface IPastWinnerEntry {
+  /** Round number where this bid won */
+  round: number;
+
+  /** Item number won */
+  itemNumber: number;
+
+  /** Bid amount in Stars */
+  amount: number;
+
+  /** Username of the winner */
+  username: string;
+
+  /** Whether the winner is a bot */
+  isBot: boolean;
+
+  /** Bid creation time */
+  createdAt: Date;
+}
+
+/**
+ * Leaderboard response with pagination
+ */
+export interface ILeaderboardResponse {
+  /** Active bids in current round */
+  leaderboard: ILeaderboardEntry[];
+
+  /** Total count of active bids */
+  totalCount: number;
+
+  /** Past round winners */
+  pastWinners: IPastWinnerEntry[];
 }
 
 /**

@@ -175,7 +175,7 @@ export class BotService implements OnModuleInit, OnModuleDestroy {
 
       let newAmount: number;
       if (existingBid) {
-        const leaderboard = await this.auctionsService.getLeaderboard(state.auctionId);
+        const { leaderboard } = await this.auctionsService.getLeaderboard(state.auctionId);
         const botPosition = leaderboard.findIndex(l => l.username.includes(botId.slice(-6)));
         const isWinning = botPosition >= 0 && botPosition < currentRound.itemsCount;
 

@@ -19,17 +19,36 @@ export interface PopulatedUser {
 }
 
 /**
- * Leaderboard entry returned from getLeaderboard
+ * Leaderboard entry returned from getLeaderboard (active bid in current round)
  */
 export interface LeaderboardEntry {
   rank: number;
   amount: number;
   username: string;
   isBot: boolean;
-  status: BidStatus;
-  itemNumber?: number;
   isWinning: boolean;
   createdAt: Date;
+}
+
+/**
+ * Past round winner entry
+ */
+export interface PastWinnerEntry {
+  round: number;
+  itemNumber: number;
+  amount: number;
+  username: string;
+  isBot: boolean;
+  createdAt: Date;
+}
+
+/**
+ * Leaderboard response with pagination
+ */
+export interface LeaderboardResponse {
+  leaderboard: LeaderboardEntry[];
+  totalCount: number;
+  pastWinners: PastWinnerEntry[];
 }
 
 /**

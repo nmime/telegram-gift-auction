@@ -10,7 +10,7 @@ import { EventsGateway } from '@/modules/events';
 import { NotificationsService } from '@/modules/notifications';
 import { REDLOCK, REDIS_CLIENT } from '@/modules/redis';
 import { ICreateAuction, IPlaceBid } from './dto';
-import { isTransientTransactionError, isDuplicateKeyError, isPopulatedUser, LeaderboardEntry, LOCALHOST_IPS } from '@/common';
+import { isTransientTransactionError, isDuplicateKeyError, isPopulatedUser, LeaderboardEntry, PastWinnerEntry, LeaderboardResponse, LOCALHOST_IPS } from '@/common';
 
 const MAX_RETRIES = 20;
 const RETRY_DELAY_MS = 50;
@@ -898,35 +898,68 @@ export class AuctionsService {
     };
   }
 
-  async getLeaderboard(auctionId: string): Promise<LeaderboardEntry[]> {
+  async getLeaderboard(
+    auctionId: string,
+    limit: number = 50,
+    offset: number = 0,
+  ): Promise<LeaderboardResponse> {
     const auction = await this.findById(auctionId);
 
+    // Get total count of active bids
+    const totalCount = await this.bidModel.countDocuments({
+      auctionId: auction._id,
+      status: BidStatus.ACTIVE,
+    });
+
+    // Get active bids with pagination
     const bids = await this.bidModel
-      .find({ auctionId: auction._id, status: { $in: [BidStatus.ACTIVE, BidStatus.WON] } })
+      .find({ auctionId: auction._id, status: BidStatus.ACTIVE })
       .sort({ amount: -1, createdAt: 1 })
+      .skip(offset)
+      .limit(limit)
       .populate('userId', 'username isBot')
       .exec();
 
     const currentRound = auction.rounds[auction.currentRound - 1];
     const itemsInRound = currentRound?.itemsCount || 0;
 
-    let activeRank = 0;
-    return bids.map((bid, index) => {
-      if (bid.status === BidStatus.ACTIVE) {
-        activeRank++;
-      }
+    const leaderboard: LeaderboardEntry[] = bids.map((bid, index) => {
       const populatedUser = isPopulatedUser(bid.userId) ? bid.userId : null;
+      const actualRank = offset + index + 1;
       return {
-        rank: index + 1,
+        rank: actualRank,
         amount: bid.amount,
         username: populatedUser?.username || 'Unknown',
         isBot: populatedUser?.isBot || false,
-        status: bid.status,
-        itemNumber: bid.itemNumber,
-        isWinning: bid.status === BidStatus.ACTIVE && activeRank <= itemsInRound,
+        isWinning: actualRank <= itemsInRound,
         createdAt: bid.createdAt,
       };
     });
+
+    // Get past round winners
+    const wonBids = await this.bidModel
+      .find({ auctionId: auction._id, status: BidStatus.WON })
+      .sort({ wonRound: 1, itemNumber: 1 })
+      .populate('userId', 'username isBot')
+      .exec();
+
+    const pastWinners: PastWinnerEntry[] = wonBids.map((bid) => {
+      const populatedUser = isPopulatedUser(bid.userId) ? bid.userId : null;
+      return {
+        round: bid.wonRound || 0,
+        itemNumber: bid.itemNumber || 0,
+        amount: bid.amount,
+        username: populatedUser?.username || 'Unknown',
+        isBot: populatedUser?.isBot || false,
+        createdAt: bid.createdAt,
+      };
+    });
+
+    return {
+      leaderboard,
+      totalCount,
+      pastWinners,
+    };
   }
 
   async getUserBids(auctionId: string, userId: string): Promise<BidDocument[]> {

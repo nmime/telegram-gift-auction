@@ -119,10 +119,23 @@ export interface LeaderboardEntry {
   amount: number;
   username: string;
   isBot: boolean;
-  status: BidStatus;
-  itemNumber?: number;
   isWinning: boolean;
   createdAt: string;
+}
+
+export interface PastWinnerEntry {
+  round: number;
+  itemNumber: number;
+  amount: number;
+  username: string;
+  isBot: boolean;
+  createdAt: string;
+}
+
+export interface LeaderboardResponse {
+  leaderboard: LeaderboardEntry[];
+  totalCount: number;
+  pastWinners: PastWinnerEntry[];
 }
 
 export interface MinWinningBidResponse {

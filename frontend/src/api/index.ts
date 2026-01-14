@@ -2,7 +2,7 @@ import type {
   User,
   Auction,
   Bid,
-  LeaderboardEntry,
+  LeaderboardResponse,
   Transaction,
   CreateAuctionData,
   BalanceInfo,
@@ -215,9 +215,17 @@ export async function placeBid(
   );
 }
 
-export async function getLeaderboard(auctionId: string): Promise<LeaderboardEntry[]> {
-  return fetchApi<LeaderboardEntry[]>(
-    `/auctions/${encodeURIComponent(auctionId)}/leaderboard`
+export async function getLeaderboard(
+  auctionId: string,
+  limit?: number,
+  offset?: number,
+): Promise<LeaderboardResponse> {
+  const params = new URLSearchParams();
+  if (limit !== undefined) params.set('limit', String(limit));
+  if (offset !== undefined) params.set('offset', String(offset));
+  const query = params.toString();
+  return fetchApi<LeaderboardResponse>(
+    `/auctions/${encodeURIComponent(auctionId)}/leaderboard${query ? `?${query}` : ''}`
   );
 }
 

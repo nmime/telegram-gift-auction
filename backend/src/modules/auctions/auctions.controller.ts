@@ -8,7 +8,7 @@ import {
   ICreateAuction,
   IPlaceBid,
   IAuctionResponse,
-  ILeaderboardEntry,
+  ILeaderboardResponse,
   IMinWinningBidResponse,
   IPlaceBidResponse,
   IAuditResponse,
@@ -22,6 +22,17 @@ import { AuctionStatus, AuctionDocument } from '@/schemas';
 export interface IAuctionStatusQuery {
   /** Filter auctions by status */
   status?: AuctionStatus;
+}
+
+/**
+ * Leaderboard pagination query parameters
+ */
+export interface ILeaderboardQuery {
+  /** Maximum number of entries to return (default: 50) */
+  limit?: number;
+
+  /** Number of entries to skip (default: 0) */
+  offset?: number;
 }
 
 @Controller('auctions')
@@ -159,25 +170,40 @@ export class AuctionsController {
   /**
    * Get auction leaderboard
    *
-   * Returns the current ranking of all active bids, sorted by amount descending.
+   * Returns the current ranking of active bids in current round and past winners.
    *
    * @tag auctions
    * @param id Auction ID
-   * @returns Leaderboard entries
+   * @param query Pagination parameters
+   * @returns Leaderboard with pagination and past winners
    */
   @TypedRoute.Get(':id/leaderboard')
-  async getLeaderboard(@TypedParam('id') id: string): Promise<ILeaderboardEntry[]> {
-    const leaderboard = await this.auctionsService.getLeaderboard(id);
-    return leaderboard.map(entry => ({
-      rank: entry.rank,
-      amount: entry.amount,
-      username: entry.username,
-      isBot: entry.isBot,
-      status: entry.status,
-      itemNumber: entry.itemNumber,
-      isWinning: entry.isWinning,
-      createdAt: entry.createdAt,
-    }));
+  async getLeaderboard(
+    @TypedParam('id') id: string,
+    @TypedQuery() query: ILeaderboardQuery,
+  ): Promise<ILeaderboardResponse> {
+    const limit = query.limit ?? 50;
+    const offset = query.offset ?? 0;
+    const result = await this.auctionsService.getLeaderboard(id, limit, offset);
+    return {
+      leaderboard: result.leaderboard.map(entry => ({
+        rank: entry.rank,
+        amount: entry.amount,
+        username: entry.username,
+        isBot: entry.isBot,
+        isWinning: entry.isWinning,
+        createdAt: entry.createdAt,
+      })),
+      totalCount: result.totalCount,
+      pastWinners: result.pastWinners.map(winner => ({
+        round: winner.round,
+        itemNumber: winner.itemNumber,
+        amount: winner.amount,
+        username: winner.username,
+        isBot: winner.isBot,
+        createdAt: winner.createdAt,
+      })),
+    };
   }
 
   /**
