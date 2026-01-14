@@ -1,6 +1,6 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
-import { validateWebAppData, checkSignature } from '@grammyjs/validator';
+import { Injectable, UnauthorizedException } from "@nestjs/common";
+import { ConfigService } from "@nestjs/config";
+import { validateWebAppData, checkSignature } from "@grammyjs/validator";
 
 export interface TelegramUser {
   id: number;
@@ -35,18 +35,18 @@ export class TelegramService {
   private readonly maxAuthAge = 86400; // 24 hours
 
   constructor(private readonly configService: ConfigService) {
-    this.botToken = this.configService.get<string>('telegram.botToken')!;
+    this.botToken = this.configService.get<string>("telegram.botToken")!;
   }
 
   validateWidgetAuth(payload: TelegramUser): TelegramUser {
     if (!this.botToken) {
-      throw new UnauthorizedException('Bot token not configured');
+      throw new UnauthorizedException("Bot token not configured");
     }
 
     // Check auth_date is not too old
     const authAge = Math.floor(Date.now() / 1000) - payload.auth_date;
     if (authAge > this.maxAuthAge) {
-      throw new UnauthorizedException('Auth data expired');
+      throw new UnauthorizedException("Auth data expired");
     }
 
     // Convert payload to Record<string, string> for checkSignature
@@ -61,13 +61,14 @@ export class TelegramService {
     if (payload.username) dataCheck.username = payload.username;
     if (payload.photo_url) dataCheck.photo_url = payload.photo_url;
     if (payload.language_code) dataCheck.language_code = payload.language_code;
-    if (payload.is_premium !== undefined) dataCheck.is_premium = String(payload.is_premium);
+    if (payload.is_premium !== undefined)
+      dataCheck.is_premium = String(payload.is_premium);
 
     // Validate signature using @grammyjs/validator
     const isValid = checkSignature(this.botToken, dataCheck);
 
     if (!isValid) {
-      throw new UnauthorizedException('Invalid Telegram auth data');
+      throw new UnauthorizedException("Invalid Telegram auth data");
     }
 
     return payload;
@@ -75,7 +76,11 @@ export class TelegramService {
 
   validateWebAppInitData(initDataString: string): WebAppInitData {
     if (!this.botToken) {
-      throw new UnauthorizedException('Bot token not configured');
+      throw new UnauthorizedException("Bot token not configured");
+    }
+
+    if (initDataString.length > 4096) {
+      throw new UnauthorizedException("Init data too large");
     }
 
     // Parse the init data string
@@ -85,16 +90,16 @@ export class TelegramService {
     const isValid = validateWebAppData(this.botToken, searchParams);
 
     if (!isValid) {
-      throw new UnauthorizedException('Invalid Web App init data');
+      throw new UnauthorizedException("Invalid Web App init data");
     }
 
     // Parse user data
-    const userStr = searchParams.get('user');
-    const authDateStr = searchParams.get('auth_date');
-    const hash = searchParams.get('hash');
+    const userStr = searchParams.get("user");
+    const authDateStr = searchParams.get("auth_date");
+    const hash = searchParams.get("hash");
 
     if (!authDateStr || !hash) {
-      throw new UnauthorizedException('Missing required fields in init data');
+      throw new UnauthorizedException("Missing required fields in init data");
     }
 
     const authDate = parseInt(authDateStr, 10);
@@ -102,20 +107,20 @@ export class TelegramService {
     // Check auth_date is not too old
     const authAge = Math.floor(Date.now() / 1000) - authDate;
     if (authAge > this.maxAuthAge) {
-      throw new UnauthorizedException('Auth data expired');
+      throw new UnauthorizedException("Auth data expired");
     }
 
-    let user: WebAppInitData['user'];
+    let user: WebAppInitData["user"];
     if (userStr) {
       try {
         user = JSON.parse(userStr);
       } catch {
-        throw new UnauthorizedException('Invalid user data format');
+        throw new UnauthorizedException("Invalid user data format");
       }
     }
 
     return {
-      query_id: searchParams.get('query_id') || undefined,
+      query_id: searchParams.get("query_id") || undefined,
       user,
       auth_date: authDate,
       hash,

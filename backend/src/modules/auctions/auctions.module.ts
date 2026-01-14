@@ -1,14 +1,23 @@
-import { Module, forwardRef } from '@nestjs/common';
-import { MongooseModule } from '@nestjs/mongoose';
-import { AuctionsController } from './auctions.controller';
-import { AuctionsService } from './auctions.service';
-import { AuctionSchedulerService } from './auction-scheduler.service';
-import { BotService } from './bot.service';
-import { Auction, AuctionSchema, Bid, BidSchema, User, UserSchema, Transaction, TransactionSchema } from '@/schemas';
-import { BidsModule } from '@/modules/bids';
-import { UsersModule } from '@/modules/users';
-import { EventsModule } from '@/modules/events';
-import { NotificationsModule } from '@/modules/notifications';
+import { Module, forwardRef } from "@nestjs/common";
+import { MongooseModule } from "@nestjs/mongoose";
+import { AuctionsController } from "./auctions.controller";
+import { AuctionsService } from "./auctions.service";
+import { AuctionSchedulerService } from "./auction-scheduler.service";
+import { BotService } from "./bot.service";
+import {
+  Auction,
+  AuctionSchema,
+  Bid,
+  BidSchema,
+  User,
+  UserSchema,
+  Transaction,
+  TransactionSchema,
+} from "@/schemas";
+import { BidsModule } from "@/modules/bids";
+import { UsersModule } from "@/modules/users";
+import { EventsModule } from "@/modules/events";
+import { NotificationsModule } from "@/modules/notifications";
 
 @Module({
   imports: [

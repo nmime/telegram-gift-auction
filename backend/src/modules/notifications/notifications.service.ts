@@ -1,9 +1,9 @@
-import { Injectable, Logger } from '@nestjs/common';
-import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
-import { I18nService } from 'nestjs-i18n';
-import { TelegramBotService } from '@/modules/telegram';
-import { User, UserDocument } from '@/schemas';
+import { Injectable, Logger } from "@nestjs/common";
+import { InjectModel } from "@nestjs/mongoose";
+import { Model } from "mongoose";
+import { I18nService } from "nestjs-i18n";
+import { TelegramBotService } from "@/modules/telegram";
+import { User, UserDocument } from "@/schemas";
 
 export interface RoundWinNotificationData {
   auctionId: string;
@@ -40,20 +40,23 @@ export class NotificationsService {
   ) {}
 
   private getLang(user: UserDocument): string {
-    return user.languageCode || 'en';
+    return user.languageCode || "en";
   }
 
   private t(key: string, lang: string, args?: Record<string, unknown>): string {
     return this.i18n.t(key, { lang, args });
   }
 
-  async notifyOutbid(userId: string, data: OutbidNotificationData): Promise<void> {
+  async notifyOutbid(
+    userId: string,
+    data: OutbidNotificationData,
+  ): Promise<void> {
     const user = await this.userModel.findById(userId);
     if (!user?.telegramId) return;
 
     const lang = this.getLang(user);
-    const title = this.t('notifications.outbid.title', lang);
-    const message = this.t('notifications.outbid.message', lang, {
+    const title = this.t("notifications.outbid.title", lang);
+    const message = this.t("notifications.outbid.message", lang, {
       auctionTitle: data.auctionTitle,
       roundNumber: data.roundNumber,
       yourBid: data.yourBid,
@@ -64,15 +67,18 @@ export class NotificationsService {
     await this.sendTelegramMessage(user.telegramId, `${title}\n\n${message}`);
   }
 
-  async notifyRoundWin(userId: string, data: RoundWinNotificationData): Promise<void> {
+  async notifyRoundWin(
+    userId: string,
+    data: RoundWinNotificationData,
+  ): Promise<void> {
     const user = await this.userModel.findById(userId);
     if (!user?.telegramId) return;
 
     const lang = this.getLang(user);
-    const title = this.t('notifications.roundWin.title', lang, {
+    const title = this.t("notifications.roundWin.title", lang, {
       itemNumber: data.itemNumber,
     });
-    const message = this.t('notifications.roundWin.message', lang, {
+    const message = this.t("notifications.roundWin.message", lang, {
       auctionTitle: data.auctionTitle,
       roundNumber: data.roundNumber,
       winningBid: data.winningBid,
@@ -81,28 +87,31 @@ export class NotificationsService {
     await this.sendTelegramMessage(user.telegramId, `${title}\n\n${message}`);
   }
 
-  async notifyRoundLost(userId: string, data: {
-    auctionId: string;
-    auctionTitle: string;
-    roundNumber: number;
-    yourBid: number;
-    refunded: boolean;
-  }): Promise<void> {
+  async notifyRoundLost(
+    userId: string,
+    data: {
+      auctionId: string;
+      auctionTitle: string;
+      roundNumber: number;
+      yourBid: number;
+      refunded: boolean;
+    },
+  ): Promise<void> {
     const user = await this.userModel.findById(userId);
     if (!user?.telegramId) return;
 
     const lang = this.getLang(user);
-    const title = this.t('notifications.roundLost.title', lang, {
+    const title = this.t("notifications.roundLost.title", lang, {
       roundNumber: data.roundNumber,
     });
-    const message = this.t('notifications.roundLost.message', lang, {
+    const message = this.t("notifications.roundLost.message", lang, {
       auctionTitle: data.auctionTitle,
     });
 
     let fullMessage = `${title}\n\n${message}`;
 
     if (data.refunded) {
-      const refundText = this.t('notifications.roundLost.refunded', lang, {
+      const refundText = this.t("notifications.roundLost.refunded", lang, {
         amount: data.yourBid,
       });
       fullMessage += `\n${refundText}`;
@@ -111,22 +120,25 @@ export class NotificationsService {
     await this.sendTelegramMessage(user.telegramId, fullMessage);
   }
 
-  async notifyAuctionComplete(userId: string, data: AuctionCompleteNotificationData): Promise<void> {
+  async notifyAuctionComplete(
+    userId: string,
+    data: AuctionCompleteNotificationData,
+  ): Promise<void> {
     const user = await this.userModel.findById(userId);
     if (!user?.telegramId) return;
 
     const lang = this.getLang(user);
-    const title = this.t('notifications.auctionComplete.title', lang);
+    const title = this.t("notifications.auctionComplete.title", lang);
 
     let message: string;
     if (data.totalWins > 0) {
-      message = this.t('notifications.auctionComplete.won', lang, {
+      message = this.t("notifications.auctionComplete.won", lang, {
         auctionTitle: data.auctionTitle,
         totalWins: data.totalWins,
         totalSpent: data.totalSpent,
       });
     } else {
-      message = this.t('notifications.auctionComplete.lost', lang, {
+      message = this.t("notifications.auctionComplete.lost", lang, {
         auctionTitle: data.auctionTitle,
       });
     }
@@ -134,19 +146,22 @@ export class NotificationsService {
     await this.sendTelegramMessage(user.telegramId, `${title}\n\n${message}`);
   }
 
-  async notifyNewRoundStarted(userId: string, data: {
-    auctionId: string;
-    auctionTitle: string;
-    roundNumber: number;
-    itemsCount: number;
-    endTime: Date;
-  }): Promise<void> {
+  async notifyNewRoundStarted(
+    userId: string,
+    data: {
+      auctionId: string;
+      auctionTitle: string;
+      roundNumber: number;
+      itemsCount: number;
+      endTime: Date;
+    },
+  ): Promise<void> {
     const user = await this.userModel.findById(userId);
     if (!user?.telegramId) return;
 
     const lang = this.getLang(user);
-    const title = this.t('notifications.newRound.title', lang);
-    const message = this.t('notifications.newRound.message', lang, {
+    const title = this.t("notifications.newRound.title", lang);
+    const message = this.t("notifications.newRound.message", lang, {
       auctionTitle: data.auctionTitle,
       roundNumber: data.roundNumber,
       itemsCount: data.itemsCount,
@@ -155,19 +170,22 @@ export class NotificationsService {
     await this.sendTelegramMessage(user.telegramId, `${title}\n\n${message}`);
   }
 
-  async notifyAntiSniping(userId: string, data: {
-    auctionId: string;
-    auctionTitle: string;
-    roundNumber: number;
-    newEndTime: Date;
-    extensionMinutes: number;
-  }): Promise<void> {
+  async notifyAntiSniping(
+    userId: string,
+    data: {
+      auctionId: string;
+      auctionTitle: string;
+      roundNumber: number;
+      newEndTime: Date;
+      extensionMinutes: number;
+    },
+  ): Promise<void> {
     const user = await this.userModel.findById(userId);
     if (!user?.telegramId) return;
 
     const lang = this.getLang(user);
-    const title = this.t('notifications.antiSniping.title', lang);
-    const message = this.t('notifications.antiSniping.message', lang, {
+    const title = this.t("notifications.antiSniping.title", lang);
+    const message = this.t("notifications.antiSniping.message", lang, {
       auctionTitle: data.auctionTitle,
       roundNumber: data.roundNumber,
       extensionMinutes: data.extensionMinutes,
@@ -176,15 +194,21 @@ export class NotificationsService {
     await this.sendTelegramMessage(user.telegramId, `${title}\n\n${message}`);
   }
 
-  private async sendTelegramMessage(telegramId: number, message: string): Promise<void> {
+  private async sendTelegramMessage(
+    telegramId: number,
+    message: string,
+  ): Promise<void> {
     try {
       const bot = this.telegramBotService.getBot();
       await bot.api.sendMessage(telegramId, message, {
-        parse_mode: 'HTML',
+        parse_mode: "HTML",
       });
       this.logger.debug(`Sent notification to Telegram user ${telegramId}`);
     } catch (error) {
-      this.logger.warn(`Failed to send Telegram notification to ${telegramId}:`, error);
+      this.logger.warn(
+        `Failed to send Telegram notification to ${telegramId}:`,
+        error,
+      );
     }
   }
 }

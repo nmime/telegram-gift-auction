@@ -1,20 +1,34 @@
-import { Injectable, BadRequestException, NotFoundException, ConflictException } from '@nestjs/common';
-import { InjectModel, InjectConnection } from '@nestjs/mongoose';
-import { Model, Connection, Types, ClientSession } from 'mongoose';
-import { User, UserDocument, Transaction, TransactionDocument, TransactionType } from '@/schemas';
+import {
+  Injectable,
+  BadRequestException,
+  NotFoundException,
+  ConflictException,
+} from "@nestjs/common";
+import { InjectModel, InjectConnection } from "@nestjs/mongoose";
+import { Model, Connection, Types, ClientSession } from "mongoose";
+import {
+  User,
+  UserDocument,
+  Transaction,
+  TransactionDocument,
+  TransactionType,
+} from "@/schemas";
 
 @Injectable()
 export class UsersService {
   constructor(
     @InjectModel(User.name) private userModel: Model<UserDocument>,
-    @InjectModel(Transaction.name) private transactionModel: Model<TransactionDocument>,
+    @InjectModel(Transaction.name)
+    private transactionModel: Model<TransactionDocument>,
     @InjectConnection() private connection: Connection,
   ) {}
 
-  async getBalance(userId: string): Promise<{ balance: number; frozenBalance: number }> {
+  async getBalance(
+    userId: string,
+  ): Promise<{ balance: number; frozenBalance: number }> {
     const user = await this.userModel.findById(userId);
     if (!user) {
-      throw new NotFoundException('User not found');
+      throw new NotFoundException("User not found");
     }
     return {
       balance: user.balance,
@@ -24,19 +38,19 @@ export class UsersService {
 
   async deposit(userId: string, amount: number): Promise<UserDocument> {
     if (amount <= 0 || !Number.isInteger(amount)) {
-      throw new BadRequestException('Amount must be a positive integer');
+      throw new BadRequestException("Amount must be a positive integer");
     }
 
     const session = await this.connection.startSession();
     session.startTransaction({
-      readConcern: { level: 'snapshot' },
-      writeConcern: { w: 'majority' },
+      readConcern: { level: "snapshot" },
+      writeConcern: { w: "majority" },
     });
 
     try {
       const user = await this.userModel.findById(userId).session(session);
       if (!user) {
-        throw new NotFoundException('User not found');
+        throw new NotFoundException("User not found");
       }
 
       const balanceBefore = user.balance;
@@ -46,21 +60,26 @@ export class UsersService {
         {
           $inc: { balance: amount, version: 1 },
         },
-        { new: true, session }
+        { new: true, session },
       );
 
       if (!updatedUser) {
-        throw new ConflictException('Concurrent modification detected');
+        throw new ConflictException("Concurrent modification detected");
       }
 
-      await this.transactionModel.create([{
-        userId: updatedUser._id,
-        type: TransactionType.DEPOSIT,
-        amount,
-        balanceBefore,
-        balanceAfter: updatedUser.balance,
-        description: `Deposit of ${amount} Stars`,
-      }], { session });
+      await this.transactionModel.create(
+        [
+          {
+            userId: updatedUser._id,
+            type: TransactionType.DEPOSIT,
+            amount,
+            balanceBefore,
+            balanceAfter: updatedUser.balance,
+            description: `Deposit of ${amount} Stars`,
+          },
+        ],
+        { session },
+      );
 
       await session.commitTransaction();
       return updatedUser;
@@ -74,23 +93,23 @@ export class UsersService {
 
   async withdraw(userId: string, amount: number): Promise<UserDocument> {
     if (amount <= 0 || !Number.isInteger(amount)) {
-      throw new BadRequestException('Amount must be a positive integer');
+      throw new BadRequestException("Amount must be a positive integer");
     }
 
     const session = await this.connection.startSession();
     session.startTransaction({
-      readConcern: { level: 'snapshot' },
-      writeConcern: { w: 'majority' },
+      readConcern: { level: "snapshot" },
+      writeConcern: { w: "majority" },
     });
 
     try {
       const user = await this.userModel.findById(userId).session(session);
       if (!user) {
-        throw new NotFoundException('User not found');
+        throw new NotFoundException("User not found");
       }
 
       if (user.balance < amount) {
-        throw new BadRequestException('Insufficient balance');
+        throw new BadRequestException("Insufficient balance");
       }
 
       const balanceBefore = user.balance;
@@ -104,21 +123,28 @@ export class UsersService {
         {
           $inc: { balance: -amount, version: 1 },
         },
-        { new: true, session }
+        { new: true, session },
       );
 
       if (!updatedUser) {
-        throw new ConflictException('Concurrent modification or insufficient balance');
+        throw new ConflictException(
+          "Concurrent modification or insufficient balance",
+        );
       }
 
-      await this.transactionModel.create([{
-        userId: updatedUser._id,
-        type: TransactionType.WITHDRAW,
-        amount,
-        balanceBefore,
-        balanceAfter: updatedUser.balance,
-        description: `Withdrawal of ${amount} Stars`,
-      }], { session });
+      await this.transactionModel.create(
+        [
+          {
+            userId: updatedUser._id,
+            type: TransactionType.WITHDRAW,
+            amount,
+            balanceBefore,
+            balanceAfter: updatedUser.balance,
+            description: `Withdrawal of ${amount} Stars`,
+          },
+        ],
+        { session },
+      );
 
       await session.commitTransaction();
       return updatedUser;
@@ -144,29 +170,34 @@ export class UsersService {
   ): Promise<void> {
     const transactionType = this.mapTransactionType(type);
 
-    await this.transactionModel.create([{
-      userId: new Types.ObjectId(userId),
-      type: transactionType,
-      amount,
-      balanceBefore,
-      balanceAfter,
-      frozenBefore,
-      frozenAfter,
-      auctionId,
-      bidId,
-      description: this.getTransactionDescription(type, amount),
-    }], { session });
+    await this.transactionModel.create(
+      [
+        {
+          userId: new Types.ObjectId(userId),
+          type: transactionType,
+          amount,
+          balanceBefore,
+          balanceAfter,
+          frozenBefore,
+          frozenAfter,
+          auctionId,
+          bidId,
+          description: this.getTransactionDescription(type, amount),
+        },
+      ],
+      { session },
+    );
   }
 
   private mapTransactionType(type: string): TransactionType {
     switch (type) {
-      case 'bid_freeze':
+      case "bid_freeze":
         return TransactionType.BID_FREEZE;
-      case 'bid_unfreeze':
+      case "bid_unfreeze":
         return TransactionType.BID_UNFREEZE;
-      case 'bid_win':
+      case "bid_win":
         return TransactionType.BID_WIN;
-      case 'bid_refund':
+      case "bid_refund":
         return TransactionType.BID_REFUND;
       default:
         return TransactionType.DEPOSIT;
@@ -175,13 +206,13 @@ export class UsersService {
 
   private getTransactionDescription(type: string, amount: number): string {
     switch (type) {
-      case 'bid_freeze':
+      case "bid_freeze":
         return `Bid placed: ${amount} Stars frozen`;
-      case 'bid_unfreeze':
+      case "bid_unfreeze":
         return `Bid cancelled: ${amount} Stars unfrozen`;
-      case 'bid_win':
+      case "bid_win":
         return `Won auction item for ${amount} Stars`;
-      case 'bid_refund':
+      case "bid_refund":
         return `Bid refunded: ${amount} Stars returned`;
       default:
         return `Transaction of ${amount} Stars`;
@@ -197,11 +228,11 @@ export class UsersService {
   ): Promise<void> {
     const user = await this.userModel.findById(userId).session(session || null);
     if (!user) {
-      throw new NotFoundException('User not found');
+      throw new NotFoundException("User not found");
     }
 
     if (user.balance < amount) {
-      throw new BadRequestException('Insufficient balance');
+      throw new BadRequestException("Insufficient balance");
     }
 
     const balanceBefore = user.balance;
@@ -220,25 +251,30 @@ export class UsersService {
           version: 1,
         },
       },
-      { new: true, session: session || undefined }
+      { new: true, session: session || undefined },
     );
 
     if (!updatedUser) {
-      throw new ConflictException('Failed to freeze balance');
+      throw new ConflictException("Failed to freeze balance");
     }
 
-    await this.transactionModel.create([{
-      userId: updatedUser._id,
-      type: TransactionType.BID_FREEZE,
-      amount,
-      balanceBefore,
-      balanceAfter: updatedUser.balance,
-      frozenBefore,
-      frozenAfter: updatedUser.frozenBalance,
-      auctionId,
-      bidId,
-      description: `Bid freeze of ${amount} Stars`,
-    }], { session: session || undefined });
+    await this.transactionModel.create(
+      [
+        {
+          userId: updatedUser._id,
+          type: TransactionType.BID_FREEZE,
+          amount,
+          balanceBefore,
+          balanceAfter: updatedUser.balance,
+          frozenBefore,
+          frozenAfter: updatedUser.frozenBalance,
+          auctionId,
+          bidId,
+          description: `Bid freeze of ${amount} Stars`,
+        },
+      ],
+      { session: session || undefined },
+    );
   }
 
   async unfreezeBalance(
@@ -250,7 +286,7 @@ export class UsersService {
   ): Promise<void> {
     const user = await this.userModel.findById(userId).session(session || null);
     if (!user) {
-      throw new NotFoundException('User not found');
+      throw new NotFoundException("User not found");
     }
 
     const balanceBefore = user.balance;
@@ -269,25 +305,30 @@ export class UsersService {
           version: 1,
         },
       },
-      { new: true, session: session || undefined }
+      { new: true, session: session || undefined },
     );
 
     if (!updatedUser) {
-      throw new ConflictException('Failed to unfreeze balance');
+      throw new ConflictException("Failed to unfreeze balance");
     }
 
-    await this.transactionModel.create([{
-      userId: updatedUser._id,
-      type: TransactionType.BID_UNFREEZE,
-      amount,
-      balanceBefore,
-      balanceAfter: updatedUser.balance,
-      frozenBefore,
-      frozenAfter: updatedUser.frozenBalance,
-      auctionId,
-      bidId,
-      description: `Bid unfreeze of ${amount} Stars`,
-    }], { session: session || undefined });
+    await this.transactionModel.create(
+      [
+        {
+          userId: updatedUser._id,
+          type: TransactionType.BID_UNFREEZE,
+          amount,
+          balanceBefore,
+          balanceAfter: updatedUser.balance,
+          frozenBefore,
+          frozenAfter: updatedUser.frozenBalance,
+          auctionId,
+          bidId,
+          description: `Bid unfreeze of ${amount} Stars`,
+        },
+      ],
+      { session: session || undefined },
+    );
   }
 
   async confirmBidWin(
@@ -299,7 +340,7 @@ export class UsersService {
   ): Promise<void> {
     const user = await this.userModel.findById(userId).session(session || null);
     if (!user) {
-      throw new NotFoundException('User not found');
+      throw new NotFoundException("User not found");
     }
 
     const frozenBefore = user.frozenBalance;
@@ -316,25 +357,30 @@ export class UsersService {
           version: 1,
         },
       },
-      { new: true, session: session || undefined }
+      { new: true, session: session || undefined },
     );
 
     if (!updatedUser) {
-      throw new ConflictException('Failed to confirm bid win');
+      throw new ConflictException("Failed to confirm bid win");
     }
 
-    await this.transactionModel.create([{
-      userId: updatedUser._id,
-      type: TransactionType.BID_WIN,
-      amount,
-      balanceBefore: user.balance,
-      balanceAfter: updatedUser.balance,
-      frozenBefore,
-      frozenAfter: updatedUser.frozenBalance,
-      auctionId,
-      bidId,
-      description: `Won auction item for ${amount} Stars`,
-    }], { session: session || undefined });
+    await this.transactionModel.create(
+      [
+        {
+          userId: updatedUser._id,
+          type: TransactionType.BID_WIN,
+          amount,
+          balanceBefore: user.balance,
+          balanceAfter: updatedUser.balance,
+          frozenBefore,
+          frozenAfter: updatedUser.frozenBalance,
+          auctionId,
+          bidId,
+          description: `Won auction item for ${amount} Stars`,
+        },
+      ],
+      { session: session || undefined },
+    );
   }
 
   async refundBid(
@@ -346,7 +392,7 @@ export class UsersService {
   ): Promise<void> {
     const user = await this.userModel.findById(userId).session(session || null);
     if (!user) {
-      throw new NotFoundException('User not found');
+      throw new NotFoundException("User not found");
     }
 
     const balanceBefore = user.balance;
@@ -365,25 +411,30 @@ export class UsersService {
           version: 1,
         },
       },
-      { new: true, session: session || undefined }
+      { new: true, session: session || undefined },
     );
 
     if (!updatedUser) {
-      throw new ConflictException('Failed to refund bid');
+      throw new ConflictException("Failed to refund bid");
     }
 
-    await this.transactionModel.create([{
-      userId: updatedUser._id,
-      type: TransactionType.BID_REFUND,
-      amount,
-      balanceBefore,
-      balanceAfter: updatedUser.balance,
-      frozenBefore,
-      frozenAfter: updatedUser.frozenBalance,
-      auctionId,
-      bidId,
-      description: `Refund of ${amount} Stars`,
-    }], { session: session || undefined });
+    await this.transactionModel.create(
+      [
+        {
+          userId: updatedUser._id,
+          type: TransactionType.BID_REFUND,
+          amount,
+          balanceBefore,
+          balanceAfter: updatedUser.balance,
+          frozenBefore,
+          frozenAfter: updatedUser.frozenBalance,
+          auctionId,
+          bidId,
+          description: `Refund of ${amount} Stars`,
+        },
+      ],
+      { session: session || undefined },
+    );
   }
 
   async createBot(name: string, balance: number): Promise<UserDocument> {
@@ -396,11 +447,16 @@ export class UsersService {
     });
   }
 
-  async findById(userId: string | Types.ObjectId): Promise<UserDocument | null> {
+  async findById(
+    userId: string | Types.ObjectId,
+  ): Promise<UserDocument | null> {
     return this.userModel.findById(userId);
   }
 
-  async findByIdForUpdate(userId: string | Types.ObjectId, session: ClientSession): Promise<UserDocument | null> {
+  async findByIdForUpdate(
+    userId: string | Types.ObjectId,
+    session: ClientSession,
+  ): Promise<UserDocument | null> {
     return this.userModel.findById(userId).session(session);
   }
 }

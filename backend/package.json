@@ -21,6 +21,7 @@
     "sdk:e2e": "npx nestia e2e"
   },
   "dependencies": {
+    "@fastify/helmet": "^13.0.2",
     "@fastify/static": "^9.0.0",
     "@grammyjs/validator": "^1.0.1",
     "@nestia/core": "^10.0.1",

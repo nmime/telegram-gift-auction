@@ -1,6 +1,6 @@
-import { Injectable, OnModuleInit, Logger } from '@nestjs/common';
-import { Cron, CronExpression } from '@nestjs/schedule';
-import { AuctionsService } from './auctions.service';
+import { Injectable, OnModuleInit, Logger } from "@nestjs/common";
+import { Cron, CronExpression } from "@nestjs/schedule";
+import { AuctionsService } from "./auctions.service";
 
 @Injectable()
 export class AuctionSchedulerService implements OnModuleInit {
@@ -24,15 +24,20 @@ export class AuctionSchedulerService implements OnModuleInit {
           if (now >= currentRound.endTime) {
             try {
               await this.auctionsService.completeRound(auction._id.toString());
-              this.logger.log('Round completed', { roundNumber: currentRound.roundNumber, auctionId: auction._id });
+              this.logger.log("Round completed", {
+                roundNumber: currentRound.roundNumber,
+                auctionId: auction._id,
+              });
             } catch (error) {
-              this.logger.error('Error completing round', error, { auctionId: auction._id });
+              this.logger.error("Error completing round", error, {
+                auctionId: auction._id,
+              });
             }
           }
         }
       }
     } catch (error) {
-      this.logger.error('Error in checkExpiredRounds', error);
+      this.logger.error("Error in checkExpiredRounds", error);
     }
   }
 }

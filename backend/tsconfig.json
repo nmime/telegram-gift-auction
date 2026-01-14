@@ -1,4 +1,5 @@
 {
+  "exclude": ["node_modules", "dist", "test"],
   "compilerOptions": {
     "module": "commonjs",
     "declaration": true,
@@ -18,6 +19,7 @@
     "strictBindCallApply": true,
     "forceConsistentCasingInFileNames": true,
     "noFallthroughCasesInSwitch": true,
+    "noUncheckedIndexedAccess": true,
     "paths": {
       "@/*": ["src/*"]
     },

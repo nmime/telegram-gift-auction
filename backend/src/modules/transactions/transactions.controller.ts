@@ -1,10 +1,10 @@
-import { Controller, Req, UseGuards } from '@nestjs/common';
-import { TypedRoute, TypedQuery } from '@nestia/core';
-import { TransactionsService } from './transactions.service';
-import { AuthGuard, AuthenticatedRequest } from '@/common';
-import { ITransactionResponse, ITransactionQuery } from './dto';
+import { Controller, Req, UseGuards } from "@nestjs/common";
+import { TypedRoute, TypedQuery } from "@nestia/core";
+import { TransactionsService } from "./transactions.service";
+import { AuthGuard, AuthenticatedRequest } from "@/common";
+import { ITransactionResponse, ITransactionQuery } from "./dto";
 
-@Controller('transactions')
+@Controller("transactions")
 @UseGuards(AuthGuard)
 export class TransactionsController {
   constructor(private readonly transactionsService: TransactionsService) {}
@@ -31,7 +31,7 @@ export class TransactionsController {
       query.offset ?? 0,
     );
 
-    return transactions.map(t => ({
+    return transactions.map((t) => ({
       id: t._id.toString(),
       type: t.type,
       amount: t.amount,

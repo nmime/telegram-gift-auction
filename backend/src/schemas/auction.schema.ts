@@ -1,13 +1,13 @@
-import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { Document, Types } from 'mongoose';
+import { Prop, Schema, SchemaFactory } from "@nestjs/mongoose";
+import { Document, Types } from "mongoose";
 
 export type AuctionDocument = Auction & Document;
 
 export enum AuctionStatus {
-  PENDING = 'pending',
-  ACTIVE = 'active',
-  COMPLETED = 'completed',
-  CANCELLED = 'cancelled',
+  PENDING = "pending",
+  ACTIVE = "active",
+  COMPLETED = "completed",
+  CANCELLED = "cancelled",
 }
 
 export class RoundConfig {
@@ -96,7 +96,7 @@ export class Auction {
   @Prop({ default: 5 })
   botCount!: number;
 
-  @Prop({ type: Types.ObjectId, ref: 'User' })
+  @Prop({ type: Types.ObjectId, ref: "User" })
   createdBy!: Types.ObjectId;
 
   @Prop({ default: 0 })

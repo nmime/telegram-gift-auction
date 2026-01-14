@@ -1,4 +1,4 @@
-import { BidStatus } from '@/schemas';
+import { BidStatus } from "@/schemas";
 
 /**
  * Auction summary in bid response

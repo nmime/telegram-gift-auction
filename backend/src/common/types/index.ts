@@ -1,6 +1,5 @@
-import { FastifyRequest } from 'fastify';
-import { Types } from 'mongoose';
-import { BidStatus } from '@/schemas';
+import { FastifyRequest } from "fastify";
+import { Types } from "mongoose";
 
 export interface AuthenticatedRequest extends FastifyRequest {
   user: {
@@ -55,12 +54,12 @@ export interface LeaderboardResponse {
  * Type guard to check if a populated field is a PopulatedUser
  */
 export function isPopulatedUser(
-  field: Types.ObjectId | PopulatedUser | unknown
+  field: Types.ObjectId | PopulatedUser | unknown,
 ): field is PopulatedUser {
   return (
-    typeof field === 'object' &&
+    typeof field === "object" &&
     field !== null &&
-    'username' in field &&
-    typeof (field as PopulatedUser).username === 'string'
+    "username" in field &&
+    typeof (field as PopulatedUser).username === "string"
   );
 }

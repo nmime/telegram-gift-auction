@@ -1,11 +1,11 @@
-import { Module } from '@nestjs/common';
-import { MongooseModule } from '@nestjs/mongoose';
-import { JwtModule } from '@nestjs/jwt';
-import { ConfigModule, ConfigService } from '@nestjs/config';
-import { AuthController } from './auth.controller';
-import { AuthService } from './auth.service';
-import { TelegramService } from './telegram.service';
-import { User, UserSchema } from '@/schemas';
+import { Module } from "@nestjs/common";
+import { MongooseModule } from "@nestjs/mongoose";
+import { JwtModule } from "@nestjs/jwt";
+import { ConfigModule, ConfigService } from "@nestjs/config";
+import { AuthController } from "./auth.controller";
+import { AuthService } from "./auth.service";
+import { TelegramService } from "./telegram.service";
+import { User, UserSchema } from "@/schemas";
 
 @Module({
   imports: [
@@ -14,9 +14,9 @@ import { User, UserSchema } from '@/schemas';
       imports: [ConfigModule],
       global: true,
       useFactory: (configService: ConfigService) => ({
-        secret: configService.get<string>('jwt.secret'),
+        secret: configService.get<string>("jwt.secret"),
         signOptions: {
-          expiresIn: '24h',
+          expiresIn: "24h",
         },
       }),
       inject: [ConfigService],

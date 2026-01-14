@@ -1,9 +1,9 @@
-import { Controller, Req, UseGuards } from '@nestjs/common';
-import { TypedRoute, TypedBody, TypedParam, TypedQuery } from '@nestia/core';
-import { FastifyRequest } from 'fastify';
-import { AuctionsService } from './auctions.service';
-import { BotService } from './bot.service';
-import { AuthGuard, AuthenticatedRequest, getClientIp } from '@/common';
+import { Controller, Req, UseGuards } from "@nestjs/common";
+import { TypedRoute, TypedBody, TypedParam, TypedQuery } from "@nestia/core";
+import { FastifyRequest } from "fastify";
+import { AuctionsService } from "./auctions.service";
+import { BotService } from "./bot.service";
+import { AuthGuard, AuthenticatedRequest, getClientIp } from "@/common";
 import {
   ICreateAuction,
   IPlaceBid,
@@ -12,9 +12,9 @@ import {
   IMinWinningBidResponse,
   IPlaceBidResponse,
   IAuditResponse,
-} from './dto';
-import { IUserBidResponse } from '@/modules/bids';
-import { AuctionStatus, AuctionDocument } from '@/schemas';
+} from "./dto";
+import { IUserBidResponse } from "@/modules/bids";
+import { AuctionStatus, AuctionDocument } from "@/schemas";
 
 /**
  * Auction status query parameter
@@ -35,7 +35,7 @@ export interface ILeaderboardQuery {
   offset?: number;
 }
 
-@Controller('auctions')
+@Controller("auctions")
 export class AuctionsController {
   constructor(
     private readonly auctionsService: AuctionsService,
@@ -52,9 +52,11 @@ export class AuctionsController {
    * @returns List of auctions
    */
   @TypedRoute.Get()
-  async findAll(@TypedQuery() query: IAuctionStatusQuery): Promise<IAuctionResponse[]> {
+  async findAll(
+    @TypedQuery() query: IAuctionStatusQuery,
+  ): Promise<IAuctionResponse[]> {
     const auctions = await this.auctionsService.findAll(query.status);
-    return auctions.map(a => this.formatAuction(a));
+    return auctions.map((a) => this.formatAuction(a));
   }
 
   /**
@@ -66,7 +68,7 @@ export class AuctionsController {
    * @tag auctions
    * @returns Audit results
    */
-  @TypedRoute.Get('system/audit')
+  @TypedRoute.Get("system/audit")
   async auditFinancialIntegrity(): Promise<IAuditResponse> {
     return this.auctionsService.auditFinancialIntegrity();
   }
@@ -80,8 +82,8 @@ export class AuctionsController {
    * @param id Auction ID
    * @returns Auction details
    */
-  @TypedRoute.Get(':id')
-  async findOne(@TypedParam('id') id: string): Promise<IAuctionResponse> {
+  @TypedRoute.Get(":id")
+  async findOne(@TypedParam("id") id: string): Promise<IAuctionResponse> {
     const auction = await this.auctionsService.findById(id);
     return this.formatAuction(auction);
   }
@@ -117,9 +119,9 @@ export class AuctionsController {
    * @param id Auction ID
    * @returns Started auction
    */
-  @TypedRoute.Post(':id/start')
+  @TypedRoute.Post(":id/start")
   @UseGuards(AuthGuard)
-  async start(@TypedParam('id') id: string): Promise<IAuctionResponse> {
+  async start(@TypedParam("id") id: string): Promise<IAuctionResponse> {
     const auction = await this.auctionsService.start(id);
 
     if (auction.botsEnabled) {
@@ -146,15 +148,20 @@ export class AuctionsController {
    * @param body Bid amount
    * @returns Placed bid and updated auction
    */
-  @TypedRoute.Post(':id/bid')
+  @TypedRoute.Post(":id/bid")
   @UseGuards(AuthGuard)
   async placeBid(
-    @TypedParam('id') id: string,
+    @TypedParam("id") id: string,
     @TypedBody() body: IPlaceBid,
     @Req() req: AuthenticatedRequest,
   ): Promise<IPlaceBidResponse> {
     const clientIp = getClientIp(req as unknown as FastifyRequest);
-    const { bid, auction } = await this.auctionsService.placeBid(id, req.user.sub, body, clientIp);
+    const { bid, auction } = await this.auctionsService.placeBid(
+      id,
+      req.user.sub,
+      body,
+      clientIp,
+    );
     return {
       bid: {
         id: bid._id.toString(),
@@ -177,16 +184,16 @@ export class AuctionsController {
    * @param query Pagination parameters
    * @returns Leaderboard with pagination and past winners
    */
-  @TypedRoute.Get(':id/leaderboard')
+  @TypedRoute.Get(":id/leaderboard")
   async getLeaderboard(
-    @TypedParam('id') id: string,
+    @TypedParam("id") id: string,
     @TypedQuery() query: ILeaderboardQuery,
   ): Promise<ILeaderboardResponse> {
     const limit = query.limit ?? 50;
     const offset = query.offset ?? 0;
     const result = await this.auctionsService.getLeaderboard(id, limit, offset);
     return {
-      leaderboard: result.leaderboard.map(entry => ({
+      leaderboard: result.leaderboard.map((entry) => ({
         rank: entry.rank,
         amount: entry.amount,
         username: entry.username,
@@ -195,7 +202,7 @@ export class AuctionsController {
         createdAt: entry.createdAt,
       })),
       totalCount: result.totalCount,
-      pastWinners: result.pastWinners.map(winner => ({
+      pastWinners: result.pastWinners.map((winner) => ({
         round: winner.round,
         itemNumber: winner.itemNumber,
         amount: winner.amount,
@@ -216,14 +223,14 @@ export class AuctionsController {
    * @param id Auction ID
    * @returns List of user bids
    */
-  @TypedRoute.Get(':id/my-bids')
+  @TypedRoute.Get(":id/my-bids")
   @UseGuards(AuthGuard)
   async getMyBids(
-    @TypedParam('id') id: string,
+    @TypedParam("id") id: string,
     @Req() req: AuthenticatedRequest,
   ): Promise<IUserBidResponse[]> {
     const bids = await this.auctionsService.getUserBids(id, req.user.sub);
-    return bids.map(b => ({
+    return bids.map((b) => ({
       id: b._id.toString(),
       amount: b.amount,
       status: b.status,
@@ -243,8 +250,10 @@ export class AuctionsController {
    * @param id Auction ID
    * @returns Minimum winning bid amount
    */
-  @TypedRoute.Get(':id/min-winning-bid')
-  async getMinWinningBid(@TypedParam('id') id: string): Promise<IMinWinningBidResponse> {
+  @TypedRoute.Get(":id/min-winning-bid")
+  async getMinWinningBid(
+    @TypedParam("id") id: string,
+  ): Promise<IMinWinningBidResponse> {
     const minBid = await this.auctionsService.getMinWinningBid(id);
     return { minWinningBid: minBid };
   }
@@ -256,14 +265,14 @@ export class AuctionsController {
       description: auction.description,
       totalItems: auction.totalItems,
       roundsConfig: auction.roundsConfig,
-      rounds: auction.rounds.map(r => ({
+      rounds: auction.rounds.map((r) => ({
         roundNumber: r.roundNumber,
         itemsCount: r.itemsCount,
         startTime: r.startTime,
         endTime: r.endTime,
         extensionsCount: r.extensionsCount,
         completed: r.completed,
-        winnerBidIds: r.winnerBidIds?.map(id => id.toString()) || [],
+        winnerBidIds: r.winnerBidIds?.map((id) => id.toString()) || [],
       })),
       status: auction.status,
       currentRound: auction.currentRound,

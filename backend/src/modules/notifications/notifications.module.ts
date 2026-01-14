@@ -1,8 +1,8 @@
-import { Module } from '@nestjs/common';
-import { MongooseModule } from '@nestjs/mongoose';
-import { NotificationsService } from './notifications.service';
-import { TelegramModule } from '../telegram';
-import { User, UserSchema } from '@/schemas';
+import { Module } from "@nestjs/common";
+import { MongooseModule } from "@nestjs/mongoose";
+import { NotificationsService } from "./notifications.service";
+import { TelegramModule } from "../telegram";
+import { User, UserSchema } from "@/schemas";
 
 @Module({
   imports: [

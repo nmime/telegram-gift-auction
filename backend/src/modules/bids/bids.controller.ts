@@ -1,10 +1,10 @@
-import { Controller, Req, UseGuards } from '@nestjs/common';
-import { TypedRoute } from '@nestia/core';
-import { Types } from 'mongoose';
-import { BidsService } from './bids.service';
-import { AuthGuard, AuthenticatedRequest } from '@/common';
-import { IBidResponse, IAuctionSummary } from './dto';
-import { AuctionStatus } from '@/schemas';
+import { Controller, Req, UseGuards } from "@nestjs/common";
+import { TypedRoute } from "@nestia/core";
+import { Types } from "mongoose";
+import { BidsService } from "./bids.service";
+import { AuthGuard, AuthenticatedRequest } from "@/common";
+import { IBidResponse, IAuctionSummary } from "./dto";
+import { AuctionStatus } from "@/schemas";
 
 interface PopulatedAuction {
   _id: Types.ObjectId;
@@ -13,21 +13,24 @@ interface PopulatedAuction {
 }
 
 function isPopulatedAuction(value: unknown): value is PopulatedAuction {
-  if (typeof value !== 'object' || value === null) {
+  if (typeof value !== "object" || value === null) {
     return false;
   }
-  if (!('title' in value)) {
+  if (!("title" in value)) {
     return false;
   }
   const maybeAuction: { title: unknown } = value;
-  return typeof maybeAuction.title === 'string';
+  return typeof maybeAuction.title === "string";
 }
 
 function isObjectId(value: unknown): value is Types.ObjectId {
-  return value instanceof Types.ObjectId || (typeof value === 'object' && value !== null && '_bsontype' in value);
+  return (
+    value instanceof Types.ObjectId ||
+    (typeof value === "object" && value !== null && "_bsontype" in value)
+  );
 }
 
-@Controller('bids')
+@Controller("bids")
 @UseGuards(AuthGuard)
 export class BidsController {
   constructor(private readonly bidsService: BidsService) {}
@@ -41,10 +44,10 @@ export class BidsController {
    * @security bearer
    * @returns List of user bids
    */
-  @TypedRoute.Get('my')
+  @TypedRoute.Get("my")
   async getMyBids(@Req() req: AuthenticatedRequest): Promise<IBidResponse[]> {
     const bids = await this.bidsService.getByUser(req.user.sub);
-    return bids.map(b => {
+    return bids.map((b) => {
       let auction: IAuctionSummary | null = null;
       let auctionId: string;
 

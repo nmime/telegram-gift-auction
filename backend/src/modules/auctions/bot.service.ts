@@ -1,9 +1,23 @@
-import { Injectable, OnModuleInit, OnModuleDestroy, Logger } from '@nestjs/common';
-import { InjectModel, InjectConnection } from '@nestjs/mongoose';
-import { Model, Connection, Types } from 'mongoose';
-import { randomInt } from 'crypto';
-import { User, UserDocument, Auction, AuctionDocument, AuctionStatus, Bid, BidDocument, BidStatus } from '@/schemas';
-import { AuctionsService } from './auctions.service';
+import {
+  Injectable,
+  OnModuleInit,
+  OnModuleDestroy,
+  Logger,
+} from "@nestjs/common";
+import { InjectModel, InjectConnection } from "@nestjs/mongoose";
+import { Model, Connection, Types } from "mongoose";
+import { randomInt } from "crypto";
+import {
+  User,
+  UserDocument,
+  Auction,
+  AuctionDocument,
+  AuctionStatus,
+  Bid,
+  BidDocument,
+  BidStatus,
+} from "@/schemas";
+import { AuctionsService } from "./auctions.service";
 
 interface BotState {
   auctionId: string;
@@ -41,17 +55,20 @@ export class BotService implements OnModuleInit, OnModuleDestroy {
       });
 
       if (activeAuctions.length === 0) {
-        this.logger.log('No active auctions with bots to restore');
+        this.logger.log("No active auctions with bots to restore");
         return;
       }
 
-      this.logger.log('Restoring bots for active auctions', activeAuctions.length);
+      this.logger.log(
+        "Restoring bots for active auctions",
+        activeAuctions.length,
+      );
 
       for (const auction of activeAuctions) {
         await this.startBots(auction._id.toString(), auction.botCount);
       }
     } catch (error) {
-      this.logger.error('Failed to restore bots', error);
+      this.logger.error("Failed to restore bots", error);
     }
   }
 
@@ -88,7 +105,7 @@ export class BotService implements OnModuleInit, OnModuleDestroy {
 
     state.intervalId = setInterval(() => this.botActivity(state), 1000);
     this.activeBots.set(auctionId, state);
-    this.logger.log('Bots started for auction', { auctionId, botCount });
+    this.logger.log("Bots started for auction", { auctionId, botCount });
 
     setTimeout(() => this.makeInitialBids(state), 1000);
   }
@@ -101,14 +118,15 @@ export class BotService implements OnModuleInit, OnModuleDestroy {
 
     const existingBids = await this.bidModel.find({
       auctionId: new Types.ObjectId(state.auctionId),
-      userId: { $in: state.botIds.map(id => new Types.ObjectId(id)) },
+      userId: { $in: state.botIds.map((id) => new Types.ObjectId(id)) },
       status: BidStatus.ACTIVE,
     });
 
-    const botsWithBids = new Set(existingBids.map(b => b.userId.toString()));
+    const botsWithBids = new Set(existingBids.map((b) => b.userId.toString()));
 
     for (let i = 0; i < state.botIds.length; i++) {
       const botId = state.botIds[i];
+      if (!botId) continue;
 
       if (botsWithBids.has(botId)) {
         continue;
@@ -119,10 +137,18 @@ export class BotService implements OnModuleInit, OnModuleDestroy {
       setTimeout(async () => {
         try {
           const amount = auction.minBidAmount + randomInt(500);
-          await this.auctionsService.placeBid(state.auctionId, botId, { amount });
-          this.logger.debug('Bot placed initial bid', { botId: botId.slice(-6), amount });
+          await this.auctionsService.placeBid(state.auctionId, botId, {
+            amount,
+          });
+          this.logger.debug("Bot placed initial bid", {
+            botId: botId.slice(-6),
+            amount,
+          });
         } catch (error) {
-          this.logger.debug('Bot initial bid failed', { botId: botId.slice(-6), error });
+          this.logger.debug("Bot initial bid failed", {
+            botId: botId.slice(-6),
+            error,
+          });
         }
       }, delay);
     }
@@ -147,8 +173,9 @@ export class BotService implements OnModuleInit, OnModuleDestroy {
 
       const now = new Date();
       const timeRemaining = currentRound.endTime!.getTime() - now.getTime();
-      const totalDuration = currentRound.endTime!.getTime() - currentRound.startTime!.getTime();
-      const timeRatio = 1 - (timeRemaining / totalDuration);
+      const totalDuration =
+        currentRound.endTime!.getTime() - currentRound.startTime!.getTime();
+      const timeRatio = 1 - timeRemaining / totalDuration;
 
       let bidProbability = 0.3 + timeRatio * 0.4;
       const antiSnipingWindow = auction.antiSnipingWindowMinutes * 60 * 1000;
@@ -161,8 +188,13 @@ export class BotService implements OnModuleInit, OnModuleDestroy {
       }
 
       const botId = state.botIds[randomInt(state.botIds.length)];
+      if (!botId) {
+        return;
+      }
 
-      const minWinningBid = await this.auctionsService.getMinWinningBid(state.auctionId);
+      const minWinningBid = await this.auctionsService.getMinWinningBid(
+        state.auctionId,
+      );
       if (!minWinningBid) {
         return;
       }
@@ -175,24 +207,37 @@ export class BotService implements OnModuleInit, OnModuleDestroy {
 
       let newAmount: number;
       if (existingBid) {
-        const { leaderboard } = await this.auctionsService.getLeaderboard(state.auctionId);
-        const botPosition = leaderboard.findIndex(l => l.username.includes(botId.slice(-6)));
-        const isWinning = botPosition >= 0 && botPosition < currentRound.itemsCount;
+        const { leaderboard } = await this.auctionsService.getLeaderboard(
+          state.auctionId,
+        );
+        const botPosition = leaderboard.findIndex((l) =>
+          l.username.includes(botId.slice(-6)),
+        );
+        const isWinning =
+          botPosition >= 0 && botPosition < currentRound.itemsCount;
 
         if (isWinning && randomInt(100) > 50) {
           return;
         }
 
         const increment = auction.minBidIncrement + randomInt(100);
-        newAmount = Math.max(existingBid.amount + increment, minWinningBid + randomInt(50));
+        newAmount = Math.max(
+          existingBid.amount + increment,
+          minWinningBid + randomInt(50),
+        );
       } else {
         newAmount = minWinningBid + randomInt(100);
       }
 
-      await this.auctionsService.placeBid(state.auctionId, botId, { amount: newAmount });
-      this.logger.debug('Bot placed bid', { botId: botId.slice(-6), amount: newAmount });
+      await this.auctionsService.placeBid(state.auctionId, botId, {
+        amount: newAmount,
+      });
+      this.logger.debug("Bot placed bid", {
+        botId: botId.slice(-6),
+        amount: newAmount,
+      });
     } catch (error) {
-      this.logger.debug('Bot activity error', error);
+      this.logger.debug("Bot activity error", error);
     }
   }
 
@@ -204,7 +249,7 @@ export class BotService implements OnModuleInit, OnModuleDestroy {
         clearInterval(state.intervalId);
       }
       this.activeBots.delete(auctionId);
-      this.logger.log('Bots stopped for auction', auctionId);
+      this.logger.log("Bots stopped for auction", auctionId);
     }
   }
 

@@ -1,19 +1,17 @@
-import { Injectable } from '@nestjs/common';
-import { InjectModel } from '@nestjs/mongoose';
-import { Model, Types } from 'mongoose';
-import { Bid, BidDocument, BidStatus } from '@/schemas';
+import { Injectable } from "@nestjs/common";
+import { InjectModel } from "@nestjs/mongoose";
+import { Model, Types } from "mongoose";
+import { Bid, BidDocument, BidStatus } from "@/schemas";
 
 @Injectable()
 export class BidsService {
-  constructor(
-    @InjectModel(Bid.name) private bidModel: Model<BidDocument>,
-  ) {}
+  constructor(@InjectModel(Bid.name) private bidModel: Model<BidDocument>) {}
 
   async getByAuction(auctionId: string): Promise<BidDocument[]> {
     return this.bidModel
       .find({ auctionId: new Types.ObjectId(auctionId) })
       .sort({ amount: -1, createdAt: 1 })
-      .populate('userId', 'username isBot')
+      .populate("userId", "username isBot")
       .exec();
   }
 
@@ -24,7 +22,7 @@ export class BidsService {
         status: BidStatus.ACTIVE,
       })
       .sort({ amount: -1, createdAt: 1 })
-      .populate('userId', 'username isBot')
+      .populate("userId", "username isBot")
       .exec();
   }
 
@@ -32,7 +30,7 @@ export class BidsService {
     return this.bidModel
       .find({ userId: new Types.ObjectId(userId) })
       .sort({ createdAt: -1 })
-      .populate('auctionId', 'title status')
+      .populate("auctionId", "title status")
       .exec();
   }
 

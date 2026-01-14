@@ -1,1 +1,1 @@
-export * from './bid-response.dto';
+export * from "./bid-response.dto";

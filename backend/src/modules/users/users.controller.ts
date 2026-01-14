@@ -1,10 +1,10 @@
-import { Controller, Req, UseGuards } from '@nestjs/common';
-import { TypedRoute, TypedBody } from '@nestia/core';
-import { UsersService } from './users.service';
-import { AuthGuard, AuthenticatedRequest } from '@/common';
-import { IBalance, IBalanceResponse } from './dto';
+import { Controller, Req, UseGuards } from "@nestjs/common";
+import { TypedRoute, TypedBody } from "@nestia/core";
+import { UsersService } from "./users.service";
+import { AuthGuard, AuthenticatedRequest } from "@/common";
+import { IBalance, IBalanceResponse } from "./dto";
 
-@Controller('users')
+@Controller("users")
 @UseGuards(AuthGuard)
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
@@ -18,8 +18,10 @@ export class UsersController {
    * @security bearer
    * @returns User balance information
    */
-  @TypedRoute.Get('balance')
-  async getBalance(@Req() req: AuthenticatedRequest): Promise<IBalanceResponse> {
+  @TypedRoute.Get("balance")
+  async getBalance(
+    @Req() req: AuthenticatedRequest,
+  ): Promise<IBalanceResponse> {
     return this.usersService.getBalance(req.user.sub);
   }
 
@@ -33,7 +35,7 @@ export class UsersController {
    * @param body Deposit amount
    * @returns Updated balance
    */
-  @TypedRoute.Post('deposit')
+  @TypedRoute.Post("deposit")
   async deposit(
     @Req() req: AuthenticatedRequest,
     @TypedBody() body: IBalance,
@@ -55,7 +57,7 @@ export class UsersController {
    * @param body Withdrawal amount
    * @returns Updated balance
    */
-  @TypedRoute.Post('withdraw')
+  @TypedRoute.Post("withdraw")
   async withdraw(
     @Req() req: AuthenticatedRequest,
     @TypedBody() body: IBalance,

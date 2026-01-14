@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import type { Transaction } from '../types';
 import { useNotification } from '../context/NotificationContext';
-import LoadingSpinner from '../components/LoadingSpinner';
+import { SkeletonTransactionsTable } from '../components/Skeleton';
 import * as api from '../api';
 
 export default function TransactionsPage() {
@@ -57,9 +57,7 @@ export default function TransactionsPage() {
       <h1>Transaction History</h1>
 
       {loading ? (
-        <div className="card">
-          <LoadingSpinner text="Loading transactions..." />
-        </div>
+        <SkeletonTransactionsTable rows={8} />
       ) : error ? (
         <div className="card" style={{ textAlign: 'center' }}>
           <p className="text-danger" style={{ marginBottom: '16px' }}>{error}</p>

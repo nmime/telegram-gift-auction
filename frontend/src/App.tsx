@@ -3,6 +3,7 @@ import { useAuth } from './hooks/useAuth';
 import Header from './components/Header';
 import BottomNav from './components/BottomNav';
 import LoadingSpinner from './components/LoadingSpinner';
+import ErrorBoundary from './components/ErrorBoundary';
 import LoginPage from './pages/LoginPage';
 import AuctionsPage from './pages/AuctionsPage';
 import AuctionPage from './pages/AuctionPage';
@@ -27,22 +28,24 @@ function App() {
   }
 
   return (
-    <div className="container">
-      <Header />
-      <main className="main-content">
-        <Routes>
-          <Route path="/" element={<AuctionsPage />} />
-          <Route path="/auctions" element={<AuctionsPage />} />
-          <Route path="/auctions/create" element={<CreateAuctionPage />} />
-          <Route path="/auctions/:id" element={<AuctionPage />} />
-          <Route path="/transactions" element={<TransactionsPage />} />
-          <Route path="/balance" element={<BalancePage />} />
-          <Route path="/profile" element={<ProfilePage />} />
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-      </main>
-      <BottomNav />
-    </div>
+    <ErrorBoundary>
+      <div className="container">
+        <Header />
+        <main className="main-content">
+          <Routes>
+            <Route path="/" element={<AuctionsPage />} />
+            <Route path="/auctions" element={<AuctionsPage />} />
+            <Route path="/auctions/create" element={<CreateAuctionPage />} />
+            <Route path="/auctions/:id" element={<AuctionPage />} />
+            <Route path="/transactions" element={<TransactionsPage />} />
+            <Route path="/balance" element={<BalancePage />} />
+            <Route path="/profile" element={<ProfilePage />} />
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </main>
+        <BottomNav />
+      </div>
+    </ErrorBoundary>
   );
 }
 

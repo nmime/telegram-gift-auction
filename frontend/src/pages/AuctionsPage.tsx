@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import type { Auction } from '../types';
 import { AuctionStatus } from '../types';
 import { useNotification } from '../context/NotificationContext';
-import LoadingSpinner from '../components/LoadingSpinner';
+import { SkeletonAuctionGrid } from '../components/Skeleton';
 import * as api from '../api';
 
 export default function AuctionsPage() {
@@ -78,9 +78,7 @@ export default function AuctionsPage() {
       </div>
 
       {loading ? (
-        <div className="card">
-          <LoadingSpinner text="Loading auctions..." />
-        </div>
+        <SkeletonAuctionGrid count={4} />
       ) : error ? (
         <div className="card" style={{ textAlign: 'center' }}>
           <p className="text-danger" style={{ marginBottom: '16px' }}>{error}</p>

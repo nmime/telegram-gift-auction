@@ -1,9 +1,9 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
-import { InjectModel } from '@nestjs/mongoose';
-import { JwtService } from '@nestjs/jwt';
-import { Model } from 'mongoose';
-import { User, UserDocument } from '@/schemas';
-import { TelegramUser, WebAppInitData } from './telegram.service';
+import { Injectable, UnauthorizedException } from "@nestjs/common";
+import { InjectModel } from "@nestjs/mongoose";
+import { JwtService } from "@nestjs/jwt";
+import { Model } from "mongoose";
+import { User, UserDocument } from "@/schemas";
+import { TelegramUser, WebAppInitData } from "./telegram.service";
 
 export interface JwtPayload {
   sub: string;
@@ -57,7 +57,9 @@ export class AuthService {
     };
   }
 
-  async loginWithTelegramWidget(telegramUser: TelegramUser): Promise<AuthResponse> {
+  async loginWithTelegramWidget(
+    telegramUser: TelegramUser,
+  ): Promise<AuthResponse> {
     // Find user by Telegram ID or create new
     let user = await this.userModel.findOne({ telegramId: telegramUser.id });
 
@@ -113,9 +115,11 @@ export class AuthService {
     };
   }
 
-  async loginWithTelegramMiniApp(initData: WebAppInitData): Promise<AuthResponse> {
+  async loginWithTelegramMiniApp(
+    initData: WebAppInitData,
+  ): Promise<AuthResponse> {
     if (!initData.user) {
-      throw new UnauthorizedException('User data not found in init data');
+      throw new UnauthorizedException("User data not found in init data");
     }
 
     const telegramUser: TelegramUser = {
@@ -137,7 +141,7 @@ export class AuthService {
     try {
       return await this.jwtService.verifyAsync<JwtPayload>(token);
     } catch {
-      throw new UnauthorizedException('Invalid token');
+      throw new UnauthorizedException("Invalid token");
     }
   }
 
@@ -148,7 +152,7 @@ export class AuthService {
   async getUser(userId: string): Promise<UserDocument> {
     const user = await this.userModel.findById(userId);
     if (!user) {
-      throw new UnauthorizedException('User not found');
+      throw new UnauthorizedException("User not found");
     }
     return user;
   }

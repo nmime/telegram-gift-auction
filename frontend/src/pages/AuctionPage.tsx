@@ -7,7 +7,7 @@ import { useAuth } from '../hooks/useAuth';
 import { useNotification } from '../context/NotificationContext';
 import { useSocket } from '../hooks/useSocket';
 import { useCountdown } from '../hooks/useCountdown';
-import LoadingSpinner from '../components/LoadingSpinner';
+import { SkeletonAuctionPage } from '../components/Skeleton';
 import * as api from '../api';
 
 export default function AuctionPage() {
@@ -30,9 +30,17 @@ export default function AuctionPage() {
   const { subscribe, isConnected } = useSocket(id);
   const loadingRef = useRef(false);
   const lastLoadRef = useRef(0);
+  const mountedRef = useRef(true);
 
   const currentRound = auction?.rounds[auction.currentRound - 1];
   const { formatted: timeLeft, timeLeft: secondsLeft } = useCountdown(currentRound?.endTime);
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
 
   const loadData = useCallback(async () => {
     if (!id) return;
@@ -53,6 +61,8 @@ export default function AuctionPage() {
         api.getMinWinningBid(id),
       ]);
 
+      if (!mountedRef.current) return;
+
       setAuction(auctionData);
       setLeaderboard(leaderboardResponse.leaderboard);
       setPastWinners(leaderboardResponse.pastWinners);
@@ -60,13 +70,16 @@ export default function AuctionPage() {
       setMinWinningBid(minBidData.minWinningBid);
       setError('');
     } catch (err) {
+      if (!mountedRef.current) return;
       console.error('Failed to load auction:', err);
       setError(t('auction.failedToLoad'));
     } finally {
-      setLoading(false);
+      if (mountedRef.current) {
+        setLoading(false);
+      }
       loadingRef.current = false;
     }
-  }, [id]);
+  }, [id, t]);
 
   useEffect(() => {
     loadData();
@@ -135,7 +148,7 @@ export default function AuctionPage() {
   };
 
   const handlePlaceBid = async () => {
-    if (!id || !bidAmount) return;
+    if (!id || !bidAmount || !user) return;
 
     const amount = parseInt(bidAmount, 10);
     if (isNaN(amount) || amount <= 0) {
@@ -149,13 +162,34 @@ export default function AuctionPage() {
       return;
     }
 
-    if (user && amount > user.balance) {
+    if (amount > user.balance) {
       setError(t('auction.insufficientBalance'));
       return;
     }
 
     setBidding(true);
     setError('');
+
+    const previousLeaderboard = [...leaderboard];
+    const previousMyBids = [...myBids];
+
+    const optimisticEntry: LeaderboardEntry = {
+      rank: 0,
+      amount,
+      username: user.username,
+      isBot: false,
+      isWinning: false,
+      createdAt: new Date().toISOString(),
+    };
+
+    setLeaderboard((prev) => {
+      const filtered = prev.filter((e) => e.username !== user.username);
+      const updated = [...filtered, optimisticEntry].sort((a, b) => b.amount - a.amount);
+      const itemsInRound = auction?.rounds[auction.currentRound - 1]?.itemsCount || 1;
+      return updated.map((e, i) => ({ ...e, rank: i + 1, isWinning: i < itemsInRound }));
+    });
+
+    setBidAmount('');
 
     try {
       const { bid, auction: updatedAuction } = await api.placeBid(id, amount);
@@ -167,11 +201,12 @@ export default function AuctionPage() {
         }
         return [bid, ...prev];
       });
-      setBidAmount('');
       showNotification(t('auction.bidPlacedAmount', { amount }), 'success');
       await refreshBalance();
       await loadData();
     } catch (err) {
+      setLeaderboard(previousLeaderboard);
+      setMyBids(previousMyBids);
       const message = (err as Error).message || t('errors.unknown');
       setError(message);
       showNotification(message, 'error');
@@ -185,11 +220,7 @@ export default function AuctionPage() {
     currentRound && auction && secondsLeft <= auction.antiSnipingWindowMinutes * 60;
 
   if (loading) {
-    return (
-      <div className="card">
-        <LoadingSpinner text={t('auction.loadingAuction')} />
-      </div>
-    );
+    return <SkeletonAuctionPage />;
   }
 
   if (!auction) {

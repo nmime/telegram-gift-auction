@@ -1,4 +1,4 @@
-import { TransactionType } from '@/schemas';
+import { TransactionType } from "@/schemas";
 
 /**
  * Transaction response

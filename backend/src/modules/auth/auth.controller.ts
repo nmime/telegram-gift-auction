@@ -1,8 +1,8 @@
-import { Controller, Req, UseGuards } from '@nestjs/common';
-import { TypedRoute, TypedBody } from '@nestia/core';
-import { AuthService } from './auth.service';
-import { TelegramService } from './telegram.service';
-import { AuthGuard, AuthenticatedRequest } from '@/common';
+import { Controller, Req, UseGuards } from "@nestjs/common";
+import { TypedRoute, TypedBody } from "@nestia/core";
+import { AuthService } from "./auth.service";
+import { TelegramService } from "./telegram.service";
+import { AuthGuard, AuthenticatedRequest } from "@/common";
 import {
   ILogin,
   ILoginResponse,
@@ -10,9 +10,9 @@ import {
   ILogoutResponse,
   ITelegramWidgetAuth,
   ITelegramWebAppAuth,
-} from './dto';
+} from "./dto";
 
-@Controller('auth')
+@Controller("auth")
 export class AuthController {
   constructor(
     private readonly authService: AuthService,
@@ -29,7 +29,7 @@ export class AuthController {
    * @param body Login credentials
    * @returns Login response with user data and access token
    */
-  @TypedRoute.Post('login')
+  @TypedRoute.Post("login")
   async login(@TypedBody() body: ILogin): Promise<ILoginResponse> {
     return this.authService.login(body.username);
   }
@@ -44,8 +44,10 @@ export class AuthController {
    * @param body Telegram widget auth data
    * @returns Login response with user data and access token
    */
-  @TypedRoute.Post('telegram/widget')
-  async loginWithTelegramWidget(@TypedBody() body: ITelegramWidgetAuth): Promise<ILoginResponse> {
+  @TypedRoute.Post("telegram/widget")
+  async loginWithTelegramWidget(
+    @TypedBody() body: ITelegramWidgetAuth,
+  ): Promise<ILoginResponse> {
     const validatedUser = this.telegramService.validateWidgetAuth(body);
     return this.authService.loginWithTelegramWidget(validatedUser);
   }
@@ -60,9 +62,13 @@ export class AuthController {
    * @param body Telegram Mini App auth data
    * @returns Login response with user data and access token
    */
-  @TypedRoute.Post('telegram/webapp')
-  async loginWithTelegramMiniApp(@TypedBody() body: ITelegramWebAppAuth): Promise<ILoginResponse> {
-    const validatedData = this.telegramService.validateWebAppInitData(body.initData);
+  @TypedRoute.Post("telegram/webapp")
+  async loginWithTelegramMiniApp(
+    @TypedBody() body: ITelegramWebAppAuth,
+  ): Promise<ILoginResponse> {
+    const validatedData = this.telegramService.validateWebAppInitData(
+      body.initData,
+    );
     return this.authService.loginWithTelegramMiniApp(validatedData);
   }
 
@@ -75,7 +81,7 @@ export class AuthController {
    * @security bearer
    * @returns Logout success status
    */
-  @TypedRoute.Post('logout')
+  @TypedRoute.Post("logout")
   @UseGuards(AuthGuard)
   async logout(): Promise<ILogoutResponse> {
     return { success: true };
@@ -90,7 +96,7 @@ export class AuthController {
    * @security bearer
    * @returns Current user data
    */
-  @TypedRoute.Get('me')
+  @TypedRoute.Get("me")
   @UseGuards(AuthGuard)
   async me(@Req() req: AuthenticatedRequest): Promise<IUserResponse | null> {
     const user = await this.authService.validateUser(req.user.sub);

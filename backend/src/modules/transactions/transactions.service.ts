@@ -1,15 +1,20 @@
-import { Injectable } from '@nestjs/common';
-import { InjectModel } from '@nestjs/mongoose';
-import { Model, Types } from 'mongoose';
-import { Transaction, TransactionDocument } from '@/schemas';
+import { Injectable } from "@nestjs/common";
+import { InjectModel } from "@nestjs/mongoose";
+import { Model, Types } from "mongoose";
+import { Transaction, TransactionDocument } from "@/schemas";
 
 @Injectable()
 export class TransactionsService {
   constructor(
-    @InjectModel(Transaction.name) private transactionModel: Model<TransactionDocument>,
+    @InjectModel(Transaction.name)
+    private transactionModel: Model<TransactionDocument>,
   ) {}
 
-  async getByUser(userId: string, limit = 50, offset = 0): Promise<TransactionDocument[]> {
+  async getByUser(
+    userId: string,
+    limit = 50,
+    offset = 0,
+  ): Promise<TransactionDocument[]> {
     return this.transactionModel
       .find({ userId: new Types.ObjectId(userId) })
       .sort({ createdAt: -1 })
