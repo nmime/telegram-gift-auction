@@ -37,6 +37,9 @@ export class RoundState {
   @Prop({ default: 0 })
   extensionsCount!: number;
 
+  @Prop({ default: 0 })
+  lastNotifiedExtensionCount!: number;
+
   @Prop({ default: false })
   completed!: boolean;
 

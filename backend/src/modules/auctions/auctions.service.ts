@@ -700,29 +700,55 @@ export class AuctionsService {
         result.antiSnipingTriggered &&
         result.antiSnipingNotifyUsers.length > 0
       ) {
-        const antiSnipingPromises = result.antiSnipingNotifyUsers.map(
-          (notifyUserId) =>
-            this.notificationsService
-              .notifyAntiSniping(notifyUserId, {
-                auctionId: result.auction._id.toString(),
-                auctionTitle: result.auction.title,
-                roundNumber: result.auction.currentRound,
-                newEndTime: result.antiSnipingNewEndTime!,
-                extensionMinutes: result.auction.antiSnipingExtensionMinutes,
-              })
-              .catch((err) =>
-                this.logger.warn(
-                  "Failed to send anti-sniping notification",
-                  err,
-                ),
-              ),
-        );
-        Promise.all(antiSnipingPromises).catch((err) =>
-          this.logger.error(
-            "Failed to send anti-sniping notification batch",
-            err,
-          ),
-        );
+        const roundIndex = result.auction.currentRound - 1;
+        const currentRound = result.auction.rounds[roundIndex];
+        const newExtensionsCount = currentRound?.extensionsCount ?? 0;
+
+        this.auctionModel
+          .findOneAndUpdate(
+            {
+              _id: result.auction._id,
+              [`rounds.${roundIndex}.lastNotifiedExtensionCount`]: {
+                $lt: newExtensionsCount,
+              },
+            },
+            {
+              $set: {
+                [`rounds.${roundIndex}.lastNotifiedExtensionCount`]:
+                  newExtensionsCount,
+              },
+            },
+          )
+          .then((updated) => {
+            if (updated) {
+              const antiSnipingPromises = result.antiSnipingNotifyUsers.map(
+                (notifyUserId) =>
+                  this.notificationsService
+                    .notifyAntiSniping(notifyUserId, {
+                      auctionId: result.auction._id.toString(),
+                      auctionTitle: result.auction.title,
+                      roundNumber: result.auction.currentRound,
+                      newEndTime: result.antiSnipingNewEndTime!,
+                      extensionMinutes:
+                        result.auction.antiSnipingExtensionMinutes,
+                    })
+                    .catch((err) =>
+                      this.logger.warn(
+                        "Failed to send anti-sniping notification",
+                        err,
+                      ),
+                    ),
+              );
+
+              return Promise.all(antiSnipingPromises);
+            }
+          })
+          .catch((err) =>
+            this.logger.error(
+              "Failed to send anti-sniping notification batch",
+              err,
+            ),
+          );
       }
 
       // Set cooldown only for non-localhost
