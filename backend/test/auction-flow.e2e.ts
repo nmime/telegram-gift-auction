@@ -79,8 +79,8 @@ async function testAuctionFlow(): Promise<void> {
   // Check leaderboard
   const leaderboardResp = await api.functional.auctions.leaderboard.getLeaderboard(user1Conn, auction.id, {});
   assertEqual(leaderboardResp.leaderboard.length, 2, 'Should have 2 bids on leaderboard');
-  assertEqual(leaderboardResp.leaderboard[0].amount, 150, 'Top bid should be 150');
-  assertEqual(leaderboardResp.leaderboard[1].amount, 100, 'Second bid should be 100');
+  assertEqual(leaderboardResp.leaderboard[0]!.amount, 150, 'Top bid should be 150');
+  assertEqual(leaderboardResp.leaderboard[1]!.amount, 100, 'Second bid should be 100');
   console.log('✓ Leaderboard correct');
 
   // User1 increases bid (must be > current + minIncrement)
@@ -118,7 +118,7 @@ async function testAuctionFlow(): Promise<void> {
   // Get my bids
   const user1Bids = await api.functional.auctions.my_bids.getMyBids(user1Conn, auction.id);
   assertEqual(user1Bids.length, 1, 'User1 should have 1 bid');
-  assertEqual(user1Bids[0].amount, 200, 'User1 bid should be 200');
+  assertEqual(user1Bids[0]!.amount, 200, 'User1 bid should be 200');
   console.log('✓ My bids endpoint correct');
 
   // Min winning bid

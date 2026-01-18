@@ -113,6 +113,7 @@ export class AuthController {
       firstName: user.firstName,
       lastName: user.lastName,
       photoUrl: user.photoUrl,
+      languageCode: user.languageCode,
     };
   }
 }

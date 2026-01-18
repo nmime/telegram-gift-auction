@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import type { Transaction } from '../types';
 import { useNotification } from '../context/NotificationContext';
 import { SkeletonTransactionsTable } from '../components/Skeleton';
@@ -10,11 +10,7 @@ export default function TransactionsPage() {
   const [error, setError] = useState('');
   const { showNotification } = useNotification();
 
-  useEffect(() => {
-    loadTransactions();
-  }, []);
-
-  const loadTransactions = async () => {
+  const loadTransactions = useCallback(async () => {
     setLoading(true);
     setError('');
     try {
@@ -27,7 +23,11 @@ export default function TransactionsPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [showNotification]);
+
+  useEffect(() => {
+    loadTransactions();
+  }, [loadTransactions]);
 
   const getTypeColor = (type: string) => {
     switch (type) {

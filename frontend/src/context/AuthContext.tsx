@@ -4,6 +4,7 @@ import type { User, TelegramWidgetUser } from '../types';
 import * as api from '../api';
 import { setOnUnauthorized, clearToken } from '../api';
 import { useNotification } from './NotificationContext';
+import { changeLanguage, mapToSupportedLanguage, saveLanguagePreference } from '../i18n';
 
 export interface AuthContextType {
   user: User | null;
@@ -14,11 +15,11 @@ export interface AuthContextType {
   logout: () => Promise<void>;
   updateBalance: (balance: number, frozenBalance: number) => void;
   refreshBalance: () => Promise<void>;
+  setLanguage: (lang: string) => Promise<void>;
 }
 
 export const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// Check if running inside Telegram Mini App (must have initData)
 function checkIsTelegramMiniApp(): boolean {
   return typeof window !== 'undefined' &&
     window.Telegram?.WebApp !== undefined &&
@@ -42,31 +43,34 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => setOnUnauthorized(null);
   }, [handleUnauthorized]);
 
-  useEffect(() => {
-    checkAuth();
+  const syncLanguageFromUser = useCallback((userData: User) => {
+    if (userData.languageCode) {
+      const lang = mapToSupportedLanguage(userData.languageCode);
+      saveLanguagePreference(lang);
+      changeLanguage(lang);
+    }
   }, []);
 
-  const checkAuth = async () => {
+  const checkAuth = useCallback(async () => {
     try {
-      // First try to check existing token
       const userData = await api.getMe();
       if (userData) {
         setUser(userData);
+        syncLanguageFromUser(userData);
         setLoading(false);
         return;
       }
     } catch {
-      // Token invalid or missing
+      // Ignore auth check errors - user is not logged in
     }
 
-    // If in Telegram Mini App and no valid token, auto-login with initData
     if (isTelegramMiniApp) {
       try {
         const initData = window.Telegram?.WebApp?.initData;
         if (initData) {
           const response = await api.loginWithTelegramMiniApp(initData);
           setUser(response.user);
-          // Expand the Mini App
+          syncLanguageFromUser(response.user);
           window.Telegram?.WebApp?.expand();
           window.Telegram?.WebApp?.ready();
         }
@@ -76,11 +80,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     setLoading(false);
-  };
+  }, [isTelegramMiniApp, syncLanguageFromUser]);
+
+  useEffect(() => {
+    checkAuth();
+  }, [checkAuth]);
 
   const loginWithTelegramWidget = async (telegramUser: TelegramWidgetUser) => {
     const response = await api.loginWithTelegramWidget(telegramUser);
     setUser(response.user);
+    syncLanguageFromUser(response.user);
     const displayName = response.user.firstName || response.user.username;
     showNotification(t('auth.welcome', { name: displayName }), 'success');
   };
@@ -88,6 +97,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const loginWithTelegramMiniApp = async (initData: string) => {
     const response = await api.loginWithTelegramMiniApp(initData);
     setUser(response.user);
+    syncLanguageFromUser(response.user);
     const displayName = response.user.firstName || response.user.username;
     showNotification(t('auth.welcome', { name: displayName }), 'success');
   };
@@ -112,7 +122,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       try {
         const { balance, frozenBalance } = await api.getBalance();
         setUser({ ...user, balance, frozenBalance });
-      } catch {}
+      } catch {
+        // Silently ignore balance refresh errors
+      }
+    }
+  };
+
+  const setLanguage = async (lang: string) => {
+    const supportedLang = ['en', 'ru'].includes(lang) ? lang : 'en';
+    changeLanguage(supportedLang);
+    if (user) {
+      try {
+        await api.updateLanguage(supportedLang);
+        setUser({ ...user, languageCode: supportedLang });
+      } catch {
+        // Silently ignore language update errors - local change already applied
+      }
     }
   };
 
@@ -125,7 +150,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       loginWithTelegramMiniApp,
       logout,
       updateBalance,
-      refreshBalance
+      refreshBalance,
+      setLanguage
     }}>
       {children}
     </AuthContext.Provider>

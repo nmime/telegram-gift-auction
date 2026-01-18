@@ -2,7 +2,12 @@ import { Controller, Req, UseGuards } from "@nestjs/common";
 import { TypedRoute, TypedBody } from "@nestia/core";
 import { UsersService } from "./users.service";
 import { AuthGuard, AuthenticatedRequest } from "@/common";
-import { IBalance, IBalanceResponse } from "./dto";
+import {
+  IBalance,
+  IBalanceResponse,
+  ILanguageUpdate,
+  ILanguageResponse,
+} from "./dto";
 
 @Controller("users")
 @UseGuards(AuthGuard)
@@ -67,5 +72,27 @@ export class UsersController {
       balance: user.balance,
       frozenBalance: user.frozenBalance,
     };
+  }
+
+  /**
+   * Update user language preference
+   *
+   * Sets the user's preferred language for the app and notifications.
+   *
+   * @tag users
+   * @security bearer
+   * @param body Language code
+   * @returns Updated language code
+   */
+  @TypedRoute.Put("language")
+  async updateLanguage(
+    @Req() req: AuthenticatedRequest,
+    @TypedBody() body: ILanguageUpdate,
+  ): Promise<ILanguageResponse> {
+    const languageCode = await this.usersService.updateLanguage(
+      req.user.sub,
+      body.language,
+    );
+    return { languageCode };
   }
 }

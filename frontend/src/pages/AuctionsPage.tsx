@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import type { Auction } from '../types';
 import { AuctionStatus } from '../types';
@@ -13,11 +13,7 @@ export default function AuctionsPage() {
   const [filter, setFilter] = useState<string>('');
   const { showNotification } = useNotification();
 
-  useEffect(() => {
-    loadAuctions();
-  }, [filter]);
-
-  const loadAuctions = async () => {
+  const loadAuctions = useCallback(async () => {
     setLoading(true);
     setError('');
     try {
@@ -30,7 +26,11 @@ export default function AuctionsPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [filter, showNotification]);
+
+  useEffect(() => {
+    loadAuctions();
+  }, [loadAuctions]);
 
   const getStatusBadgeClass = (status: AuctionStatus) => {
     switch (status) {

@@ -4,10 +4,13 @@ import {
   OnModuleInit,
   OnModuleDestroy,
 } from "@nestjs/common";
+import { InjectModel } from "@nestjs/mongoose";
+import { Model } from "mongoose";
 import { ConfigService } from "@nestjs/config";
 import { I18nService } from "nestjs-i18n";
 import { Bot, Context, webhookCallback } from "grammy";
 import type { FastifyRequest, FastifyReply } from "fastify";
+import { User, UserDocument } from "@/schemas";
 
 interface BotContext extends Context {
   lang: string;
@@ -24,6 +27,7 @@ export class TelegramBotService implements OnModuleInit, OnModuleDestroy {
   private isRunning = false;
 
   constructor(
+    @InjectModel(User.name) private userModel: Model<UserDocument>,
     private readonly configService: ConfigService,
     private readonly i18n: I18nService,
   ) {
@@ -44,11 +48,17 @@ export class TelegramBotService implements OnModuleInit, OnModuleDestroy {
   }
 
   private setupMiddleware() {
-    // Language detection middleware
     this.bot.use(async (ctx, next) => {
-      // Get language from user's Telegram settings
+      if (ctx.from?.id) {
+        const user = await this.userModel.findOne({ telegramId: ctx.from.id });
+        if (user?.languageCode && ["en", "ru"].includes(user.languageCode)) {
+          ctx.lang = user.languageCode;
+          await next();
+          return;
+        }
+      }
+
       const userLang = ctx.from?.language_code || "en";
-      // Map to supported languages (en, ru)
       ctx.lang = ["ru", "uk", "be"].includes(userLang) ? "ru" : "en";
       await next();
     });
@@ -85,7 +95,6 @@ export class TelegramBotService implements OnModuleInit, OnModuleDestroy {
       }
     });
 
-    // Handle /help command
     this.bot.command("help", async (ctx) => {
       const lang = ctx.lang;
 
@@ -93,6 +102,7 @@ export class TelegramBotService implements OnModuleInit, OnModuleDestroy {
       const commands = this.t("bot.help.commands", lang);
       const start = this.t("bot.help.start", lang);
       const helpCmd = this.t("bot.help.helpCmd", lang);
+      const languageCmd = this.t("bot.help.languageCmd", lang);
       const howItWorks = this.t("bot.help.howItWorks", lang);
       const step1 = this.t("bot.help.step1", lang);
       const step2 = this.t("bot.help.step2", lang);
@@ -104,7 +114,8 @@ export class TelegramBotService implements OnModuleInit, OnModuleDestroy {
         `🎁 ${title}\n\n` +
           `${commands}\n` +
           `• ${start}\n` +
-          `• ${helpCmd}\n\n` +
+          `• ${helpCmd}\n` +
+          `• ${languageCmd}\n\n` +
           `${howItWorks}\n` +
           `${step1}\n` +
           `${step2}\n` +
@@ -114,7 +125,45 @@ export class TelegramBotService implements OnModuleInit, OnModuleDestroy {
       );
     });
 
-    // Handle errors
+    this.bot.command("language", async (ctx) => {
+      const lang = ctx.lang;
+
+      const title = this.t("bot.language.title", lang);
+      const select = this.t("bot.language.select", lang);
+      const english = this.t("bot.language.english", lang);
+      const russian = this.t("bot.language.russian", lang);
+
+      await ctx.reply(`🌐 ${title}\n\n${select}`, {
+        reply_markup: {
+          inline_keyboard: [
+            [
+              { text: `🇬🇧 ${english}`, callback_data: "lang_en" },
+              { text: `🇷🇺 ${russian}`, callback_data: "lang_ru" },
+            ],
+          ],
+        },
+      });
+    });
+
+    this.bot.callbackQuery(/^lang_(en|ru)$/, async (ctx) => {
+      const match = ctx.callbackQuery.data.match(/^lang_(en|ru)$/);
+      if (!match || !match[1]) return;
+
+      const newLang = match[1] as string;
+      const telegramId = ctx.from.id;
+
+      await this.userModel.findOneAndUpdate(
+        { telegramId },
+        { languageCode: newLang },
+        { upsert: false },
+      );
+
+      const changed = this.t("bot.language.changed", newLang);
+
+      await ctx.answerCallbackQuery({ text: changed });
+      await ctx.editMessageText(`✅ ${changed}`);
+    });
+
     this.bot.catch((err) => {
       this.logger.error("Bot error:", err);
     });

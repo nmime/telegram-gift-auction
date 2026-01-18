@@ -25,6 +25,7 @@ import { UsersService } from "@/modules/users";
 import { EventsGateway } from "@/modules/events";
 import { NotificationsService } from "@/modules/notifications";
 import { REDLOCK, REDIS_CLIENT } from "@/modules/redis";
+import { TimerService } from "./timer.service";
 import { ICreateAuction, IPlaceBid } from "./dto";
 import {
   isTransientTransactionError,
@@ -51,6 +52,7 @@ export class AuctionsService {
     private usersService: UsersService,
     private eventsGateway: EventsGateway,
     private notificationsService: NotificationsService,
+    private timerService: TimerService,
     @Inject(REDLOCK) private readonly redlock: Redlock,
     @Inject(REDIS_CLIENT) private readonly redis: Redis,
   ) {}
@@ -214,6 +216,14 @@ export class AuctionsService {
       }
 
       this.eventsGateway.emitAuctionUpdate(updatedAuction);
+
+      // Start the countdown timer for the first round
+      this.timerService.startTimer(
+        updatedAuction._id.toString(),
+        1,
+        roundEndTime,
+      );
+
       return updatedAuction;
     });
   }
@@ -574,6 +584,9 @@ export class AuctionsService {
             auctionUpdated = updated;
             antiSnipingTriggered = true;
             antiSnipingNewEndTime = newEndTime;
+
+            // Update the countdown timer with the new end time
+            this.timerService.updateTimer(auctionId, newEndTime);
           }
 
           this.eventsGateway.emitAntiSnipingExtension(
@@ -1119,6 +1132,19 @@ export class AuctionsService {
             this.logger.warn("Failed to send new round notification", err),
           );
       }
+    }
+
+    // Handle countdown timer based on auction state
+    if (isCompleted) {
+      // Stop timer when auction completes
+      this.timerService.stopTimer(finalAuction._id.toString());
+    } else if (nextRound) {
+      // Start timer for the new round
+      this.timerService.startTimer(
+        finalAuction._id.toString(),
+        finalAuction.currentRound,
+        nextRound.endTime!,
+      );
     }
 
     // If auction completed, send summary to all participants

@@ -25,6 +25,9 @@ export interface IUserResponse {
 
   /** User photo URL (from Telegram) */
   photoUrl?: string;
+
+  /** User preferred language code (en, ru) */
+  languageCode?: string;
 }
 
 /**

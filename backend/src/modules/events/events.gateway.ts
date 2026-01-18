@@ -169,4 +169,19 @@ export class EventsGateway {
     if (!this.server) return;
     this.server.emit(event, data);
   }
+
+  emitCountdown(
+    auctionId: string,
+    data: {
+      auctionId: string;
+      roundNumber: number;
+      timeLeftSeconds: number;
+      roundEndTime: string;
+      isUrgent: boolean;
+      serverTime: string;
+    },
+  ) {
+    if (!this.server) return;
+    this.server.to(`auction:${auctionId}`).emit("countdown", data);
+  }
 }

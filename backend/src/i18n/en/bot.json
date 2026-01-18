@@ -10,11 +10,19 @@
     "commands": "Commands:",
     "start": "/start - Open the auction app",
     "helpCmd": "/help - Show this help message",
+    "languageCmd": "/language - Change language",
     "howItWorks": "How it works:",
     "step1": "1. Open the auction app",
     "step2": "2. Browse active auctions",
     "step3": "3. Place bids to win exclusive gifts",
     "step4": "4. Highest bidders at round end win!",
     "goodLuck": "Good luck!"
+  },
+  "language": {
+    "title": "Language Settings",
+    "select": "Select your preferred language:",
+    "english": "English",
+    "russian": "Russian",
+    "changed": "Language changed to English"
   }
 }

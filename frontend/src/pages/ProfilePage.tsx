@@ -1,10 +1,12 @@
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../hooks/useAuth';
+import { getCurrentLanguage } from '../i18n';
 
 export default function ProfilePage() {
   const { t } = useTranslation();
-  const { user, logout, isTelegramMiniApp } = useAuth();
+  const { user, logout, isTelegramMiniApp, setLanguage } = useAuth();
+  const currentLang = getCurrentLanguage();
   const navigate = useNavigate();
 
   const handleLogout = async () => {
@@ -42,6 +44,24 @@ export default function ProfilePage() {
             {(user?.balance || 0) + (user?.frozenBalance || 0)}
           </div>
           <div className="profile-stat-label">{t('balance.total')}</div>
+        </div>
+      </div>
+
+      <div className="card">
+        <div className="card-title">{t('settings.language')}</div>
+        <div className="language-selector">
+          <button
+            className={`language-btn ${currentLang === 'en' ? 'active' : ''}`}
+            onClick={() => setLanguage('en')}
+          >
+            🇬🇧 {t('settings.languageEn')}
+          </button>
+          <button
+            className={`language-btn ${currentLang === 'ru' ? 'active' : ''}`}
+            onClick={() => setLanguage('ru')}
+          >
+            🇷🇺 {t('settings.languageRu')}
+          </button>
         </div>
       </div>
 

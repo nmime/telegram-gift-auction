@@ -19,6 +19,10 @@ const NotificationContext = createContext<NotificationContextType | undefined>(u
 export function NotificationProvider({ children }: { children: ReactNode }) {
   const [notifications, setNotifications] = useState<Notification[]>([]);
 
+  const dismissNotification = useCallback((id: string) => {
+    setNotifications((prev) => prev.filter((n) => n.id !== id));
+  }, []);
+
   const showNotification = useCallback((message: string, type: NotificationType = 'info') => {
     const id = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
     const notification: Notification = { id, message, type };
@@ -28,11 +32,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     setTimeout(() => {
       dismissNotification(id);
     }, 5000);
-  }, []);
-
-  const dismissNotification = useCallback((id: string) => {
-    setNotifications((prev) => prev.filter((n) => n.id !== id));
-  }, []);
+  }, [dismissNotification]);
 
   return (
     <NotificationContext.Provider value={{ notifications, showNotification, dismissNotification }}>

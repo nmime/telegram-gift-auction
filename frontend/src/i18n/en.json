@@ -164,5 +164,10 @@
     "hours": "{{count}}h",
     "minutes": "{{count}}m",
     "seconds": "{{count}}s"
+  },
+  "settings": {
+    "language": "Language",
+    "languageEn": "English",
+    "languageRu": "Russian"
   }
 }

@@ -10,25 +10,21 @@ interface CountdownResult {
   isUrgent: boolean;
 }
 
+function calculateTimeLeft(endTime?: string): number {
+  if (!endTime) return 0;
+  const end = new Date(endTime).getTime();
+  const now = Date.now();
+  return Math.max(0, Math.floor((end - now) / 1000));
+}
+
 export function useCountdown(endTime?: string): CountdownResult {
-  const [timeLeft, setTimeLeft] = useState<number>(0);
+  const [timeLeft, setTimeLeft] = useState<number>(() => calculateTimeLeft(endTime));
 
   useEffect(() => {
-    if (!endTime) {
-      setTimeLeft(0);
-      return;
-    }
-
-    const calculateTimeLeft = (): number => {
-      const end = new Date(endTime).getTime();
-      const now = Date.now();
-      return Math.max(0, Math.floor((end - now) / 1000));
-    };
-
-    setTimeLeft(calculateTimeLeft());
+    if (!endTime) return;
 
     const interval = setInterval(() => {
-      const remaining = calculateTimeLeft();
+      const remaining = calculateTimeLeft(endTime);
       setTimeLeft(remaining);
 
       if (remaining <= 0) {

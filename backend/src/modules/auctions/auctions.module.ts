@@ -4,6 +4,7 @@ import { AuctionsController } from "./auctions.controller";
 import { AuctionsService } from "./auctions.service";
 import { AuctionSchedulerService } from "./auction-scheduler.service";
 import { BotService } from "./bot.service";
+import { TimerService } from "./timer.service";
 import {
   Auction,
   AuctionSchema,
@@ -33,7 +34,12 @@ import { NotificationsModule } from "@/modules/notifications";
     NotificationsModule,
   ],
   controllers: [AuctionsController],
-  providers: [AuctionsService, AuctionSchedulerService, BotService],
-  exports: [AuctionsService, BotService],
+  providers: [
+    AuctionsService,
+    AuctionSchedulerService,
+    BotService,
+    TimerService,
+  ],
+  exports: [AuctionsService, BotService, TimerService],
 })
 export class AuctionsModule {}

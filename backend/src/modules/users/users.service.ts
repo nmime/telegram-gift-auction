@@ -459,4 +459,21 @@ export class UsersService {
   ): Promise<UserDocument | null> {
     return this.userModel.findById(userId).session(session);
   }
+
+  async updateLanguage(userId: string, languageCode: string): Promise<string> {
+    const validLanguages = ["en", "ru"];
+    const lang = validLanguages.includes(languageCode) ? languageCode : "en";
+
+    const user = await this.userModel.findByIdAndUpdate(
+      userId,
+      { languageCode: lang },
+      { new: true },
+    );
+
+    if (!user) {
+      throw new NotFoundException("User not found");
+    }
+
+    return user.languageCode || "en";
+  }
 }

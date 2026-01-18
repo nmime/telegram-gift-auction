@@ -253,3 +253,14 @@ export interface FinancialAuditResult {
 export async function getFinancialAudit(): Promise<FinancialAuditResult> {
   return fetchApi<FinancialAuditResult>('/auctions/system/audit');
 }
+
+export interface LanguageResponse {
+  languageCode: string;
+}
+
+export async function updateLanguage(language: string): Promise<LanguageResponse> {
+  return fetchApi<LanguageResponse>('/users/language', {
+    method: 'PUT',
+    body: JSON.stringify({ language }),
+  });
+}

@@ -117,10 +117,20 @@ export function SkeletonTable({ rows = 5 }: { rows?: number }) {
   );
 }
 
+const ROW_WIDTHS = [
+  ['65%', '55%', '75%', '65%', '60%', '65%'],
+  ['58%', '48%', '68%', '58%', '50%', '58%'],
+  ['72%', '62%', '82%', '72%', '70%', '72%'],
+  ['60%', '52%', '70%', '60%', '55%', '60%'],
+  ['68%', '58%', '78%', '68%', '65%', '68%'],
+  ['55%', '45%', '65%', '55%', '48%', '55%'],
+  ['75%', '65%', '85%', '75%', '72%', '75%'],
+  ['62%', '52%', '72%', '62%', '58%', '62%'],
+];
+
 export function SkeletonTransactionsTable({ rows = 8 }: { rows?: number }) {
   return (
     <div className="skeleton-card">
-      {/* Table header */}
       <div style={{
         display: 'grid',
         gridTemplateColumns: '1fr 1fr 1.5fr 1.5fr 2fr 1fr',
@@ -136,26 +146,28 @@ export function SkeletonTransactionsTable({ rows = 8 }: { rows?: number }) {
         <Skeleton variant="text" className="skeleton-text-sm" width="50%" />
         <Skeleton variant="text" className="skeleton-text-sm" width="60%" />
       </div>
-      {/* Table rows */}
-      {Array.from({ length: rows }).map((_, i) => (
-        <div
-          key={i}
-          style={{
-            display: 'grid',
-            gridTemplateColumns: '1fr 1fr 1.5fr 1.5fr 2fr 1fr',
-            gap: '12px',
-            padding: '12px',
-            borderBottom: '1px solid rgba(255,255,255,0.05)'
-          }}
-        >
-          <Skeleton variant="text" width={`${50 + Math.random() * 30}%`} />
-          <Skeleton variant="text" width={`${40 + Math.random() * 30}%`} />
-          <Skeleton variant="text" width={`${60 + Math.random() * 30}%`} />
-          <Skeleton variant="text" width={`${50 + Math.random() * 30}%`} />
-          <Skeleton variant="text" width={`${40 + Math.random() * 40}%`} />
-          <Skeleton variant="text" width={`${50 + Math.random() * 30}%`} />
-        </div>
-      ))}
+      {Array.from({ length: rows }).map((_, i) => {
+        const widths = ROW_WIDTHS[i % ROW_WIDTHS.length];
+        return (
+          <div
+            key={i}
+            style={{
+              display: 'grid',
+              gridTemplateColumns: '1fr 1fr 1.5fr 1.5fr 2fr 1fr',
+              gap: '12px',
+              padding: '12px',
+              borderBottom: '1px solid rgba(255,255,255,0.05)'
+            }}
+          >
+            <Skeleton variant="text" width={widths[0]} />
+            <Skeleton variant="text" width={widths[1]} />
+            <Skeleton variant="text" width={widths[2]} />
+            <Skeleton variant="text" width={widths[3]} />
+            <Skeleton variant="text" width={widths[4]} />
+            <Skeleton variant="text" width={widths[5]} />
+          </div>
+        );
+      })}
     </div>
   );
 }
@@ -233,8 +245,8 @@ export function SkeletonAuctionPage() {
         <div className="skeleton-card">
           <Skeleton variant="title" width="30%" />
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-            {Array.from({ length: 7 }).map((_, i) => (
-              <Skeleton key={i} variant="text" width={`${60 + Math.random() * 30}%`} />
+            {['70%', '85%', '65%', '80%', '75%', '90%', '68%'].map((width, i) => (
+              <Skeleton key={i} variant="text" width={width} />
             ))}
           </div>
         </div>

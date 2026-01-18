@@ -62,7 +62,7 @@ export default function LoginPage() {
     return () => {
       delete (window as Window & { onTelegramAuth?: unknown }).onTelegramAuth;
     };
-  }, [isTelegramMiniApp, handleTelegramAuth]);
+  }, [isTelegramMiniApp, handleTelegramAuth, t]);
 
   // In Telegram Mini App, show loading while auto-auth happens
   if (isTelegramMiniApp) {

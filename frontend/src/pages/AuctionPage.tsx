@@ -131,7 +131,7 @@ export default function AuctionPage() {
       unsubRoundComplete();
       unsubAuctionComplete();
     };
-  }, [subscribe, loadData, refreshBalance, showNotification]);
+  }, [subscribe, loadData, refreshBalance, showNotification, t]);
 
   const handleStartAuction = async () => {
     if (!id) return;

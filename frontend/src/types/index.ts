@@ -8,6 +8,7 @@ export interface User {
   firstName?: string;
   lastName?: string;
   photoUrl?: string;
+  languageCode?: string;
 }
 
 export interface TelegramWidgetUser {
