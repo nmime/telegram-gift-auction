@@ -1,6 +1,7 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from './hooks/useAuth';
 import Header from './components/Header';
+import Footer from './components/Footer';
 import BottomNav from './components/BottomNav';
 import LoadingSpinner from './components/LoadingSpinner';
 import ErrorBoundary from './components/ErrorBoundary';
@@ -29,9 +30,9 @@ function App() {
 
   return (
     <ErrorBoundary>
-      <div className="container">
+      <div className="container" style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
         <Header />
-        <main className="main-content">
+        <main className="main-content" style={{ flex: 1 }}>
           <Routes>
             <Route path="/" element={<AuctionsPage />} />
             <Route path="/auctions" element={<AuctionsPage />} />
@@ -43,6 +44,7 @@ function App() {
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </main>
+        <Footer />
         <BottomNav />
       </div>
     </ErrorBoundary>

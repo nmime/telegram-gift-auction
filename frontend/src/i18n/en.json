@@ -169,5 +169,13 @@
     "language": "Language",
     "languageEn": "English",
     "languageRu": "Russian"
+  },
+  "footer": {
+    "liveDemo": "Live Demo",
+    "telegramBot": "Telegram Bot",
+    "miniApp": "Mini App",
+    "apiDocs": "API Docs",
+    "madeWith": "Made with",
+    "forContest": "for Telegram Mini App Contest"
   }
 }
