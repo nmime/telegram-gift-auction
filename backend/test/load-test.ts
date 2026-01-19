@@ -36,6 +36,7 @@ interface Config {
   testSuites: string[];
   verbose: boolean;
   useFastBid: boolean;
+  useWebSocketBid: boolean;
 }
 
 interface TestUser {
@@ -259,6 +260,10 @@ function parseArgs(args: string[]): Partial<Config> & { help?: boolean } {
       case '--fast-bid':
         config.useFastBid = true;
         break;
+      case '--ws':
+      case '--ws-bid':
+        config.useWebSocketBid = true;
+        break;
     }
   }
 
@@ -288,6 +293,7 @@ ${c.cyan}OPTIONS:${c.reset}
   --stress-duration <ms>    High-frequency test duration (default: 5000)
   --stress-delay <ms>       Delay between stress bids (default: 50)
   --fast, --fast-bid        Use Redis-based fast bid endpoint for maximum throughput
+  --ws, --ws-bid            Use WebSocket bidding for maximum throughput (bypasses HTTP)
   -v, --verbose             Enable verbose output
 
 ${c.cyan}TEST SUITES:${c.reset}
@@ -321,9 +327,106 @@ class LoadTester {
   private config: Config;
   private testResults: TestSuiteResult[] = [];
   private startMemory: number = 0;
+  private wsSockets: Map<string, Socket> = new Map(); // userId -> authenticated socket
 
   constructor(config: Config) {
     this.config = config;
+  }
+
+  /**
+   * Setup WebSocket connections for all users and authenticate them.
+   * Call this before running tests if useWebSocketBid is enabled.
+   */
+  async setupWebSocketConnections(): Promise<void> {
+    if (!this.config.useWebSocketBid) return;
+
+    process.stdout.write(`${c.cyan}Setting up WebSocket connections...${c.reset}`);
+
+    const connectionPromises = this.users.map((user, i) => {
+      return new Promise<void>((resolve, reject) => {
+        const socket = io(this.config.wsUrl, {
+          transports: ['websocket'],
+          timeout: 10000,
+        });
+
+        const timeout = setTimeout(() => {
+          socket.disconnect();
+          reject(new Error(`Connection timeout for user ${i}`));
+        }, 10000);
+
+        socket.on('connect', () => {
+          // Authenticate the socket
+          socket.emit('auth', user.token);
+        });
+
+        socket.on('auth-response', (response: { success: boolean; userId?: string; error?: string }) => {
+          clearTimeout(timeout);
+          if (response.success) {
+            this.wsSockets.set(user.id, socket);
+            resolve();
+          } else {
+            socket.disconnect();
+            reject(new Error(`Auth failed for user ${i}: ${response.error}`));
+          }
+        });
+
+        socket.on('connect_error', (err) => {
+          clearTimeout(timeout);
+          reject(new Error(`Connection error for user ${i}: ${err.message}`));
+        });
+      });
+    });
+
+    let connected = 0;
+    const results = await Promise.allSettled(connectionPromises);
+    results.forEach(r => {
+      if (r.status === 'fulfilled') connected++;
+    });
+
+    console.log(`\r${c.green}✓${c.reset} WebSocket: ${connected}/${this.users.length} users connected and authenticated`);
+
+    if (connected < this.users.length * 0.8) {
+      throw new Error(`Too few WebSocket connections succeeded: ${connected}/${this.users.length}`);
+    }
+  }
+
+  /**
+   * Place bid via WebSocket (ultra-fast path, bypasses HTTP entirely)
+   */
+  private async placeBidViaWebSocket(user: TestUser, auctionId: string, amount: number): Promise<BidResult> {
+    const socket = this.wsSockets.get(user.id);
+    if (!socket || !socket.connected) {
+      return { success: false, responseTimeMs: 0, error: 'WebSocket not connected' };
+    }
+
+    return new Promise<BidResult>((resolve) => {
+      const start = performance.now();
+      const timeout = setTimeout(() => {
+        resolve({ success: false, responseTimeMs: performance.now() - start, error: 'WebSocket bid timeout' });
+      }, 5000);
+
+      // Listen for bid response
+      const handler = (response: { success: boolean; amount?: number; error?: string }) => {
+        clearTimeout(timeout);
+        const responseTimeMs = performance.now() - start;
+        resolve({
+          success: response.success,
+          responseTimeMs,
+          error: response.error,
+        });
+      };
+
+      socket.once('bid-response', handler);
+      socket.emit('place-bid', { auctionId, amount });
+    });
+  }
+
+  /**
+   * Cleanup WebSocket connections
+   */
+  cleanupWebSockets(): void {
+    this.wsSockets.forEach(socket => socket.disconnect());
+    this.wsSockets.clear();
   }
 
   private async request<T>(
@@ -452,6 +555,11 @@ class LoadTester {
   }
 
   private async placeBid(user: TestUser, auctionId: string, amount: number, retry = true): Promise<BidResult> {
+    // Use WebSocket path if enabled
+    if (this.config.useWebSocketBid) {
+      return this.placeBidViaWebSocket(user, auctionId, amount);
+    }
+
     const start = performance.now();
     const endpoint = this.config.useFastBid ? 'fast-bid' : 'bid';
     try {
@@ -497,8 +605,8 @@ class LoadTester {
       p50: percentile(times, 50),
       p95: percentile(times, 95),
       p99: percentile(times, 99),
-      maxMs: times.length ? Math.max(...times) : 0,
-      minMs: times.length ? Math.min(...times) : 0,
+      maxMs: times.length ? times.reduce((a, b) => Math.max(a, b), 0) : 0,
+      minMs: times.length ? times.reduce((a, b) => Math.min(a, b), Infinity) : 0,
       avgMs: times.length ? times.reduce((a, b) => a + b, 0) / times.length : 0,
       rps: durationMs > 0 ? (results.length / durationMs) * 1000 : 0,
       stdDev: stdDev(times),
@@ -841,6 +949,148 @@ class LoadTester {
   // WEBSOCKET TESTS
   // ═══════════════════════════════════════════════════════════════════════════
 
+  /**
+   * High-throughput WebSocket bidding test
+   * This test bypasses HTTP entirely and uses WebSocket for maximum performance
+   */
+  async testWebSocketBidThroughput(auctionId: string): Promise<TestSuiteResult> {
+    const testName = 'WebSocket Bid Throughput';
+    process.stdout.write(`${c.cyan}Running ${testName}...${c.reset}`);
+
+    // Setup dedicated WebSocket connections for this test
+    const sockets: Map<string, Socket> = new Map();
+    const connectionPromises = this.users.map((user) => {
+      return new Promise<void>((resolve, reject) => {
+        const socket = io(this.config.wsUrl, {
+          transports: ['websocket'],
+          timeout: 10000,
+        });
+
+        const timeout = setTimeout(() => {
+          socket.disconnect();
+          reject(new Error('Connection timeout'));
+        }, 10000);
+
+        socket.on('connect', () => {
+          socket.emit('auth', user.token);
+        });
+
+        socket.on('auth-response', (response: { success: boolean }) => {
+          clearTimeout(timeout);
+          if (response.success) {
+            socket.emit('join-auction', auctionId);
+            sockets.set(user.id, socket);
+            resolve();
+          } else {
+            socket.disconnect();
+            reject(new Error('Auth failed'));
+          }
+        });
+
+        socket.on('connect_error', (err) => {
+          clearTimeout(timeout);
+          reject(new Error(err.message));
+        });
+      });
+    });
+
+    await Promise.allSettled(connectionPromises);
+    const connectedCount = sockets.size;
+
+    if (connectedCount < this.users.length * 0.5) {
+      // Cleanup
+      sockets.forEach(s => s.disconnect());
+      return {
+        name: testName,
+        passed: false,
+        metrics: {
+          requests: 0, successes: 0, failures: 0,
+          p50: 0, p95: 0, p99: 0, maxMs: 0, minMs: 0, avgMs: 0, rps: 0, stdDev: 0,
+        },
+        errors: { 'Too few connections': 1 },
+        details: `Only ${connectedCount}/${this.users.length} connected`,
+      };
+    }
+
+    // Get current highest bid
+    const highestBid = await this.getHighestBid(auctionId);
+    const { data: auction } = await this.request<{ minBidAmount: number }>(`/auctions/${auctionId}`);
+    let baseAmount = Math.max(highestBid, auction.minBidAmount || 100) + 50000;
+
+    // Run high-frequency WebSocket bids
+    const results: BidResult[] = [];
+    const endTime = Date.now() + this.config.highFrequencyDurationMs;
+    let bidCount = 0;
+    const connectedUsers = this.users.filter(u => sockets.has(u.id));
+
+    const start = performance.now();
+
+    // Fire bids in batches to avoid stack overflow
+    const BATCH_SIZE = 50;
+
+    while (Date.now() < endTime) {
+      const batchPromises: Promise<BidResult>[] = [];
+
+      // Create a batch of bids
+      for (let i = 0; i < BATCH_SIZE && Date.now() < endTime; i++) {
+        const user = connectedUsers[bidCount % connectedUsers.length]!;
+        const socket = sockets.get(user.id)!;
+        const amount = baseAmount + bidCount * 10;
+
+        const bidPromise = new Promise<BidResult>((resolve) => {
+          const bidStart = performance.now();
+          const timeout = setTimeout(() => {
+            resolve({ success: false, responseTimeMs: 5000, error: 'timeout' });
+          }, 5000);
+
+          const handler = (response: { success: boolean; error?: string }) => {
+            clearTimeout(timeout);
+            resolve({
+              success: response.success,
+              responseTimeMs: performance.now() - bidStart,
+              error: response.error,
+            });
+          };
+
+          socket.once('bid-response', handler);
+          socket.emit('place-bid', { auctionId, amount });
+        });
+
+        batchPromises.push(bidPromise);
+        bidCount++;
+      }
+
+      // Wait for batch to complete
+      const batchResults = await Promise.all(batchPromises);
+      for (const r of batchResults) {
+        results.push(r);
+      }
+
+      // Small yield to prevent blocking
+      await sleep(1);
+    }
+
+    const duration = performance.now() - start;
+
+    // Cleanup
+    sockets.forEach(s => s.disconnect());
+
+    const metrics = this.computeMetrics(results, duration);
+    const passed = metrics.rps >= 100; // At least 100 rps via WebSocket
+    const times = results.map(r => r.responseTimeMs);
+
+    console.log(`\r${passed ? c.green + '✓' : c.red + '✗'}${c.reset} ${testName}: ${metrics.requests} bids @ ${c.bold}${metrics.rps.toFixed(1)} req/s${c.reset}, p99=${formatMs(metrics.p99)}`);
+
+    return {
+      name: testName,
+      passed,
+      metrics,
+      errors: this.collectErrors(results),
+      histogram: this.config.verbose ? histogram(times) : undefined,
+      details: `WebSocket throughput: ${metrics.rps.toFixed(1)} req/s`,
+    };
+  }
+
   async testWebSocketConnections(auctionId: string): Promise<TestSuiteResult> {
     const testName = 'WebSocket Connections';
     process.stdout.write(`${c.cyan}Running ${testName}...${c.reset}`);
@@ -1146,6 +1396,12 @@ class LoadTester {
 
   async runAllTests(): Promise<void> {
     const auctionId = await this.createAndStartAuction();
+
+    // Setup WebSocket connections if using WS bidding
+    if (this.config.useWebSocketBid) {
+      await this.setupWebSocketConnections();
+    }
+
     const suites = this.config.testSuites;
 
     console.log();
@@ -1183,6 +1439,7 @@ class LoadTester {
 
     // WebSocket tests
     if (runWs) {
+      this.testResults.push(await this.testWebSocketBidThroughput(auctionId));
       this.testResults.push(await this.testWebSocketConnections(auctionId));
     }
 
@@ -1190,6 +1447,11 @@ class LoadTester {
     if (runVerify) {
       this.testResults.push(await this.verifyBidOrdering(auctionId));
       this.testResults.push(await this.verifyFinancialIntegrity(auctionId));
+    }
+
+    // Cleanup WebSocket connections
+    if (this.config.useWebSocketBid) {
+      this.cleanupWebSockets();
     }
 
     this.printResults();
@@ -1223,6 +1485,7 @@ async function main(): Promise<void> {
     testSuites: parsedArgs.testSuites || ['all'],
     verbose: parsedArgs.verbose || false,
     useFastBid: parsedArgs.useFastBid || false,
+    useWebSocketBid: parsedArgs.useWebSocketBid || false,
   };
 
   console.log();
@@ -1236,6 +1499,7 @@ async function main(): Promise<void> {
   console.log(`${c.dim}Items:${c.reset}     ${config.itemCount}`);
   console.log(`${c.dim}Suites:${c.reset}    ${config.testSuites.join(', ')}`);
   console.log(`${c.dim}Fast Bid:${c.reset}  ${config.useFastBid ? c.green + 'ENABLED (Redis path)' + c.reset : 'disabled'}`);
+  console.log(`${c.dim}WS Bid:${c.reset}    ${config.useWebSocketBid ? c.green + 'ENABLED (WebSocket path)' + c.reset : 'disabled'}`);
   console.log(`${'═'.repeat(50)}`);
   console.log();
 

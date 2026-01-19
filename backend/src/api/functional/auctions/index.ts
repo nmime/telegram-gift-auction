@@ -18,6 +18,7 @@ import type {
 
 export * as system from "./system/index";
 export * as bid from "./bid/index";
+export * as fast_bid from "./fast_bid/index";
 export * as leaderboard from "./leaderboard/index";
 export * as my_bids from "./my_bids/index";
 export * as min_winning_bid from "./min_winning_bid/index";

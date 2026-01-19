@@ -5,7 +5,7 @@
   "main": "dist/src/main.js",
   "scripts": {
     "build": "nest build",
-    "build:test": "tsc -p test/tsconfig.json",
+    "build:test": "tspc -p test/tsconfig.json",
     "start": "nest start",
     "start:dev": "nest start --watch",
     "start:debug": "nest start --debug --watch",
@@ -18,7 +18,8 @@
     "benchmark": "pnpm build:test && node dist-test/test/benchmark.js",
     "load-test": "pnpm exec ts-node test/load-test.ts",
     "sdk": "pnpm exec nestia sdk",
-    "sdk:e2e": "pnpm exec nestia e2e"
+    "sdk:e2e": "pnpm exec nestia e2e",
+    "prepare": "ts-patch install"
   },
   "dependencies": {
     "@fastify/helmet": "^13.0.2",
@@ -75,7 +76,7 @@
     "ts-node": "^10.9.2",
     "ts-patch": "^3.3.0",
     "tsconfig-paths": "^4.2.0",
-    "typescript": "^5.9.3",
+    "typescript": "~5.9.3",
     "typescript-transform-paths": "^3.5.6"
   },
   "jest": {

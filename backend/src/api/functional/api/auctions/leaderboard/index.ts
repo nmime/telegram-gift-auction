@@ -10,16 +10,18 @@ import { PlainFetcher } from "@nestia/fetcher/lib/PlainFetcher";
 import type { Primitive, Resolved } from "typia";
 import typia from "typia";
 
-import type { ILeaderboardEntry } from "../../../../../modules/auctions/dto";
+import type { ILeaderboardQuery } from "../../../../../modules/auctions/auctions.controller";
+import type { ILeaderboardResponse } from "../../../../../modules/auctions/dto";
 
 /**
  * Get auction leaderboard
  *
- * Returns the current ranking of all active bids, sorted by amount descending.
+ * Returns the current ranking of active bids in current round and past winners.
  *
  * @param id Auction ID
+ * @param query Pagination parameters
  * @tag auctions
- * @returns Leaderboard entries
+ * @returns Leaderboard with pagination and past winners
  *
  * @controller AuctionsController.getLeaderboard
  * @path GET /api/auctions/:id/leaderboard
@@ -29,17 +31,19 @@ import type { ILeaderboardEntry } from "../../../../../modules/auctions/dto";
 export async function getLeaderboard(
   connection: IConnection,
   id: string,
+  query: getLeaderboard.Query,
 ): Promise<getLeaderboard.Output> {
   return true === connection.simulate
-    ? getLeaderboard.simulate(connection, id)
+    ? getLeaderboard.simulate(connection, id, query)
     : PlainFetcher.fetch(connection, {
         ...getLeaderboard.METADATA,
         template: getLeaderboard.METADATA.path,
-        path: getLeaderboard.path(id),
+        path: getLeaderboard.path(id, query),
       });
 }
 export namespace getLeaderboard {
-  export type Output = Primitive<Array<ILeaderboardEntry>>;
+  export type Query = Resolved<ILeaderboardQuery>;
+  export type Output = Primitive<ILeaderboardResponse>;
 
   export const METADATA = {
     method: "GET",
@@ -52,18 +56,33 @@ export namespace getLeaderboard {
     status: 200,
   } as const;
 
-  export const path = (id: string) =>
-    `/api/auctions/${encodeURIComponent(id?.toString() ?? "null")}/leaderboard`;
-  export const random = (): Resolved<Primitive<Array<ILeaderboardEntry>>> =>
-    typia.random<Primitive<Array<ILeaderboardEntry>>>();
-  export const simulate = (connection: IConnection, id: string): Output => {
+  export const path = (id: string, query: Query) => {
+    const variables: URLSearchParams = new URLSearchParams();
+    for (const [key, value] of Object.entries(query as any))
+      if (undefined === value) continue;
+      else if (Array.isArray(value))
+        value.forEach((elem: any) => variables.append(key, String(elem)));
+      else variables.set(key, String(value));
+    const location: string = `/api/auctions/${encodeURIComponent(id?.toString() ?? "null")}/leaderboard`;
+    return 0 === variables.size
+      ? location
+      : `${location}?${variables.toString()}`;
+  };
+  export const random = (): Resolved<Primitive<ILeaderboardResponse>> =>
+    typia.random<Primitive<ILeaderboardResponse>>();
+  export const simulate = (
+    connection: IConnection,
+    id: string,
+    query: Query,
+  ): Output => {
     const assert = NestiaSimulator.assert({
       method: METADATA.method,
       host: connection.host,
-      path: path(id),
+      path: path(id, query),
       contentType: "application/json",
     });
     assert.param("id")(() => typia.assert(id));
+    assert.query(() => typia.assert(query));
     return random();
   };
 }

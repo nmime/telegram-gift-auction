@@ -18,7 +18,7 @@ async function testMultiRoundAuctionSetup(): Promise<void> {
   console.log('✓ Created admin user');
 
   // Create auction with 3 rounds
-  const auction = await api.functional.auctions.create(adminConn, {
+  const auction = await api.functional.api.auctions.create(adminConn, {
     title: `Multi-Round Test ${timestamp}`,
     totalItems: 6,
     rounds: [
@@ -36,7 +36,7 @@ async function testMultiRoundAuctionSetup(): Promise<void> {
   console.log(`✓ Created auction: ${auction.id}`);
 
   // Verify rounds configuration
-  const auctionDetails = await api.functional.auctions.findOne(
+  const auctionDetails = await api.functional.api.auctions.findOne(
     adminConn,
     auction.id
   );
@@ -61,10 +61,10 @@ async function testMultiRoundAuctionSetup(): Promise<void> {
   }
 
   // Start auction
-  await api.functional.auctions.start(adminConn, auction.id);
+  await api.functional.api.auctions.start(adminConn, auction.id);
 
   // Verify current round is 1
-  const started = await api.functional.auctions.findOne(adminConn, auction.id);
+  const started = await api.functional.api.auctions.findOne(adminConn, auction.id);
   if (started.currentRound === 1) {
     console.log('✓ Auction started at round 1');
   } else {
@@ -84,13 +84,13 @@ async function testBidsInMultiRound(): Promise<void> {
   // Create 5 users
   for (let i = 0; i < 5; i++) {
     const conn = await createConnection(`ub_${timestamp}_${i}`);
-    await api.functional.users.deposit(conn, { amount: 50000 });
+    await api.functional.api.users.deposit(conn, { amount: 50000 });
     users.push(conn);
   }
   console.log('✓ Created 5 test users with deposits');
 
   // Create auction with 2 items in round 1
-  const auction = await api.functional.auctions.create(adminConn, {
+  const auction = await api.functional.api.auctions.create(adminConn, {
     title: `Bids Test ${timestamp}`,
     totalItems: 4,
     rounds: [
@@ -104,13 +104,13 @@ async function testBidsInMultiRound(): Promise<void> {
     maxExtensions: 3,
     botsEnabled: false,
   });
-  await api.functional.auctions.start(adminConn, auction.id);
+  await api.functional.api.auctions.start(adminConn, auction.id);
   console.log(`✓ Created and started auction: ${auction.id}`);
 
   // Place 5 bids with lock release
   const bidAmounts = [1000, 800, 600, 400, 200];
   for (let i = 0; i < users.length; i++) {
-    await api.functional.auctions.bid.placeBid(users[i]!, auction.id, {
+    await api.functional.api.auctions.bid.placeBid(users[i]!, auction.id, {
       amount: bidAmounts[i]!,
     });
     console.log(`  User ${i} placed bid: ${bidAmounts[i]}`);
@@ -119,12 +119,12 @@ async function testBidsInMultiRound(): Promise<void> {
 
   // Wait for leaderboard to be fully updated
   await waitFor(async () => {
-    const lb = await api.functional.auctions.leaderboard.getLeaderboard(adminConn, auction.id, {});
+    const lb = await api.functional.api.auctions.leaderboard.getLeaderboard(adminConn, auction.id, {});
     return lb.leaderboard.length === 5;
   }, { message: 'Leaderboard should have 5 bids' });
 
   // Verify leaderboard
-  const leaderboard = await api.functional.auctions.leaderboard.getLeaderboard(
+  const leaderboard = await api.functional.api.auctions.leaderboard.getLeaderboard(
     adminConn,
     auction.id,
     {}
@@ -165,30 +165,30 @@ async function testMinWinningBid(): Promise<void> {
   // Create 3 users
   for (let i = 0; i < 3; i++) {
     const conn = await createConnection(`um_${timestamp}_${i}`);
-    await api.functional.users.deposit(conn, { amount: 50000 });
+    await api.functional.api.users.deposit(conn, { amount: 50000 });
     users.push(conn);
   }
   console.log('✓ Created 3 test users');
 
   // Create auction with 2 items
-  const auction = await api.functional.auctions.create(
+  const auction = await api.functional.api.auctions.create(
     adminConn,
     createAuctionConfig(`Min Bid Test ${timestamp}`, { totalItems: 2, rounds: [{ itemsCount: 2, durationMinutes: 5 }] })
   );
-  await api.functional.auctions.start(adminConn, auction.id);
+  await api.functional.api.auctions.start(adminConn, auction.id);
   console.log(`✓ Created auction: ${auction.id}`);
 
   // Place 3 bids: 500, 400, 300 with lock release
-  await api.functional.auctions.bid.placeBid(users[0]!, auction.id, { amount: 500 });
+  await api.functional.api.auctions.bid.placeBid(users[0]!, auction.id, { amount: 500 });
   await waitForLockRelease();
-  await api.functional.auctions.bid.placeBid(users[1]!, auction.id, { amount: 400 });
+  await api.functional.api.auctions.bid.placeBid(users[1]!, auction.id, { amount: 400 });
   await waitForLockRelease();
-  await api.functional.auctions.bid.placeBid(users[2]!, auction.id, { amount: 300 });
+  await api.functional.api.auctions.bid.placeBid(users[2]!, auction.id, { amount: 300 });
   console.log('✓ Placed bids: 500, 400, 300');
 
   // Get min winning bid
   const minBidResponse =
-    await api.functional.auctions.min_winning_bid.getMinWinningBid(
+    await api.functional.api.auctions.min_winning_bid.getMinWinningBid(
       adminConn,
       auction.id
     );
@@ -214,11 +214,11 @@ async function testCarryoverSchema(): Promise<void> {
   const timestamp = Date.now();
   const adminConn = await createConnection(`as_${timestamp}`);
   const userConn = await createConnection(`us_${timestamp}`);
-  await api.functional.users.deposit(userConn, { amount: 50000 });
+  await api.functional.api.users.deposit(userConn, { amount: 50000 });
   console.log('✓ Created test users');
 
   // Create 2-round auction
-  const auction = await api.functional.auctions.create(adminConn, {
+  const auction = await api.functional.api.auctions.create(adminConn, {
     title: `Schema Test ${timestamp}`,
     totalItems: 2,
     rounds: [
@@ -232,11 +232,11 @@ async function testCarryoverSchema(): Promise<void> {
     maxExtensions: 3,
     botsEnabled: false,
   });
-  await api.functional.auctions.start(adminConn, auction.id);
+  await api.functional.api.auctions.start(adminConn, auction.id);
   console.log(`✓ Created 2-round auction: ${auction.id}`);
 
   // Place bid
-  const bidResult = await api.functional.auctions.bid.placeBid(
+  const bidResult = await api.functional.api.auctions.bid.placeBid(
     userConn,
     auction.id,
     { amount: 500 }
@@ -251,7 +251,7 @@ async function testCarryoverSchema(): Promise<void> {
   }
 
   // Check user's bids endpoint
-  const myBids = await api.functional.auctions.my_bids.getMyBids(
+  const myBids = await api.functional.api.auctions.my_bids.getMyBids(
     userConn,
     auction.id
   );

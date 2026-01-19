@@ -1513,9 +1513,17 @@ export class AuctionsService {
       isIncrease: !result.isNewBid,
     });
 
-    // Get cached auction meta for anti-sniping check (ultra-fast, no MongoDB)
-    const auctionMeta = await this.bidCacheService.getAuctionMeta(auctionId);
-    if (auctionMeta && auctionMeta.roundEndTime > 0) {
+    // Use meta from Lua script result (no extra Redis call needed)
+    if (result.roundEndTime && result.roundEndTime > 0) {
+      const auctionMeta = {
+        roundEndTime: result.roundEndTime,
+        antiSnipingWindowMs: result.antiSnipingWindowMs || 0,
+        antiSnipingExtensionMs: result.antiSnipingExtensionMs || 0,
+        maxExtensions: result.maxExtensions || 0,
+        itemsInRound: result.itemsInRound || 1,
+        currentRound: result.currentRound || 1,
+      };
+
       // Check anti-sniping (async, don't block response)
       this.checkAntiSnipingUltraFast(auctionId, auctionMeta).catch((err) =>
         this.logger.error("Anti-sniping check failed", err),

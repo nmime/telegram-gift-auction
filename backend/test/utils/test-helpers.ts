@@ -108,7 +108,7 @@ export async function createConnection(username: string): Promise<api.IConnectio
     headers: { Authorization: '' },
   };
 
-  const auth = await api.functional.auth.login(connection, { username });
+  const auth = await api.functional.api.auth.login(connection, { username });
   connection.headers = { Authorization: `Bearer ${auth.accessToken}` };
   return connection;
 }
@@ -117,7 +117,7 @@ export async function createConnection(username: string): Promise<api.IConnectio
  * Get auth token for WebSocket connection
  */
 export async function getAuthToken(username: string): Promise<string> {
-  const authRes = await api.functional.auth.login(
+  const authRes = await api.functional.api.auth.login(
     { host: HOST, headers: {} },
     { username }
   );

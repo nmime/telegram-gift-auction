@@ -20,21 +20,21 @@ async function testConcurrentBidsDifferentUsers(): Promise<void> {
   // Create 10 users
   for (let i = 0; i < 10; i++) {
     const conn = await createConnection(`ucd_${timestamp}_${i}`);
-    await api.functional.users.deposit(conn, { amount: 10000 });
+    await api.functional.api.users.deposit(conn, { amount: 10000 });
     users.push(conn);
   }
   console.log('✓ Created 10 users');
 
-  const auction = await api.functional.auctions.create(
+  const auction = await api.functional.api.auctions.create(
     adminConn,
     createAuctionConfig(`Concurrent Test ${timestamp}`, { totalItems: 5, rounds: [{ itemsCount: 5, durationMinutes: 5 }] })
   );
-  await api.functional.auctions.start(adminConn, auction.id);
+  await api.functional.api.auctions.start(adminConn, auction.id);
   console.log(`✓ Created auction: ${auction.id}`);
 
   // All users bid concurrently with different amounts
   const bidPromises = users.map((user, i) =>
-    api.functional.auctions.bid
+    api.functional.api.auctions.bid
       .placeBid(user, auction.id, { amount: 100 + (i + 1) * 50 })
       .then(() => ({ success: true, user: i, amount: 100 + (i + 1) * 50 }))
       .catch((e) => ({ success: false, user: i, error: (e as Error).message }))
@@ -48,7 +48,7 @@ async function testConcurrentBidsDifferentUsers(): Promise<void> {
   console.log(`  ${failed.length} bids failed (expected due to rate limiting)`);
 
   // Verify leaderboard
-  const leaderboard = await api.functional.auctions.leaderboard.getLeaderboard(
+  const leaderboard = await api.functional.api.auctions.leaderboard.getLeaderboard(
     adminConn,
     auction.id,
     {}
@@ -76,30 +76,30 @@ async function testDuplicateBidAmountRejection(): Promise<void> {
   const user1Conn = await createConnection(`u1r_${timestamp}`);
   const user2Conn = await createConnection(`u2r_${timestamp}`);
 
-  await api.functional.users.deposit(user1Conn, { amount: 5000 });
-  await api.functional.users.deposit(user2Conn, { amount: 5000 });
+  await api.functional.api.users.deposit(user1Conn, { amount: 5000 });
+  await api.functional.api.users.deposit(user2Conn, { amount: 5000 });
   console.log('✓ Created 2 users');
 
-  const auction = await api.functional.auctions.create(
+  const auction = await api.functional.api.auctions.create(
     adminConn,
     createAuctionConfig(`Duplicate Test ${timestamp}`, { totalItems: 2, rounds: [{ itemsCount: 2, durationMinutes: 5 }] })
   );
-  await api.functional.auctions.start(adminConn, auction.id);
+  await api.functional.api.auctions.start(adminConn, auction.id);
   console.log(`✓ Created auction: ${auction.id}`);
 
   // User1 places bid
-  await api.functional.auctions.bid.placeBid(user1Conn, auction.id, { amount: 500 });
+  await api.functional.api.auctions.bid.placeBid(user1Conn, auction.id, { amount: 500 });
   console.log('✓ User1 bid 500');
 
   // Wait for bid to be fully persisted
   await waitFor(async () => {
-    const lb = await api.functional.auctions.leaderboard.getLeaderboard(adminConn, auction.id, {});
+    const lb = await api.functional.api.auctions.leaderboard.getLeaderboard(adminConn, auction.id, {});
     return lb.leaderboard.some((b) => b.amount === 500);
   }, { message: 'First bid not found in leaderboard' });
 
   // User2 tries same amount
   try {
-    await api.functional.auctions.bid.placeBid(user2Conn, auction.id, { amount: 500 });
+    await api.functional.api.auctions.bid.placeBid(user2Conn, auction.id, { amount: 500 });
     throw new Error('Should have rejected duplicate amount');
   } catch (e: unknown) {
     const error = e as Error;
@@ -113,7 +113,7 @@ async function testDuplicateBidAmountRejection(): Promise<void> {
   }
 
   // User2 can bid different amount
-  await api.functional.auctions.bid.placeBid(user2Conn, auction.id, { amount: 600 });
+  await api.functional.api.auctions.bid.placeBid(user2Conn, auction.id, { amount: 600 });
   console.log('✓ User2 bid 600 (different amount accepted)');
 
   console.log('\n✓ Duplicate Bid Amount Rejection test PASSED\n');
@@ -126,14 +126,14 @@ async function testRapidBidIncreases(): Promise<void> {
   const adminConn = await createConnection(`ari_${timestamp}`);
   const userConn = await createConnection(`uri_${timestamp}`);
 
-  await api.functional.users.deposit(userConn, { amount: 50000 });
+  await api.functional.api.users.deposit(userConn, { amount: 50000 });
   console.log('✓ Created user with 50000 balance');
 
-  const auction = await api.functional.auctions.create(
+  const auction = await api.functional.api.auctions.create(
     adminConn,
     createAuctionConfig(`Rapid Test ${timestamp}`)
   );
-  await api.functional.auctions.start(adminConn, auction.id);
+  await api.functional.api.auctions.start(adminConn, auction.id);
   console.log(`✓ Created auction: ${auction.id}`);
 
   // Rapidly increase bid 10 times with lock release waits
@@ -143,7 +143,7 @@ async function testRapidBidIncreases(): Promise<void> {
   for (let i = 0; i < 10; i++) {
     const amount = 100 + i * 100;
     try {
-      await api.functional.auctions.bid.placeBid(userConn, auction.id, { amount });
+      await api.functional.api.auctions.bid.placeBid(userConn, auction.id, { amount });
       successCount++;
       lastSuccessfulAmount = amount;
       console.log(`  Bid ${amount}: success`);
@@ -157,13 +157,13 @@ async function testRapidBidIncreases(): Promise<void> {
   console.log(`✓ ${successCount}/10 rapid bids succeeded`);
 
   // Verify final state
-  const myBids = await api.functional.auctions.my_bids.getMyBids(userConn, auction.id);
+  const myBids = await api.functional.api.auctions.my_bids.getMyBids(userConn, auction.id);
   if (myBids.length === 1) {
     console.log(`✓ User has 1 bid at amount ${myBids[0]?.amount}`);
   }
 
   // Verify balance is correct
-  const balance = await api.functional.users.balance.getBalance(userConn);
+  const balance = await api.functional.api.users.balance.getBalance(userConn);
   const expectedFrozen = lastSuccessfulAmount > 0 ? lastSuccessfulAmount : myBids[0]?.amount ?? 0;
   if (balance.frozenBalance === expectedFrozen) {
     console.log(`✓ Frozen balance correct: ${balance.frozenBalance}`);
@@ -182,21 +182,21 @@ async function testConcurrentSameAmountRace(): Promise<void> {
   // Create 5 users
   for (let i = 0; i < 5; i++) {
     const conn = await createConnection(`ucs_${timestamp}_${i}`);
-    await api.functional.users.deposit(conn, { amount: 5000 });
+    await api.functional.api.users.deposit(conn, { amount: 5000 });
     users.push(conn);
   }
   console.log('✓ Created 5 users');
 
-  const auction = await api.functional.auctions.create(
+  const auction = await api.functional.api.auctions.create(
     adminConn,
     createAuctionConfig(`Race Test ${timestamp}`)
   );
-  await api.functional.auctions.start(adminConn, auction.id);
+  await api.functional.api.auctions.start(adminConn, auction.id);
   console.log(`✓ Created auction: ${auction.id}`);
 
   // All 5 users try to bid 500 simultaneously
   const racePromises = users.map((user, i) =>
-    api.functional.auctions.bid
+    api.functional.api.auctions.bid
       .placeBid(user, auction.id, { amount: 500 })
       .then(() => ({ success: true, user: i }))
       .catch(() => ({ success: false, user: i }))
@@ -219,7 +219,7 @@ async function testConcurrentSameAmountRace(): Promise<void> {
   }
 
   // Verify leaderboard has max 1 entry at 500
-  const leaderboard = await api.functional.auctions.leaderboard.getLeaderboard(
+  const leaderboard = await api.functional.api.auctions.leaderboard.getLeaderboard(
     adminConn,
     auction.id,
     {}
@@ -241,10 +241,10 @@ async function testBiddingWhileAuctionNotActive(): Promise<void> {
   const timestamp = Date.now();
   const adminConn = await createConnection(`aia_${timestamp}`);
   const userConn = await createConnection(`uia_${timestamp}`);
-  await api.functional.users.deposit(userConn, { amount: 5000 });
+  await api.functional.api.users.deposit(userConn, { amount: 5000 });
 
   // Create auction but don't start it
-  const auction = await api.functional.auctions.create(
+  const auction = await api.functional.api.auctions.create(
     adminConn,
     createAuctionConfig(`Inactive Test ${timestamp}`)
   );
@@ -252,7 +252,7 @@ async function testBiddingWhileAuctionNotActive(): Promise<void> {
 
   // Try to bid on pending auction
   try {
-    await api.functional.auctions.bid.placeBid(userConn, auction.id, { amount: 200 });
+    await api.functional.api.auctions.bid.placeBid(userConn, auction.id, { amount: 200 });
     throw new Error('Should reject bid on pending auction');
   } catch (e: unknown) {
     const error = e as Error;
@@ -263,11 +263,11 @@ async function testBiddingWhileAuctionNotActive(): Promise<void> {
   }
 
   // Start auction
-  await api.functional.auctions.start(adminConn, auction.id);
+  await api.functional.api.auctions.start(adminConn, auction.id);
   console.log('✓ Auction started');
 
   // Now bid should work
-  await api.functional.auctions.bid.placeBid(userConn, auction.id, { amount: 200 });
+  await api.functional.api.auctions.bid.placeBid(userConn, auction.id, { amount: 200 });
   console.log('✓ Bid accepted on active auction');
 
   console.log('\n✓ Bidding on Inactive Auction test PASSED\n');
@@ -283,21 +283,21 @@ async function testLeaderboardConsistency(): Promise<void> {
   // Create 20 users
   for (let i = 0; i < 20; i++) {
     const conn = await createConnection(`ulc_${timestamp}_${i}`);
-    await api.functional.users.deposit(conn, { amount: 50000 });
+    await api.functional.api.users.deposit(conn, { amount: 50000 });
     users.push(conn);
   }
   console.log('✓ Created 20 users');
 
-  const auction = await api.functional.auctions.create(
+  const auction = await api.functional.api.auctions.create(
     adminConn,
     createAuctionConfig(`Consistency Test ${timestamp}`, { totalItems: 10, rounds: [{ itemsCount: 10, durationMinutes: 5 }] })
   );
-  await api.functional.auctions.start(adminConn, auction.id);
+  await api.functional.api.auctions.start(adminConn, auction.id);
   console.log(`✓ Created auction: ${auction.id}`);
 
   // Each user places a bid with unique amount
   const bidPromises = users.map((user, i) =>
-    api.functional.auctions.bid
+    api.functional.api.auctions.bid
       .placeBid(user, auction.id, { amount: 1000 + i * 100 })
       .catch(() => null)
   );
@@ -307,13 +307,13 @@ async function testLeaderboardConsistency(): Promise<void> {
 
   // Wait for leaderboard to be updated
   await waitFor(async () => {
-    const lb = await api.functional.auctions.leaderboard.getLeaderboard(adminConn, auction.id, {});
+    const lb = await api.functional.api.auctions.leaderboard.getLeaderboard(adminConn, auction.id, {});
     return lb.leaderboard.length >= 15; // At least 15 of 20 should succeed
   }, { timeout: 5000, message: 'Not enough bids in leaderboard' });
 
   // Verify leaderboard multiple times
   for (let check = 0; check < 3; check++) {
-    const leaderboard = await api.functional.auctions.leaderboard.getLeaderboard(
+    const leaderboard = await api.functional.api.auctions.leaderboard.getLeaderboard(
       adminConn,
       auction.id,
       {}

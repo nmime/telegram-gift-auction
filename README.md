@@ -23,7 +23,7 @@ This isn't just another auction demo — it's a **battle-tested, production-read
 | **Financial Integrity** | Atomic operations with comprehensive audit system — zero money lost or created |
 | **Last-Second Sniping** | Anti-sniping mechanism with transparent round extensions |
 | **Scalability** | Redis adapter enables horizontal scaling across multiple servers |
-| **High Performance** | Ultra-fast Redis Lua scripts achieve **2,500+ bids/sec** with sub-10ms p99 latency |
+| **High Performance** | Ultra-fast Redis Lua scripts + WebSocket bidding achieve **30,000+ bids/sec** with sub-5ms p99 latency |
 | **Real-time UX** | WebSocket events ensure no user misses critical auction updates |
 | **Telegram Native** | Full integration: Login Widget, Mini App auth, bot notifications |
 
@@ -53,7 +53,7 @@ This isn't just another auction demo — it's a **battle-tested, production-read
 - **Optimistic locking** with version checks on all financial operations
 - **Unique indexes** enforce one active bid per user and unique bid amounts
 
-### Ultra-Fast Bidding (Redis Path)
+### 🚀 Ultra-Fast Bidding (Redis Path)
 - **Single Lua script** does ALL validation + bid placement atomically (~2ms latency)
 - **Cached auction meta** eliminates MongoDB fetch per bid
 - **Eager user warmup** on auction start loads all users with balance > 0
@@ -61,8 +61,21 @@ This isn't just another auction demo — it's a **battle-tested, production-read
 - **Background sync** writes dirty data to MongoDB every 5 seconds
 - **Fallback mode** uses standard MongoDB path if cache not ready
 
+### ⚡ WebSocket Bidding (Maximum Performance)
+- **Direct WebSocket bids** bypass HTTP overhead entirely
+- **30,000+ bids/sec** with p99 latency under 5ms
+- **JWT authentication** via socket events
+- **Real-time bid responses** with instant confirmation
+
+### 🔥 Cluster Mode (Horizontal Scaling)
+- **Multi-process scaling** via Node.js cluster module
+- **CLUSTER_WORKERS=auto** automatically uses all CPU cores
+- **Auto-restart** of failed workers
+- **Redis adapter** syncs Socket.IO across workers
+
 ### Real-time Communication
 - WebSocket events: `new-bid`, `auction-update`, `anti-sniping`, `round-complete`
+- **WebSocket bidding**: `auth` + `place-bid` events for ultra-low latency
 - 2-minute session persistence after disconnect
 - Automatic room rejoin on reconnect
 - Redis adapter for multi-server deployments
@@ -267,48 +280,77 @@ Bid Lifecycle:
 
 The system includes a comprehensive test suite validating behavior under stress.
 
-### Performance Comparison: Standard vs Fast Bid
+### Performance Comparison: All Bidding Modes
 
-The system supports two bidding modes:
+The system supports three bidding modes:
 - **Standard Bid**: MongoDB transactions with full ACID guarantees
-- **Ultra-Fast Bid**: Single Redis Lua script does ALL validation + bid placement atomically
+- **Ultra-Fast Bid**: Single Redis Lua script (HTTP POST to `/api/auctions/:id/fast-bid`)
+- **WebSocket Bid**: Direct socket events (bypasses HTTP entirely)
 
-| Metric | Standard Bid | Ultra-Fast Bid (Redis) | Improvement |
-|--------|-------------|------------------------|-------------|
-| **Concurrent Storm (50 users)** | 11.5 req/s, p99=4.3s | 2,452 req/s, p99=19ms | **213x faster** |
-| **Sequential Bids** | avg 16ms | avg 2ms | **8x faster** |
-| **Massive Concurrent (150 bids)** | 18.5 req/s, p99=2.6s | 438 req/s, p99=12ms | **24x faster** |
-| **E2E Concurrent Throughput** | — | 5,556 bids/sec | — |
-| **Raw Lua Script Throughput** | — | 58,824 ops/sec | — |
+| Metric | Standard Bid | Fast Bid (HTTP+Redis) | WebSocket Bid | Improvement |
+|--------|-------------|----------------------|---------------|-------------|
+| **Throughput** | ~20 req/s | ~2,500 req/s | **30,579 req/s** | **1,500x faster** |
+| **p99 Latency** | 2-4 seconds | 10-20ms | **3ms** | **1,000x faster** |
+| **Sequential Bids** | avg 16ms | avg 2ms | **<1ms** | **16x faster** |
+
+### 🏆 Maximum Performance Configuration
+
+```bash
+# Enable cluster mode with automatic core detection
+CLUSTER_WORKERS=auto pnpm start
+
+# Or specify exact number of workers
+CLUSTER_WORKERS=4 pnpm start
+
+# Results: 30,000+ bids/sec with p99 < 5ms
+```
 
 ### Running Load Tests
 
 ```bash
 # Standard bid mode
-cd backend && npm run load-test
+cd backend && pnpm run load-test
 
-# Fast bid mode (Redis path)
-cd backend && npm run load-test -- --fast
+# Fast bid mode (HTTP + Redis path)
+cd backend && pnpm run load-test -- --fast
+
+# WebSocket bid mode (maximum throughput)
+cd backend && pnpm run load-test -- -s ws
 
 # Heavy stress test with 100 users
-npm run load-test -- --fast --users 100 --deposit 100000 --stress-duration 10000
+pnpm run load-test -- --fast --users 100 --deposit 100000 --stress-duration 10000
 ```
 
-### Ultra-Fast Bid Test Results
+### WebSocket Bid Test Results (Maximum Throughput)
 
 ```
 ══════════════════════════════════════════════════
    AUCTION SYSTEM LOAD TEST SUITE v1.0.0
+══════════════════════════════════════════════════
+WS Bid:    ENABLED (WebSocket path)
+══════════════════════════════════════════════════
+
+✓ WebSocket Bid Throughput: 152,900 bids @ 30,579 req/s, p99=3ms
+✓ WebSocket Connections: 30/30 connected, avg latency=7ms
+✓ Bid Ordering Verification: ordering=correct
+✓ Financial Integrity: VALID (diff=0.00)
+
+══════════════════════════════════════════════════
+  ALL TESTS PASSED
+══════════════════════════════════════════════════
+```
+
+### HTTP Fast Bid Test Results
+
+```
 ══════════════════════════════════════════════════
 Fast Bid:  ENABLED (Ultra-fast Redis path)
 ══════════════════════════════════════════════════
 
 ✓ Concurrent Bid Storm: 50/50 @ 2,452 req/s, p99=19ms
 ✓ Rapid Sequential Bids: 20/20, avg=2ms
-✓ High-Frequency Stress: 88 bids @ 17.4 req/s
-✓ Massive Concurrent Stress: 150/150 @ 438 req/s, p99=12ms
+✓ Massive Concurrent Stress: 150/150 @ 427 req/s, p99=21ms
 ✓ Same-User Race Condition: 0/10 succeeded (expected <10)
-✓ Bid Ordering Verification: ordering=correct
 ✓ Financial Integrity: VALID (diff=0.00)
 
 ══════════════════════════════════════════════════
@@ -405,14 +447,45 @@ All protected endpoints require `Authorization: Bearer <token>` header.
 **Client → Server:**
 - `join-auction` - Subscribe to auction updates
 - `leave-auction` - Unsubscribe
+- `auth` - **Authenticate socket with JWT token** (required for bidding)
+- `place-bid` - **Place bid via WebSocket** `{ auctionId, amount }`
 
 **Server → Client:**
-- `new-bid` - New bid placed
+- `auth-response` - Authentication result `{ success, userId?, error? }`
+- `bid-response` - **Bid result** `{ success, amount?, previousAmount?, error? }`
+- `new-bid` - New bid placed (broadcast to room)
 - `auction-update` - Auction state changed
 - `anti-sniping` - Round extended
 - `round-complete` - Round ended with winners
 - `auction-complete` - Auction finished
 - `round-start` - New round began
+
+### ⚡ WebSocket Bidding Example
+
+```javascript
+import { io } from 'socket.io-client';
+
+const socket = io('ws://localhost:4000', { transports: ['websocket'] });
+
+// 1. Authenticate
+socket.emit('auth', jwtToken);
+socket.on('auth-response', ({ success, userId }) => {
+  if (success) console.log('Authenticated:', userId);
+});
+
+// 2. Join auction room
+socket.emit('join-auction', auctionId);
+
+// 3. Place bids (30,000+ bids/sec possible!)
+socket.emit('place-bid', { auctionId, amount: 1000 });
+socket.on('bid-response', ({ success, amount, error }) => {
+  if (success) console.log('Bid placed:', amount);
+  else console.error('Bid failed:', error);
+});
+
+// 4. Receive real-time updates
+socket.on('new-bid', (data) => console.log('New bid:', data));
+```
 
 ---
 
@@ -428,6 +501,7 @@ All protected endpoints require `Authorization: Bearer <token>` header.
 | `JWT_SECRET` | JWT signing secret | (required) |
 | `TELEGRAM_BOT_TOKEN` | Telegram bot token | — |
 | `CORS_ORIGIN` | Allowed CORS origin | http://localhost:5173 |
+| **`CLUSTER_WORKERS`** | **Number of worker processes (`0`=single, `auto`=all cores)** | **0** |
 
 ### Frontend (`frontend/.env`)
 
@@ -528,6 +602,12 @@ Real-time MongoDB writes would negate the speed benefits. A 5-second sync interv
 
 **Why Eager User Warmup?**
 Lazy cache loading (warming users on first bid) adds 5-10ms latency for the first bidder. Eager warmup on auction start pre-loads all users with positive balance, ensuring consistent sub-2ms latency for everyone.
+
+**Why WebSocket Bidding?**
+HTTP requests add ~5-10ms overhead for headers, connection handling, and response formatting. WebSocket bidding eliminates this entirely — the bid payload goes directly to the server over an established connection. Combined with the Lua script, this achieves **30,000+ bids/sec** with p99 under 5ms.
+
+**Why Cluster Mode?**
+Node.js is single-threaded. On multi-core servers, a single process can't utilize all CPU cores. Cluster mode spawns multiple worker processes, each handling requests independently. With the Redis adapter, Socket.IO events are synchronized across workers, enabling linear scaling with CPU cores.
 
 ---
 

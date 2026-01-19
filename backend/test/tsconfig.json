@@ -8,6 +8,7 @@
   },
   "include": [
     "**/*.ts",
+    "features/**/*.ts",
     "../src/api/**/*.ts",
     "../src/modules/**/*.ts",
     "../src/schemas/**/*.ts"

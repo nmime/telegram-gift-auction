@@ -13,6 +13,7 @@ import typia from "typia";
 import type { IBalance, IBalanceResponse } from "../../../modules/users/dto";
 
 export * as balance from "./balance/index";
+export * as language from "./language/index";
 
 /**
  * Deposit funds

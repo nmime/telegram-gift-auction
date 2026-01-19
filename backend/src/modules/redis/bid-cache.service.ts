@@ -44,6 +44,20 @@ export interface PlaceBidResult {
   rank?: number;
 }
 
+/**
+ * Ultra-fast bid result with all meta fields included
+ * Eliminates need for separate getAuctionMeta call
+ */
+export interface UltraFastBidResult extends PlaceBidResult {
+  needsWarmup?: boolean;
+  roundEndTime?: number;
+  antiSnipingWindowMs?: number;
+  antiSnipingExtensionMs?: number;
+  maxExtensions?: number;
+  itemsInRound?: number;
+  currentRound?: number;
+}
+
 export interface CacheSyncData {
   balances: Map<string, CachedBalance>;
   bids: Map<string, CachedBid>;
@@ -156,7 +170,8 @@ export class BidCacheService implements OnModuleInit {
    * ARGV[2] = requested amount
    * ARGV[3] = current timestamp (ms)
    *
-   * Returns: [success(0/1), errorCode, newAmount, previousAmount, frozenDelta, isNewBid(0/1), rank, roundEndTime]
+   * Returns: [success(0/1), errorCode, newAmount, previousAmount, frozenDelta, isNewBid(0/1), rank,
+   *           roundEndTime, antiSnipingWindowMs, antiSnipingExtensionMs, maxExtensions, itemsInRound, currentRound]
    */
   private readonly PLACE_BID_ULTRA_FAST_SCRIPT = `
     local balanceKey = KEYS[1]
@@ -170,27 +185,39 @@ export class BidCacheService implements OnModuleInit {
     local requestedAmount = tonumber(ARGV[2])
     local timestamp = tonumber(ARGV[3])
 
-    -- Get auction meta (validates cache is warmed)
-    local status = redis.call('HGET', metaKey, 'status')
-    if not status then
-      return {0, "NOT_WARMED", 0, 0, 0, 0, -1, 0}
+    -- Get all auction meta at once (single HGETALL is faster than multiple HGET)
+    local meta = redis.call('HGETALL', metaKey)
+    if #meta == 0 then
+      return {0, "NOT_WARMED", 0, 0, 0, 0, -1, 0, 0, 0, 0, 0, 0}
     end
 
+    -- Parse meta into table
+    local metaMap = {}
+    for i = 1, #meta, 2 do
+      metaMap[meta[i]] = meta[i + 1]
+    end
+
+    local status = metaMap['status']
     if status ~= 'active' then
-      return {0, "NOT_ACTIVE", 0, 0, 0, 0, -1, 0}
+      return {0, "NOT_ACTIVE", 0, 0, 0, 0, -1, 0, 0, 0, 0, 0, 0}
     end
 
-    local roundEndTime = tonumber(redis.call('HGET', metaKey, 'roundEndTime') or '0')
-    local minBidAmount = tonumber(redis.call('HGET', metaKey, 'minBidAmount') or '0')
+    local roundEndTime = tonumber(metaMap['roundEndTime'] or '0')
+    local minBidAmount = tonumber(metaMap['minBidAmount'] or '0')
+    local antiSnipingWindowMs = tonumber(metaMap['antiSnipingWindowMs'] or '0')
+    local antiSnipingExtensionMs = tonumber(metaMap['antiSnipingExtensionMs'] or '0')
+    local maxExtensions = tonumber(metaMap['maxExtensions'] or '0')
+    local itemsInRound = tonumber(metaMap['itemsInRound'] or '1')
+    local currentRound = tonumber(metaMap['currentRound'] or '1')
 
     -- Check round timing (100ms buffer)
     if timestamp > roundEndTime - 100 then
-      return {0, "ROUND_ENDED", 0, 0, 0, 0, -1, roundEndTime}
+      return {0, "ROUND_ENDED", 0, 0, 0, 0, -1, roundEndTime, antiSnipingWindowMs, antiSnipingExtensionMs, maxExtensions, itemsInRound, currentRound}
     end
 
     -- Validate minimum bid
     if requestedAmount < minBidAmount then
-      return {0, "MIN_BID", 0, 0, 0, 0, -1, roundEndTime}
+      return {0, "MIN_BID", 0, 0, 0, 0, -1, roundEndTime, antiSnipingWindowMs, antiSnipingExtensionMs, maxExtensions, itemsInRound, currentRound}
     end
 
     -- Get current balance
@@ -199,7 +226,7 @@ export class BidCacheService implements OnModuleInit {
 
     -- If user has no balance at all, they're not warmed up
     if available == 0 and frozen == 0 then
-      return {0, "USER_NOT_WARMED", 0, 0, 0, 0, -1, roundEndTime}
+      return {0, "USER_NOT_WARMED", 0, 0, 0, 0, -1, roundEndTime, antiSnipingWindowMs, antiSnipingExtensionMs, maxExtensions, itemsInRound, currentRound}
     end
 
     -- Get current bid if exists
@@ -209,7 +236,7 @@ export class BidCacheService implements OnModuleInit {
 
     -- Cannot lower bid
     if requestedAmount <= currentAmount then
-      return {0, "BID_TOO_LOW", currentAmount, currentAmount, 0, 0, -1, roundEndTime}
+      return {0, "BID_TOO_LOW", currentAmount, currentAmount, 0, 0, -1, roundEndTime, antiSnipingWindowMs, antiSnipingExtensionMs, maxExtensions, itemsInRound, currentRound}
     end
 
     -- Calculate additional funds needed
@@ -217,7 +244,7 @@ export class BidCacheService implements OnModuleInit {
 
     -- Check sufficient balance
     if available < additionalNeeded then
-      return {0, "INSUFFICIENT_BALANCE", currentAmount, currentAmount, 0, 0, -1, roundEndTime}
+      return {0, "INSUFFICIENT_BALANCE", currentAmount, currentAmount, 0, 0, -1, roundEndTime, antiSnipingWindowMs, antiSnipingExtensionMs, maxExtensions, itemsInRound, currentRound}
     end
 
     -- Use original createdAt for existing bids
@@ -243,7 +270,7 @@ export class BidCacheService implements OnModuleInit {
     -- local rank = redis.call('ZREVRANK', leaderboardKey, userId)
     local rank = -1
 
-    return {1, "OK", requestedAmount, currentAmount, additionalNeeded, isNewBid, rank, roundEndTime}
+    return {1, "OK", requestedAmount, currentAmount, additionalNeeded, isNewBid, rank, roundEndTime, antiSnipingWindowMs, antiSnipingExtensionMs, maxExtensions, itemsInRound, currentRound}
   `;
 
   /**
@@ -562,12 +589,14 @@ export class BidCacheService implements OnModuleInit {
    * - MIN_BID: Amount below minimum
    * - BID_TOO_LOW: Amount not higher than current bid
    * - INSUFFICIENT_BALANCE: Not enough available balance
+   *
+   * Returns all auction meta fields to eliminate separate getAuctionMeta call
    */
   async placeBidUltraFast(
     auctionId: string,
     userId: string,
     amount: number,
-  ): Promise<PlaceBidResult & { needsWarmup?: boolean; roundEndTime?: number }> {
+  ): Promise<UltraFastBidResult> {
     const timestamp = Date.now();
 
     try {
@@ -585,7 +614,10 @@ export class BidCacheService implements OnModuleInit {
         timestamp,
       )) as (number | string)[];
 
-      const [success, errorOrOk, newAmount, previousAmount, frozenDelta, isNewBid, rank, roundEndTime] = result;
+      const [
+        success, errorOrOk, newAmount, previousAmount, frozenDelta, isNewBid, rank,
+        roundEndTime, antiSnipingWindowMs, antiSnipingExtensionMs, maxExtensions, itemsInRound, currentRound
+      ] = result;
 
       if (success === 1) {
         return {
@@ -596,6 +628,11 @@ export class BidCacheService implements OnModuleInit {
           isNewBid: isNewBid === 1,
           rank: undefined, // Skipped for ultra-fast mode
           roundEndTime: roundEndTime as number,
+          antiSnipingWindowMs: antiSnipingWindowMs as number,
+          antiSnipingExtensionMs: antiSnipingExtensionMs as number,
+          maxExtensions: maxExtensions as number,
+          itemsInRound: itemsInRound as number,
+          currentRound: currentRound as number,
         };
       }
 
@@ -617,6 +654,11 @@ export class BidCacheService implements OnModuleInit {
         previousAmount: previousAmount as number,
         needsWarmup: errorCode === "NOT_WARMED" || errorCode === "USER_NOT_WARMED",
         roundEndTime: roundEndTime as number,
+        antiSnipingWindowMs: antiSnipingWindowMs as number,
+        antiSnipingExtensionMs: antiSnipingExtensionMs as number,
+        maxExtensions: maxExtensions as number,
+        itemsInRound: itemsInRound as number,
+        currentRound: currentRound as number,
       };
     } catch (error) {
       if ((error as Error).message?.includes("NOSCRIPT")) {

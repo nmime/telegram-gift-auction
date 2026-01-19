@@ -1,3 +1,5 @@
+import * as cluster from "cluster";
+import * as os from "os";
 import { NestFactory } from "@nestjs/core";
 import {
   FastifyAdapter,
@@ -14,6 +16,8 @@ import { JsonLoggerService } from "./common/logger";
 import * as fs from "fs";
 import * as path from "path";
 
+const logger = new Logger("Bootstrap");
+
 async function bootstrap() {
   const isProduction = process.env.NODE_ENV === "production";
   const app = await NestFactory.create<NestFastifyApplication>(
@@ -21,7 +25,6 @@ async function bootstrap() {
     new FastifyAdapter(),
     isProduction ? { logger: new JsonLoggerService() } : {},
   );
-  const logger = new Logger("Bootstrap");
 
   const configService = app.get(ConfigService);
 
@@ -112,10 +115,63 @@ async function bootstrap() {
   process.on("SIGINT", shutdown);
 
   logger.log("Socket.IO server attached to HTTP server");
+  const workerId = cluster.isWorker ? cluster.worker?.id : "primary";
   logger.log("Server running", {
     port,
     docs: `http://localhost:${port}/api/docs`,
+    workerId,
   });
 }
 
-bootstrap();
+/**
+ * Cluster mode for high-throughput scenarios
+ * Each worker runs a full NestJS instance, sharing the same port
+ * Socket.IO Redis adapter handles cross-worker message broadcasting
+ */
+function startCluster() {
+  const clusterWorkersEnv = process.env.CLUSTER_WORKERS || "0";
+
+  // Support "auto" to use all available CPU cores
+  let numWorkers: number;
+  if (clusterWorkersEnv.toLowerCase() === "auto") {
+    numWorkers = os.cpus().length;
+    logger.log(`CLUSTER_WORKERS=auto, detected ${numWorkers} CPU cores`);
+  } else {
+    numWorkers = parseInt(clusterWorkersEnv, 10);
+  }
+
+  // If CLUSTER_WORKERS=0 or not set, run in single-process mode
+  if (numWorkers <= 0) {
+    logger.log("Running in single-process mode");
+    bootstrap();
+    return;
+  }
+
+  const actualWorkers = Math.min(numWorkers, os.cpus().length);
+
+  if (cluster.isPrimary) {
+    logger.log(`Primary ${process.pid} starting ${actualWorkers} workers...`);
+
+    // Fork workers
+    for (let i = 0; i < actualWorkers; i++) {
+      cluster.fork();
+    }
+
+    // Handle worker exit
+    cluster.on("exit", (worker, code, signal) => {
+      logger.warn(`Worker ${worker.process.pid} died (${signal || code}). Restarting...`);
+      cluster.fork();
+    });
+
+    // Handle worker online
+    cluster.on("online", (worker) => {
+      logger.log(`Worker ${worker.process.pid} is online`);
+    });
+  } else {
+    // Workers run the application
+    logger.log(`Worker ${process.pid} starting...`);
+    bootstrap();
+  }
+}
+
+startCluster();

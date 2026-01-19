@@ -26,13 +26,13 @@ async function testCountdownBroadcast(): Promise<void> {
   const timestamp = Date.now();
   const adminConn = await createConnection(`at_${timestamp}`);
   const userConn = await createConnection(`ut_${timestamp}`);
-  await api.functional.users.deposit(userConn, { amount: 10000 });
+  await api.functional.api.users.deposit(userConn, { amount: 10000 });
   console.log('✓ Created test users');
 
   const wsToken = await getAuthToken(`wt_${timestamp}`);
 
   // Create auction
-  const auction = await api.functional.auctions.create(
+  const auction = await api.functional.api.auctions.create(
     adminConn,
     createAuctionConfig(`Timer Test ${timestamp}`, { rounds: [{ itemsCount: 2, durationMinutes: 2 }], totalItems: 2 })
   );
@@ -51,7 +51,7 @@ async function testCountdownBroadcast(): Promise<void> {
   );
 
   // Start auction (this should trigger timer broadcasts)
-  await api.functional.auctions.start(adminConn, auction.id);
+  await api.functional.api.auctions.start(adminConn, auction.id);
   console.log('✓ Started auction');
 
   // Wait for countdown events
@@ -94,13 +94,13 @@ async function testAntiSnipingExtension(): Promise<void> {
   const timestamp = Date.now();
   const adminConn = await createConnection(`as_${timestamp}`);
   const userConn = await createConnection(`ua_${timestamp}`);
-  await api.functional.users.deposit(userConn, { amount: 50000 });
+  await api.functional.api.users.deposit(userConn, { amount: 50000 });
   console.log('✓ Created test users');
 
   const wsToken = await getAuthToken(`wa_${timestamp}`);
 
   // Create auction with 1-minute anti-sniping window
-  const auction = await api.functional.auctions.create(adminConn, {
+  const auction = await api.functional.api.auctions.create(adminConn, {
     title: `Anti-Snipe Test ${timestamp}`,
     totalItems: 1,
     rounds: [{ itemsCount: 1, durationMinutes: 1 }],
@@ -132,13 +132,13 @@ async function testAntiSnipingExtension(): Promise<void> {
   });
 
   // Start auction
-  await api.functional.auctions.start(adminConn, auction.id);
+  await api.functional.api.auctions.start(adminConn, auction.id);
   console.log('✓ Started auction');
 
   // Wait for first countdown then place bid
   await collectEvents(socket, 'countdown', 2, { timeout: 5000 }).catch(() => null);
 
-  await api.functional.auctions.bid.placeBid(userConn, auction.id, { amount: 200 });
+  await api.functional.api.auctions.bid.placeBid(userConn, auction.id, { amount: 200 });
   console.log('✓ Placed bid within anti-sniping window');
 
   // Wait for anti-sniping or more countdown events
@@ -162,7 +162,7 @@ async function testMultipleClientsSync(): Promise<void> {
   console.log('✓ Created admin user');
 
   // Create auction
-  const auction = await api.functional.auctions.create(
+  const auction = await api.functional.api.auctions.create(
     adminConn,
     createAuctionConfig(`Multi-Client Test ${timestamp}`, { rounds: [{ itemsCount: 1, durationMinutes: 2 }] })
   );
@@ -187,7 +187,7 @@ async function testMultipleClientsSync(): Promise<void> {
   console.log('✓ Connected 3 WebSocket clients');
 
   // Start auction
-  await api.functional.auctions.start(adminConn, auction.id);
+  await api.functional.api.auctions.start(adminConn, auction.id);
   console.log('✓ Started auction');
 
   // Wait for countdown events using collectEvents on first socket

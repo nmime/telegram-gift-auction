@@ -20,22 +20,22 @@ async function testLeaderboardOrdering(): Promise<void> {
   // Create 5 users with deposits
   for (let i = 0; i < 5; i++) {
     const conn = await createConnection(`ur_${timestamp}_${i}`);
-    await api.functional.users.deposit(conn, { amount: 10000 });
+    await api.functional.api.users.deposit(conn, { amount: 10000 });
     users.push(conn);
   }
   console.log('✓ Created 5 users');
 
-  const auction = await api.functional.auctions.create(
+  const auction = await api.functional.api.auctions.create(
     adminConn,
     createAuctionConfig(`Redis Order Test ${timestamp}`, { totalItems: 3, rounds: [{ itemsCount: 3, durationMinutes: 5 }] })
   );
-  await api.functional.auctions.start(adminConn, auction.id);
+  await api.functional.api.auctions.start(adminConn, auction.id);
   console.log(`✓ Created auction: ${auction.id}`);
 
   // Place bids in random order with lock release
   const bidAmounts = [300, 500, 100, 400, 200];
   for (let i = 0; i < users.length; i++) {
-    await api.functional.auctions.bid.placeBid(users[i]!, auction.id, {
+    await api.functional.api.auctions.bid.placeBid(users[i]!, auction.id, {
       amount: bidAmounts[i]!,
     });
     await waitForLockRelease();
@@ -44,12 +44,12 @@ async function testLeaderboardOrdering(): Promise<void> {
 
   // Wait for all bids to appear in leaderboard
   await waitFor(async () => {
-    const lb = await api.functional.auctions.leaderboard.getLeaderboard(adminConn, auction.id, {});
+    const lb = await api.functional.api.auctions.leaderboard.getLeaderboard(adminConn, auction.id, {});
     return lb.leaderboard.length === 5;
   }, { message: 'All 5 bids should be in leaderboard' });
 
   // Get leaderboard
-  const leaderboard = await api.functional.auctions.leaderboard.getLeaderboard(
+  const leaderboard = await api.functional.api.auctions.leaderboard.getLeaderboard(
     adminConn,
     auction.id,
     {}
@@ -94,21 +94,21 @@ async function testLeaderboardPagination(): Promise<void> {
   // Create 10 users
   for (let i = 0; i < 10; i++) {
     const conn = await createConnection(`up_${timestamp}_${i}`);
-    await api.functional.users.deposit(conn, { amount: 50000 });
+    await api.functional.api.users.deposit(conn, { amount: 50000 });
     users.push(conn);
   }
   console.log('✓ Created 10 users');
 
-  const auction = await api.functional.auctions.create(
+  const auction = await api.functional.api.auctions.create(
     adminConn,
     createAuctionConfig(`Pagination Test ${timestamp}`, { totalItems: 5, rounds: [{ itemsCount: 5, durationMinutes: 5 }] })
   );
-  await api.functional.auctions.start(adminConn, auction.id);
+  await api.functional.api.auctions.start(adminConn, auction.id);
   console.log(`✓ Created auction: ${auction.id}`);
 
   // Place 10 bids with unique amounts
   for (let i = 0; i < users.length; i++) {
-    await api.functional.auctions.bid.placeBid(users[i]!, auction.id, {
+    await api.functional.api.auctions.bid.placeBid(users[i]!, auction.id, {
       amount: 1000 + i * 100,
     });
     await waitForLockRelease();
@@ -117,19 +117,19 @@ async function testLeaderboardPagination(): Promise<void> {
 
   // Wait for all bids in leaderboard
   await waitFor(async () => {
-    const lb = await api.functional.auctions.leaderboard.getLeaderboard(adminConn, auction.id, {});
+    const lb = await api.functional.api.auctions.leaderboard.getLeaderboard(adminConn, auction.id, {});
     return lb.leaderboard.length === 10;
   }, { message: 'All 10 bids should be in leaderboard' });
 
   // Get page 1 (limit 5)
-  const page1 = await api.functional.auctions.leaderboard.getLeaderboard(
+  const page1 = await api.functional.api.auctions.leaderboard.getLeaderboard(
     adminConn,
     auction.id,
     { limit: 5, offset: 0 }
   );
 
   // Get page 2 (limit 5, offset 5)
-  const page2 = await api.functional.auctions.leaderboard.getLeaderboard(
+  const page2 = await api.functional.api.auctions.leaderboard.getLeaderboard(
     adminConn,
     auction.id,
     { limit: 5, offset: 5 }
@@ -166,28 +166,28 @@ async function testBidUpdate(): Promise<void> {
   const timestamp = Date.now();
   const adminConn = await createConnection(`au_${timestamp}`);
   const userConn = await createConnection(`uu_${timestamp}`);
-  await api.functional.users.deposit(userConn, { amount: 50000 });
+  await api.functional.api.users.deposit(userConn, { amount: 50000 });
   console.log('✓ Created user');
 
-  const auction = await api.functional.auctions.create(
+  const auction = await api.functional.api.auctions.create(
     adminConn,
     createAuctionConfig(`Update Test ${timestamp}`)
   );
-  await api.functional.auctions.start(adminConn, auction.id);
+  await api.functional.api.auctions.start(adminConn, auction.id);
   console.log(`✓ Created auction: ${auction.id}`);
 
   // Place initial bid
-  await api.functional.auctions.bid.placeBid(userConn, auction.id, { amount: 200 });
+  await api.functional.api.auctions.bid.placeBid(userConn, auction.id, { amount: 200 });
   console.log('✓ Placed initial bid: 200');
 
   // Wait for bid to appear
   await waitFor(async () => {
-    const lb = await api.functional.auctions.leaderboard.getLeaderboard(adminConn, auction.id, {});
+    const lb = await api.functional.api.auctions.leaderboard.getLeaderboard(adminConn, auction.id, {});
     return lb.leaderboard.some((b) => b.amount === 200);
   }, { message: 'Initial bid should appear' });
 
   // Verify in leaderboard
-  let leaderboard = await api.functional.auctions.leaderboard.getLeaderboard(
+  let leaderboard = await api.functional.api.auctions.leaderboard.getLeaderboard(
     adminConn,
     auction.id,
     {}
@@ -199,17 +199,17 @@ async function testBidUpdate(): Promise<void> {
   await waitForLockRelease();
 
   // Update bid to higher amount
-  await api.functional.auctions.bid.placeBid(userConn, auction.id, { amount: 500 });
+  await api.functional.api.auctions.bid.placeBid(userConn, auction.id, { amount: 500 });
   console.log('✓ Updated bid to: 500');
 
   // Wait for update to propagate
   await waitFor(async () => {
-    const lb = await api.functional.auctions.leaderboard.getLeaderboard(adminConn, auction.id, {});
+    const lb = await api.functional.api.auctions.leaderboard.getLeaderboard(adminConn, auction.id, {});
     return lb.leaderboard.some((b) => b.amount === 500);
   }, { message: 'Updated bid should appear' });
 
   // Verify updated in leaderboard
-  leaderboard = await api.functional.auctions.leaderboard.getLeaderboard(
+  leaderboard = await api.functional.api.auctions.leaderboard.getLeaderboard(
     adminConn,
     auction.id,
     {}
@@ -234,33 +234,33 @@ async function testTieBreaking(): Promise<void> {
   const user1Conn = await createConnection(`ut1_${timestamp}`);
   const user2Conn = await createConnection(`ut2_${timestamp}`);
 
-  await api.functional.users.deposit(user1Conn, { amount: 10000 });
-  await api.functional.users.deposit(user2Conn, { amount: 10000 });
+  await api.functional.api.users.deposit(user1Conn, { amount: 10000 });
+  await api.functional.api.users.deposit(user2Conn, { amount: 10000 });
   console.log('✓ Created 2 users');
 
-  const auction = await api.functional.auctions.create(
+  const auction = await api.functional.api.auctions.create(
     adminConn,
     createAuctionConfig(`Tiebreak Test ${timestamp}`, { totalItems: 2, rounds: [{ itemsCount: 2, durationMinutes: 5 }] })
   );
-  await api.functional.auctions.start(adminConn, auction.id);
+  await api.functional.api.auctions.start(adminConn, auction.id);
   console.log(`✓ Created auction: ${auction.id}`);
 
   // User1 bids first, then User2 bids higher
-  await api.functional.auctions.bid.placeBid(user1Conn, auction.id, { amount: 300 });
+  await api.functional.api.auctions.bid.placeBid(user1Conn, auction.id, { amount: 300 });
   console.log('✓ User1 bid 300');
   await waitForLockRelease();
 
-  await api.functional.auctions.bid.placeBid(user2Conn, auction.id, { amount: 500 });
+  await api.functional.api.auctions.bid.placeBid(user2Conn, auction.id, { amount: 500 });
   console.log('✓ User2 bid 500');
 
   // Wait for both bids
   await waitFor(async () => {
-    const lb = await api.functional.auctions.leaderboard.getLeaderboard(adminConn, auction.id, {});
+    const lb = await api.functional.api.auctions.leaderboard.getLeaderboard(adminConn, auction.id, {});
     return lb.leaderboard.length === 2;
   }, { message: 'Both bids should be in leaderboard' });
 
   // Get leaderboard
-  const leaderboard = await api.functional.auctions.leaderboard.getLeaderboard(
+  const leaderboard = await api.functional.api.auctions.leaderboard.getLeaderboard(
     adminConn,
     auction.id,
     {}

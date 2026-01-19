@@ -21,15 +21,15 @@ async function testNewBidEvent(): Promise<void> {
   const timestamp = Date.now();
   const adminConn = await createConnection(`anb_${timestamp}`);
   const userConn = await createConnection(`unb_${timestamp}`);
-  await api.functional.users.deposit(userConn, { amount: 5000 });
+  await api.functional.api.users.deposit(userConn, { amount: 5000 });
 
   const wsToken = await getAuthToken(`wnb_${timestamp}`);
 
-  const auction = await api.functional.auctions.create(
+  const auction = await api.functional.api.auctions.create(
     adminConn,
     createAuctionConfig(`New Bid Event Test ${timestamp}`)
   );
-  await api.functional.auctions.start(adminConn, auction.id);
+  await api.functional.api.auctions.start(adminConn, auction.id);
   console.log(`✓ Created auction: ${auction.id}`);
 
   // Connect WebSocket and join auction room
@@ -45,8 +45,8 @@ async function testNewBidEvent(): Promise<void> {
   );
 
   // Place bids
-  await api.functional.auctions.bid.placeBid(userConn, auction.id, { amount: 200 });
-  await api.functional.auctions.bid.placeBid(userConn, auction.id, { amount: 300 });
+  await api.functional.api.auctions.bid.placeBid(userConn, auction.id, { amount: 200 });
+  await api.functional.api.auctions.bid.placeBid(userConn, auction.id, { amount: 300 });
 
   // Wait for events
   const newBidEvents = await eventsPromise;
@@ -70,7 +70,7 @@ async function testAuctionUpdateEvent(): Promise<void> {
   const adminConn = await createConnection(`aau_${timestamp}`);
   const wsToken = await getAuthToken(`wau_${timestamp}`);
 
-  const auction = await api.functional.auctions.create(
+  const auction = await api.functional.api.auctions.create(
     adminConn,
     createAuctionConfig(`Auction Update Test ${timestamp}`)
   );
@@ -89,7 +89,7 @@ async function testAuctionUpdateEvent(): Promise<void> {
   ).catch(() => [] as Array<{ status: string }>); // Don't fail if no events
 
   // Start auction - should trigger update
-  await api.functional.auctions.start(adminConn, auction.id);
+  await api.functional.api.auctions.start(adminConn, auction.id);
   console.log('✓ Started auction');
 
   const updateEvents = await updatePromise;
@@ -114,20 +114,20 @@ async function testRoomIsolation(): Promise<void> {
   const timestamp = Date.now();
   const adminConn = await createConnection(`ari_${timestamp}`);
   const userConn = await createConnection(`uri_${timestamp}`);
-  await api.functional.users.deposit(userConn, { amount: 5000 });
+  await api.functional.api.users.deposit(userConn, { amount: 5000 });
 
   // Create two auctions
-  const auction1 = await api.functional.auctions.create(
+  const auction1 = await api.functional.api.auctions.create(
     adminConn,
     createAuctionConfig(`Room Test 1 ${timestamp}`)
   );
-  const auction2 = await api.functional.auctions.create(
+  const auction2 = await api.functional.api.auctions.create(
     adminConn,
     createAuctionConfig(`Room Test 2 ${timestamp}`)
   );
 
-  await api.functional.auctions.start(adminConn, auction1.id);
-  await api.functional.auctions.start(adminConn, auction2.id);
+  await api.functional.api.auctions.start(adminConn, auction1.id);
+  await api.functional.api.auctions.start(adminConn, auction2.id);
   console.log(`✓ Created auctions: ${auction1.id}, ${auction2.id}`);
 
   // Connect two clients to different auctions
@@ -145,7 +145,7 @@ async function testRoomIsolation(): Promise<void> {
   socket2.on('new-bid', (data) => events2.push(data.amount));
 
   // Place bid in auction1 only
-  await api.functional.auctions.bid.placeBid(userConn, auction1.id, { amount: 200 });
+  await api.functional.api.auctions.bid.placeBid(userConn, auction1.id, { amount: 200 });
 
   // Wait for event to propagate
   await waitForEvent(socket1, 'new-bid', { timeout: 3000 }).catch(() => null);
@@ -173,13 +173,13 @@ async function testMultipleConnectionsSameUser(): Promise<void> {
   const timestamp = Date.now();
   const adminConn = await createConnection(`amc_${timestamp}`);
   const userConn = await createConnection(`umc_${timestamp}`);
-  await api.functional.users.deposit(userConn, { amount: 5000 });
+  await api.functional.api.users.deposit(userConn, { amount: 5000 });
 
-  const auction = await api.functional.auctions.create(
+  const auction = await api.functional.api.auctions.create(
     adminConn,
     createAuctionConfig(`Multi-Conn Test ${timestamp}`)
   );
-  await api.functional.auctions.start(adminConn, auction.id);
+  await api.functional.api.auctions.start(adminConn, auction.id);
   console.log(`✓ Created auction: ${auction.id}`);
 
   // Same user connects from 3 "devices"
@@ -198,7 +198,7 @@ async function testMultipleConnectionsSameUser(): Promise<void> {
   console.log('✓ 3 connections established for same user');
 
   // Place bid
-  await api.functional.auctions.bid.placeBid(userConn, auction.id, { amount: 200 });
+  await api.functional.api.auctions.bid.placeBid(userConn, auction.id, { amount: 200 });
 
   // Wait for all sockets to receive the event
   await Promise.all(
@@ -229,13 +229,13 @@ async function testLeaveAuctionRoom(): Promise<void> {
   const timestamp = Date.now();
   const adminConn = await createConnection(`ala_${timestamp}`);
   const userConn = await createConnection(`ula_${timestamp}`);
-  await api.functional.users.deposit(userConn, { amount: 5000 });
+  await api.functional.api.users.deposit(userConn, { amount: 5000 });
 
-  const auction = await api.functional.auctions.create(
+  const auction = await api.functional.api.auctions.create(
     adminConn,
     createAuctionConfig(`Leave Room Test ${timestamp}`)
   );
-  await api.functional.auctions.start(adminConn, auction.id);
+  await api.functional.api.auctions.start(adminConn, auction.id);
   console.log(`✓ Created auction: ${auction.id}`);
 
   const token = await getAuthToken(`wla_${timestamp}`);
@@ -255,7 +255,7 @@ async function testLeaveAuctionRoom(): Promise<void> {
   });
 
   // Place first bid while in room
-  await api.functional.auctions.bid.placeBid(userConn, auction.id, { amount: 200 });
+  await api.functional.api.auctions.bid.placeBid(userConn, auction.id, { amount: 200 });
 
   // Wait for event
   await waitForEvent(socket, 'new-bid', { timeout: 3000 }).catch(() => null);
@@ -269,7 +269,7 @@ async function testLeaveAuctionRoom(): Promise<void> {
   await new Promise((r) => setTimeout(r, 200));
 
   // Place second bid after leaving
-  await api.functional.auctions.bid.placeBid(userConn, auction.id, { amount: 300 });
+  await api.functional.api.auctions.bid.placeBid(userConn, auction.id, { amount: 300 });
 
   // Wait a bit to see if we receive the event (we shouldn't)
   await new Promise((r) => setTimeout(r, 500));

@@ -10,5 +10,5 @@ export const test_auctions_leaderboard = async (connection: api.IConnection) => 
   if (!auctionId) {
     throw new Error("BENCHMARK_AUCTION_ID env required");
   }
-  await api.functional.api.auctions.leaderboard.getLeaderboard(connection, auctionId);
+  await api.functional.api.auctions.leaderboard.getLeaderboard(connection, auctionId, {});
 };
