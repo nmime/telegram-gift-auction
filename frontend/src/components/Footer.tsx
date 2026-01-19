@@ -72,7 +72,7 @@ export default function Footer() {
         </a>
       </div>
       <div className="footer-copyright">
-        {t('footer.madeWith')} <span className="footer-heart">♥</span> {t('footer.forContest')}
+        {t('footer.madeWith')} <span className="footer-heart">♥</span> {t('footer.by')} nmime
       </div>
     </footer>
   );

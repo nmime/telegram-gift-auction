@@ -463,8 +463,10 @@ h4 {
   align-items: center;
   padding: var(--spacing-md) var(--spacing-lg);
   margin-bottom: var(--spacing-md);
-  margin-left: calc(-1 * var(--spacing-lg));
-  margin-right: calc(-1 * var(--spacing-lg));
+  margin-left: calc(-50vw + 50%);
+  margin-right: calc(-50vw + 50%);
+  padding-left: calc(50vw - 50% + var(--spacing-lg));
+  padding-right: calc(50vw - 50% + var(--spacing-lg));
   gap: var(--spacing-md);
   background: linear-gradient(135deg, var(--bg-primary) 0%, var(--bg-secondary) 100%);
   z-index: 100;
@@ -867,8 +869,10 @@ table tbody tr:hover {
     align-items: center;
     gap: var(--spacing-sm);
     padding: var(--spacing-sm) var(--spacing-md);
-    margin-left: calc(-1 * var(--spacing-md));
-    margin-right: calc(-1 * var(--spacing-md));
+    margin-left: calc(-50vw + 50%);
+    margin-right: calc(-50vw + 50%);
+    padding-left: calc(50vw - 50% + var(--spacing-md));
+    padding-right: calc(50vw - 50% + var(--spacing-md));
     padding-top: calc(var(--spacing-sm) + env(safe-area-inset-top, 0px));
   }
 
@@ -1503,9 +1507,11 @@ table tbody tr:hover {
 
 .footer {
   margin-top: auto;
-  padding: var(--spacing-lg) var(--spacing-lg);
-  margin-left: calc(-1 * var(--spacing-lg));
-  margin-right: calc(-1 * var(--spacing-lg));
+  padding: var(--spacing-lg);
+  margin-left: calc(-50vw + 50%);
+  margin-right: calc(-50vw + 50%);
+  padding-left: calc(50vw - 50% + var(--spacing-lg));
+  padding-right: calc(50vw - 50% + var(--spacing-lg));
   border-top: 1px solid var(--border-color);
   text-align: center;
 }
@@ -1570,8 +1576,10 @@ table tbody tr:hover {
 @media (max-width: 768px) {
   .footer {
     padding: var(--spacing-md);
-    margin-left: calc(-1 * var(--spacing-md));
-    margin-right: calc(-1 * var(--spacing-md));
+    margin-left: calc(-50vw + 50%);
+    margin-right: calc(-50vw + 50%);
+    padding-left: calc(50vw - 50% + var(--spacing-md));
+    padding-right: calc(50vw - 50% + var(--spacing-md));
     padding-bottom: calc(var(--spacing-md) + 80px + env(safe-area-inset-bottom, 0px));
   }
 
