@@ -13,10 +13,10 @@ import type {
   TelegramWidgetUser,
 } from '../types';
 
-const API_BASE = import.meta.env.VITE_API_URL;
-const TOKEN_KEY = 'auth_token';
+const apiBase = import.meta.env.VITE_API_URL;
+const tokenKey = 'auth_token';
 
-let accessToken: string | null = localStorage.getItem(TOKEN_KEY);
+let accessToken: string | null = localStorage.getItem(tokenKey);
 
 type AuthEventCallback = () => void;
 let onUnauthorizedCallback: AuthEventCallback | null = null;
@@ -28,9 +28,9 @@ export function setOnUnauthorized(callback: AuthEventCallback | null) {
 export function setToken(token: string | null) {
   accessToken = token;
   if (token) {
-    localStorage.setItem(TOKEN_KEY, token);
+    localStorage.setItem(tokenKey, token);
   } else {
-    localStorage.removeItem(TOKEN_KEY);
+    localStorage.removeItem(tokenKey);
   }
 }
 
@@ -40,7 +40,7 @@ export function getToken(): string | null {
 
 export function clearToken() {
   accessToken = null;
-  localStorage.removeItem(TOKEN_KEY);
+  localStorage.removeItem(tokenKey);
 }
 
 export class ApiRequestError extends Error {
@@ -75,7 +75,7 @@ async function fetchApi<T>(url: string, options?: FetchOptions): Promise<T> {
     headers['Authorization'] = `Bearer ${accessToken}`;
   }
 
-  const response = await fetch(`${API_BASE}${url}`, {
+  const response = await fetch(`${apiBase}${url}`, {
     ...fetchOptions,
     headers,
   });

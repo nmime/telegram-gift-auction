@@ -9,16 +9,16 @@ import {
 import { ConfigModule, ConfigService } from "@nestjs/config";
 import Redis from "ioredis";
 import Redlock from "redlock";
-
-export const REDIS_CLIENT = "REDIS_CLIENT";
-export const REDLOCK = "REDLOCK";
+import { LeaderboardService } from "./leaderboard.service";
+import { BidCacheService } from "./bid-cache.service";
+import { redisClient, redlock } from "./constants";
 
 @Global()
 @Module({
   imports: [ConfigModule],
   providers: [
     {
-      provide: REDIS_CLIENT,
+      provide: redisClient,
       useFactory: (configService: ConfigService) => {
         const url =
           configService.get<string>("redis.url") || "redis://localhost:6379";
@@ -31,19 +31,21 @@ export const REDLOCK = "REDLOCK";
       inject: [ConfigService],
     },
     {
-      provide: REDLOCK,
+      provide: redlock,
       useFactory: (redis: Redis) => {
         return new Redlock([redis], { retryCount: 0 });
       },
-      inject: [REDIS_CLIENT],
+      inject: [redisClient],
     },
+    LeaderboardService,
+    BidCacheService,
   ],
-  exports: [REDIS_CLIENT, REDLOCK],
+  exports: [redisClient, redlock, LeaderboardService, BidCacheService],
 })
 export class RedisModule implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(RedisModule.name);
 
-  constructor(@Inject(REDIS_CLIENT) private readonly redis: Redis) {}
+  constructor(@Inject(redisClient) private readonly redis: Redis) {}
 
   async onModuleInit() {
     try {

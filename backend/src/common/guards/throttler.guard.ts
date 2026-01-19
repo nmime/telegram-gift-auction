@@ -8,7 +8,7 @@ import { Reflector } from "@nestjs/core";
 import { ConfigService } from "@nestjs/config";
 import { FastifyRequest } from "fastify";
 
-export const LOCALHOST_IPS = [
+export const localhostIps = [
   "127.0.0.1",
   "::1",
   "::ffff:127.0.0.1",
@@ -80,7 +80,7 @@ export class CustomThrottlerGuard extends ThrottlerGuard {
 
     if (
       this.isDevelopment &&
-      (LOCALHOST_IPS.includes(clientIp) || clientIp === "0.0.0.0")
+      (localhostIps.includes(clientIp) || clientIp === "0.0.0.0")
     ) {
       return true;
     }

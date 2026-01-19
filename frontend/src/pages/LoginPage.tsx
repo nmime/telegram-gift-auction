@@ -3,8 +3,8 @@ import { useTranslation } from 'react-i18next';
 import { useAuth } from '../hooks/useAuth';
 import type { TelegramWidgetUser } from '../types';
 
-const BOT_USERNAME = import.meta.env.VITE_BOT_USERNAME || '';
-const IS_LOCALHOST = typeof window !== 'undefined' &&
+const botUsername = import.meta.env.VITE_BOT_USERNAME || '';
+const isLocalhost = typeof window !== 'undefined' &&
   (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
 
 export default function LoginPage() {
@@ -30,7 +30,7 @@ export default function LoginPage() {
 
   useEffect(() => {
     // Only show widget if not in Telegram Mini App and bot username is configured
-    if (isTelegramMiniApp || !BOT_USERNAME || !telegramWidgetRef.current) {
+    if (isTelegramMiniApp || !botUsername || !telegramWidgetRef.current) {
       setWidgetLoading(false);
       return;
     }
@@ -41,7 +41,7 @@ export default function LoginPage() {
     // Create Telegram Login Widget script
     const script = document.createElement('script');
     script.src = 'https://telegram.org/js/telegram-widget.js?22';
-    script.setAttribute('data-telegram-login', BOT_USERNAME);
+    script.setAttribute('data-telegram-login', botUsername);
     script.setAttribute('data-size', 'large');
     script.setAttribute('data-radius', '8');
     script.setAttribute('data-onauth', 'onTelegramAuth(user)');
@@ -91,7 +91,7 @@ export default function LoginPage() {
         </p>
 
         {/* Telegram Login Widget */}
-        {!BOT_USERNAME ? (
+        {!botUsername ? (
           <div style={{ padding: '12px', backgroundColor: 'rgba(255,0,0,0.1)', borderRadius: '8px' }}>
             <p className="text-danger" style={{ textAlign: 'center', margin: 0 }}>
               {t('auth.botNotConfigured')}
@@ -100,7 +100,7 @@ export default function LoginPage() {
               {t('auth.setBotUsername')}
             </p>
           </div>
-        ) : IS_LOCALHOST ? (
+        ) : isLocalhost ? (
           <div style={{ padding: '16px', backgroundColor: 'rgba(255,165,0,0.1)', borderRadius: '8px' }}>
             <p style={{ textAlign: 'center', margin: 0, color: 'var(--warning-color, #f0ad4e)' }}>
               {t('auth.localhostWarning')}

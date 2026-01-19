@@ -117,7 +117,7 @@ export function SkeletonTable({ rows = 5 }: { rows?: number }) {
   );
 }
 
-const ROW_WIDTHS = [
+const rowWidths = [
   ['65%', '55%', '75%', '65%', '60%', '65%'],
   ['58%', '48%', '68%', '58%', '50%', '58%'],
   ['72%', '62%', '82%', '72%', '70%', '72%'],
@@ -147,7 +147,7 @@ export function SkeletonTransactionsTable({ rows = 8 }: { rows?: number }) {
         <Skeleton variant="text" className="skeleton-text-sm" width="60%" />
       </div>
       {Array.from({ length: rows }).map((_, i) => {
-        const widths = ROW_WIDTHS[i % ROW_WIDTHS.length];
+        const widths = rowWidths[i % rowWidths.length];
         return (
           <div
             key={i}

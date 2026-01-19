@@ -3,7 +3,7 @@ import { Server, Socket } from "socket.io";
 import { createAdapter } from "@socket.io/redis-adapter";
 import Redis from "ioredis";
 import { AuctionDocument, BidDocument } from "@/schemas";
-import { REDIS_CLIENT } from "@/modules/redis";
+import { redisClient } from "@/modules/redis";
 
 @Injectable()
 export class EventsGateway {
@@ -11,7 +11,7 @@ export class EventsGateway {
   private server: Server | null = null;
   private connectedClients: Map<string, Set<string>> = new Map();
 
-  constructor(@Inject(REDIS_CLIENT) private readonly redis: Redis) {
+  constructor(@Inject(redisClient) private readonly redis: Redis) {
     this.logger.log("EventsGateway constructor called");
   }
 

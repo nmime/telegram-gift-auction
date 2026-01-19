@@ -4,7 +4,7 @@ import { initReactI18next } from 'react-i18next';
 import en from './en.json';
 import ru from './ru.json';
 
-const LANGUAGE_KEY = 'user_language';
+const languageKey = 'user_language';
 
 export function mapToSupportedLanguage(langCode: string | undefined): string {
   if (!langCode) return 'en';
@@ -12,7 +12,7 @@ export function mapToSupportedLanguage(langCode: string | undefined): string {
 }
 
 function detectLanguage(): string {
-  const storedLang = localStorage.getItem(LANGUAGE_KEY);
+  const storedLang = localStorage.getItem(languageKey);
   if (storedLang && ['en', 'ru'].includes(storedLang)) {
     return storedLang;
   }
@@ -31,7 +31,7 @@ function detectLanguage(): string {
 }
 
 export function saveLanguagePreference(lang: string): void {
-  localStorage.setItem(LANGUAGE_KEY, lang);
+  localStorage.setItem(languageKey, lang);
 }
 
 export function changeLanguage(lang: string): void {

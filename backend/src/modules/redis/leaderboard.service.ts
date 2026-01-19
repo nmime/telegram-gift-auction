@@ -1,6 +1,6 @@
 import { Injectable, Inject, Logger } from "@nestjs/common";
 import Redis from "ioredis";
-import { REDIS_CLIENT } from "./constants";
+import { redisClient } from "./constants";
 
 /**
  * Leaderboard entry returned from Redis
@@ -23,14 +23,14 @@ export interface RedisLeaderboardEntry {
  * 1. Higher amounts always rank higher
  * 2. For equal amounts, earlier bids rank higher (lower timestamp inversion)
  */
-const MAX_TIMESTAMP = 9999999999999;
-const TIMESTAMP_MULTIPLIER = 1e13;
+const maxTimestamp = 9999999999999;
+const timestampMultiplier = 1e13;
 
 @Injectable()
 export class LeaderboardService {
   private readonly logger = new Logger(LeaderboardService.name);
 
-  constructor(@Inject(REDIS_CLIENT) private readonly redis: Redis) {}
+  constructor(@Inject(redisClient) private readonly redis: Redis) {}
 
   /**
    * Generate Redis key for auction leaderboard
@@ -46,17 +46,17 @@ export class LeaderboardService {
   private encodeScore(amount: number, createdAt: Date): number {
     const timestamp = createdAt.getTime();
     // Invert timestamp so earlier bids get higher scores for tie-breaking
-    const invertedTimestamp = MAX_TIMESTAMP - timestamp;
-    return amount * TIMESTAMP_MULTIPLIER + invertedTimestamp;
+    const invertedTimestamp = maxTimestamp - timestamp;
+    return amount * timestampMultiplier + invertedTimestamp;
   }
 
   /**
    * Decode a ZSET score back to amount and timestamp
    */
   private decodeScore(score: number): { amount: number; createdAt: Date } {
-    const amount = Math.floor(score / TIMESTAMP_MULTIPLIER);
-    const invertedTimestamp = score % TIMESTAMP_MULTIPLIER;
-    const timestamp = MAX_TIMESTAMP - invertedTimestamp;
+    const amount = Math.floor(score / timestampMultiplier);
+    const invertedTimestamp = score % timestampMultiplier;
+    const timestamp = maxTimestamp - invertedTimestamp;
     return {
       amount,
       createdAt: new Date(timestamp),

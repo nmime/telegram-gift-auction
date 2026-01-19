@@ -24,7 +24,8 @@ import {
 import { UsersService } from "@/modules/users";
 import { EventsGateway } from "@/modules/events";
 import { NotificationsService } from "@/modules/notifications";
-import { REDLOCK, REDIS_CLIENT } from "@/modules/redis";
+import { redlock, redisClient, BidCacheService } from "@/modules/redis";
+import { CacheSyncService } from "@/modules/redis/cache-sync.service";
 import { TimerService } from "./timer.service";
 import { ICreateAuction, IPlaceBid } from "./dto";
 import {
@@ -34,11 +35,11 @@ import {
   LeaderboardEntry,
   PastWinnerEntry,
   LeaderboardResponse,
-  LOCALHOST_IPS,
+  localhostIps,
 } from "@/common";
 
-const MAX_RETRIES = 20;
-const RETRY_DELAY_MS = 50;
+const maxRetries = 20;
+const retryDelayMs = 50;
 
 @Injectable()
 export class AuctionsService {
@@ -53,13 +54,15 @@ export class AuctionsService {
     private eventsGateway: EventsGateway,
     private notificationsService: NotificationsService,
     private timerService: TimerService,
-    @Inject(REDLOCK) private readonly redlock: Redlock,
-    @Inject(REDIS_CLIENT) private readonly redis: Redis,
+    private bidCacheService: BidCacheService,
+    private cacheSyncService: CacheSyncService,
+    @Inject(redlock) private readonly redlockInstance: Redlock,
+    @Inject(redisClient) private readonly redis: Redis,
   ) {}
 
   private async withTransaction<T>(
     operation: (session: ClientSession) => Promise<T>,
-    retries = MAX_RETRIES,
+    retries = maxRetries,
   ): Promise<T> {
     let lastError: Error | null = null;
 
@@ -84,8 +87,8 @@ export class AuctionsService {
             attempt,
             retries,
           });
-          const jitter = randomInt(RETRY_DELAY_MS);
-          await this.delay(RETRY_DELAY_MS * attempt + jitter);
+          const jitter = randomInt(retryDelayMs);
+          await this.delay(retryDelayMs * attempt + jitter);
           continue;
         }
 
@@ -162,7 +165,7 @@ export class AuctionsService {
   }
 
   async start(id: string): Promise<AuctionDocument> {
-    return this.withTransaction(async (session) => {
+    const result = await this.withTransaction(async (session) => {
       const auction = await this.auctionModel.findOneAndUpdate(
         { _id: new Types.ObjectId(id), status: AuctionStatus.PENDING },
         { $inc: { version: 1 } },
@@ -226,6 +229,13 @@ export class AuctionsService {
 
       return updatedAuction;
     });
+
+    // Warm up Redis cache after transaction commits (async, don't block)
+    this.warmupAuctionCache(id).catch((err) =>
+      this.logger.error(`Failed to warm up cache for auction ${id}`, err),
+    );
+
+    return result;
   }
 
   async placeBid(
@@ -242,7 +252,7 @@ export class AuctionsService {
       throw new BadRequestException("Bid amount must be a positive integer");
     }
 
-    const isLocalhost = clientIp && LOCALHOST_IPS.includes(clientIp);
+    const isLocalhost = clientIp && localhostIps.includes(clientIp);
     const lockKey = `bid-lock:${userId}:${auctionId}`;
     const cooldownKey = `bid-cooldown:${userId}:${auctionId}`;
     let lock: Lock | null = null;
@@ -250,7 +260,7 @@ export class AuctionsService {
     // Skip lock for localhost (testing)
     if (!isLocalhost) {
       try {
-        lock = await this.redlock.acquire([lockKey], 10000);
+        lock = await this.redlockInstance.acquire([lockKey], 10000);
       } catch (error) {
         this.logger.debug("Failed to acquire lock", { lockKey, error });
         throw new ConflictException(
@@ -293,10 +303,10 @@ export class AuctionsService {
         }
 
         const now = new Date();
-        const BOUNDARY_BUFFER_MS = 100;
+        const boundaryBufferMs = 100;
         if (
           now.getTime() >
-          currentRound.endTime!.getTime() - BOUNDARY_BUFFER_MS
+          currentRound.endTime!.getTime() - boundaryBufferMs
         ) {
           throw new BadRequestException("Round has ended or is about to end");
         }
@@ -1348,5 +1358,476 @@ export class AuctionsService {
 
   async getActiveAuctions(): Promise<AuctionDocument[]> {
     return this.auctionModel.find({ status: AuctionStatus.ACTIVE }).exec();
+  }
+
+  // ==================== High-Performance Redis-Based Bidding ====================
+
+  /**
+   * Warm up the Redis cache for an auction
+   * Call this when auction starts to pre-load all necessary data
+   */
+  async warmupAuctionCache(auctionId: string): Promise<void> {
+    const auction = await this.auctionModel.findById(auctionId);
+    if (!auction) {
+      throw new NotFoundException("Auction not found");
+    }
+
+    this.logger.log(`Warming up cache for auction ${auctionId}`);
+
+    // Set auction metadata (includes all data needed for ultra-fast bidding)
+    const currentRound = auction.rounds[auction.currentRound - 1];
+    await this.bidCacheService.setAuctionMeta(auctionId, {
+      minBidAmount: auction.minBidAmount,
+      status: auction.status,
+      currentRound: auction.currentRound,
+      roundEndTime: currentRound?.endTime?.getTime(),
+      itemsInRound: currentRound?.itemsCount || 1,
+      antiSnipingWindowMs: auction.antiSnipingWindowMinutes * 60 * 1000,
+      antiSnipingExtensionMs: auction.antiSnipingExtensionMinutes * 60 * 1000,
+      maxExtensions: auction.maxExtensions,
+    });
+
+    // Load existing active bids
+    const existingBids = await this.bidModel
+      .find({ auctionId: auction._id, status: BidStatus.ACTIVE })
+      .lean();
+
+    if (existingBids.length > 0) {
+      await this.bidCacheService.warmupBids(
+        auctionId,
+        existingBids.map((bid) => ({
+          userId: bid.userId.toString(),
+          amount: bid.amount,
+          createdAt: bid.createdAt,
+        })),
+      );
+    }
+
+    // Get all users who might bid (users with balance > 0)
+    // In production, you might want to limit this to registered auction participants
+    const usersWithBalance = await this.userModel
+      .find({ balance: { $gt: 0 } })
+      .select("_id balance frozenBalance")
+      .lean();
+
+    if (usersWithBalance.length > 0) {
+      await this.bidCacheService.warmupBalances(
+        auctionId,
+        usersWithBalance.map((user) => ({
+          id: user._id.toString(),
+          balance: user.balance,
+          frozenBalance: user.frozenBalance,
+        })),
+      );
+    }
+
+    this.logger.log(
+      `Cache warmed up: ${existingBids.length} bids, ${usersWithBalance.length} users`,
+    );
+  }
+
+  /**
+   * Ensure user's balance is in cache before bidding
+   * Called lazily when a user tries to bid but isn't in cache
+   */
+  async ensureUserInCache(auctionId: string, userId: string): Promise<void> {
+    const user = await this.userModel.findById(userId).select("balance frozenBalance");
+    if (!user) {
+      throw new NotFoundException("User not found");
+    }
+
+    await this.bidCacheService.warmupUserBalance(
+      auctionId,
+      userId,
+      user.balance,
+      user.frozenBalance,
+    );
+  }
+
+  /**
+   * Fast bid placement using Redis (~1-2ms per bid)
+   *
+   * This method:
+   * 1. Uses Lua script for atomic balance check + freeze + leaderboard update
+   * 2. Skips MongoDB during active bidding
+   * 3. Data is synced to MongoDB periodically by CacheSyncService
+   *
+   * @returns Bid result with rank and amounts
+   */
+  async placeBidFast(
+    auctionId: string,
+    userId: string,
+    dto: IPlaceBid,
+  ): Promise<{
+    success: boolean;
+    amount?: number;
+    previousAmount?: number;
+    rank?: number;
+    isNewBid?: boolean;
+    error?: string;
+    auction?: AuctionDocument;
+  }> {
+    if (!Types.ObjectId.isValid(auctionId) || !Types.ObjectId.isValid(userId)) {
+      return { success: false, error: "Invalid ID format" };
+    }
+
+    if (dto.amount <= 0 || !Number.isInteger(dto.amount)) {
+      return { success: false, error: "Bid amount must be a positive integer" };
+    }
+
+    // Ultra-fast path: Single Redis call does ALL validation + bid placement
+    const result = await this.bidCacheService.placeBidUltraFast(
+      auctionId,
+      userId,
+      dto.amount,
+    );
+
+    // If cache not warmed or user not in cache, fall back to standard bid
+    if (result.needsWarmup) {
+      this.logger.debug(`Ultra-fast path unavailable for ${auctionId}/${userId}, using standard bid`);
+      try {
+        const standardResult = await this.placeBid(auctionId, userId, dto);
+        return {
+          success: true,
+          amount: standardResult.bid.amount,
+          previousAmount: 0,
+          isNewBid: true,
+          auction: standardResult.auction,
+        };
+      } catch (error) {
+        return {
+          success: false,
+          error: error instanceof Error ? error.message : "Unknown error",
+        };
+      }
+    }
+
+    if (!result.success) {
+      return { success: false, error: result.error };
+    }
+
+    // Emit WebSocket event (fire-and-forget)
+    this.eventsGateway.emitNewBid(auctionId, {
+      amount: result.newAmount!,
+      timestamp: new Date(),
+      isIncrease: !result.isNewBid,
+    });
+
+    // Get cached auction meta for anti-sniping check (ultra-fast, no MongoDB)
+    const auctionMeta = await this.bidCacheService.getAuctionMeta(auctionId);
+    if (auctionMeta && auctionMeta.roundEndTime > 0) {
+      // Check anti-sniping (async, don't block response)
+      this.checkAntiSnipingUltraFast(auctionId, auctionMeta).catch((err) =>
+        this.logger.error("Anti-sniping check failed", err),
+      );
+
+      // Check outbid notifications (async, don't block response)
+      this.checkOutbidNotificationsUltraFast(auctionId, auctionMeta, userId, result.newAmount!).catch(
+        (err) => this.logger.error("Outbid notification check failed", err),
+      );
+    }
+
+    return {
+      success: true,
+      amount: result.newAmount,
+      previousAmount: result.previousAmount,
+      rank: result.rank,
+      isNewBid: result.isNewBid,
+    };
+  }
+
+  /**
+   * Ultra-fast anti-sniping check using cached auction meta
+   */
+  private async checkAntiSnipingUltraFast(
+    auctionId: string,
+    meta: {
+      roundEndTime: number;
+      antiSnipingWindowMs: number;
+      antiSnipingExtensionMs: number;
+      maxExtensions: number;
+      currentRound: number;
+    },
+  ): Promise<void> {
+    const now = Date.now();
+    const windowStart = meta.roundEndTime - meta.antiSnipingWindowMs;
+
+    if (now < windowStart || meta.antiSnipingExtensionMs <= 0) {
+      return; // Not in anti-sniping window
+    }
+
+    // Check extension count from MongoDB (necessary for accuracy)
+    const auction = await this.auctionModel.findById(auctionId).lean();
+    if (!auction) return;
+
+    const currentRound = auction.rounds[auction.currentRound - 1];
+    if (!currentRound || currentRound.extensionsCount >= meta.maxExtensions) {
+      return;
+    }
+
+    // Apply extension
+    const newEndTime = new Date(meta.roundEndTime + meta.antiSnipingExtensionMs);
+
+    const updated = await this.auctionModel.findOneAndUpdate(
+      {
+        _id: new Types.ObjectId(auctionId),
+        status: AuctionStatus.ACTIVE,
+        [`rounds.${auction.currentRound - 1}.extensionsCount`]: currentRound.extensionsCount,
+      },
+      {
+        $set: { [`rounds.${auction.currentRound - 1}.endTime`]: newEndTime },
+        $inc: { [`rounds.${auction.currentRound - 1}.extensionsCount`]: 1 },
+      },
+      { new: true },
+    );
+
+    if (updated) {
+      // Update cache with new end time
+      await this.bidCacheService.updateRoundEndTime(auctionId, newEndTime.getTime());
+
+      // Emit anti-sniping event
+      this.eventsGateway.emitAntiSnipingExtension(updated, currentRound.extensionsCount + 1);
+
+      // Update timer with new end time
+      this.timerService.updateTimer(auctionId, newEndTime);
+    }
+  }
+
+  /**
+   * Ultra-fast outbid notification check
+   * Fetches minimal data needed for notifications
+   */
+  private async checkOutbidNotificationsUltraFast(
+    auctionId: string,
+    meta: { itemsInRound: number },
+    bidderId: string,
+    newAmount: number,
+  ): Promise<void> {
+    // Fetch auction for title and round info (needed for notifications)
+    const auction = await this.auctionModel
+      .findById(auctionId)
+      .select("title currentRound minBidIncrement")
+      .lean();
+    if (!auction) return;
+
+    const itemsInRound = meta.itemsInRound || 1;
+    const topBidders = await this.bidCacheService.getTopBidders(auctionId, itemsInRound + 10);
+
+    // Find users who just got pushed out of winning positions
+    for (let i = itemsInRound; i < topBidders.length; i++) {
+      const outbidEntry = topBidders[i];
+      if (!outbidEntry || outbidEntry.userId === bidderId) continue;
+
+      // Get user for notification
+      const user = await this.userModel.findById(outbidEntry.userId);
+      if (user && !user.isBot && user.telegramId) {
+        // Check if already notified
+        const bid = await this.bidModel.findOneAndUpdate(
+          {
+            auctionId: new Types.ObjectId(auctionId),
+            userId: new Types.ObjectId(outbidEntry.userId),
+            status: BidStatus.ACTIVE,
+            outbidNotifiedAt: null,
+          },
+          { outbidNotifiedAt: new Date() },
+          { new: true },
+        );
+
+        if (bid) {
+          await this.notificationsService.notifyOutbid(outbidEntry.userId, {
+            auctionId,
+            auctionTitle: auction.title,
+            yourBid: outbidEntry.amount,
+            newLeaderBid: newAmount,
+            roundNumber: auction.currentRound,
+            minBidToWin: newAmount + auction.minBidIncrement,
+          });
+        }
+      }
+    }
+  }
+
+  /**
+   * Check and apply anti-sniping extension (async)
+   */
+  private async checkAntiSnipingFast(
+    auctionId: string,
+    auction: Auction,
+    currentRound: { endTime?: Date; extensionsCount: number },
+  ): Promise<void> {
+    const now = Date.now();
+    const timeUntilEnd = currentRound.endTime!.getTime() - now;
+    const antiSnipingWindow = auction.antiSnipingWindowMinutes * 60 * 1000;
+
+    if (
+      timeUntilEnd <= antiSnipingWindow &&
+      currentRound.extensionsCount < auction.maxExtensions
+    ) {
+      const extension = auction.antiSnipingExtensionMinutes * 60 * 1000;
+      const newEndTime = new Date(currentRound.endTime!.getTime() + extension);
+
+      // Update in MongoDB
+      const updated = await this.auctionModel.findByIdAndUpdate(
+        auctionId,
+        {
+          $set: {
+            [`rounds.${auction.currentRound - 1}.endTime`]: newEndTime,
+          },
+          $inc: {
+            [`rounds.${auction.currentRound - 1}.extensionsCount`]: 1,
+          },
+        },
+        { new: true },
+      );
+
+      if (updated) {
+        // Update timer
+        this.timerService.updateTimer(auctionId, newEndTime);
+
+        // Update cache meta
+        await this.bidCacheService.setAuctionMeta(auctionId, {
+          minBidAmount: auction.minBidAmount,
+          status: auction.status,
+          currentRound: auction.currentRound,
+          roundEndTime: newEndTime.getTime(),
+        });
+
+        // Emit event
+        this.eventsGateway.emitAntiSnipingExtension(
+          updated,
+          currentRound.extensionsCount + 1,
+        );
+      }
+    }
+  }
+
+  /**
+   * Check and send outbid notifications (async)
+   */
+  private async checkOutbidNotificationsFast(
+    auctionId: string,
+    auction: Auction,
+    bidderId: string,
+    bidAmount: number,
+  ): Promise<void> {
+    const currentRound = auction.rounds[auction.currentRound - 1];
+    if (!currentRound) return;
+
+    const itemsInRound = currentRound.itemsCount;
+
+    // Get current leaderboard from cache
+    const topBidders = await this.bidCacheService.getTopBidders(
+      auctionId,
+      itemsInRound + 10, // Get a few extra to check who got pushed out
+    );
+
+    // Find users who are just outside winning position
+    const winningUserIds = new Set(
+      topBidders.slice(0, itemsInRound).map((b) => b.userId),
+    );
+
+    // Check users just outside winning position
+    for (let i = itemsInRound; i < topBidders.length; i++) {
+      const outbidEntry = topBidders[i];
+      if (!outbidEntry || outbidEntry.userId === bidderId) continue;
+
+      const user = await this.userModel.findById(outbidEntry.userId);
+      if (user && !user.isBot && user.telegramId) {
+        // Check if already notified for this bid
+        const bid = await this.bidModel.findOneAndUpdate(
+          {
+            auctionId: new Types.ObjectId(auctionId),
+            userId: new Types.ObjectId(outbidEntry.userId),
+            status: BidStatus.ACTIVE,
+            outbidNotifiedAt: null,
+          },
+          { outbidNotifiedAt: new Date() },
+          { new: true },
+        );
+
+        if (bid) {
+          await this.notificationsService.notifyOutbid(outbidEntry.userId, {
+            auctionId,
+            auctionTitle: auction.title,
+            yourBid: outbidEntry.amount,
+            newLeaderBid: bidAmount,
+            roundNumber: auction.currentRound,
+            minBidToWin: bidAmount + auction.minBidIncrement,
+          });
+        }
+      }
+    }
+  }
+
+  /**
+   * Sync cache to MongoDB before round completion
+   * Must be called before completeRound to ensure data consistency
+   */
+  async syncBeforeRoundComplete(auctionId: string): Promise<void> {
+    await this.cacheSyncService.fullSync(auctionId);
+  }
+
+  /**
+   * Get leaderboard from Redis cache (fast path)
+   * Returns userId + user details for each entry
+   */
+  async getLeaderboardFast(
+    auctionId: string,
+    limit: number = 50,
+    offset: number = 0,
+  ): Promise<{
+    entries: Array<{
+      userId: string;
+      amount: number;
+      rank: number;
+      username: string;
+      isBot: boolean;
+    }>;
+    totalCount: number;
+  }> {
+    const isWarmed = await this.bidCacheService.isCacheWarmed(auctionId);
+
+    if (!isWarmed) {
+      // Fallback to MongoDB
+      const result = await this.getLeaderboard(auctionId, limit, offset);
+      return {
+        entries: result.leaderboard.map((entry) => ({
+          userId: "", // Not available in standard leaderboard
+          amount: entry.amount,
+          rank: entry.rank,
+          username: entry.username,
+          isBot: entry.isBot,
+        })),
+        totalCount: result.totalCount,
+      };
+    }
+
+    // Get from Redis cache
+    const [topBidders, totalCount] = await Promise.all([
+      this.bidCacheService.getTopBidders(auctionId, limit, offset),
+      this.bidCacheService.getTotalBidders(auctionId),
+    ]);
+
+    // Fetch user details for display
+    const userIds = topBidders.map((b) => new Types.ObjectId(b.userId));
+    const users = await this.userModel
+      .find({ _id: { $in: userIds } })
+      .select("username isBot")
+      .lean();
+
+    const userMap = new Map(users.map((u) => [u._id.toString(), u]));
+
+    const entries = topBidders.map((bid, index) => {
+      const user = userMap.get(bid.userId);
+      return {
+        userId: bid.userId,
+        amount: bid.amount,
+        rank: offset + index + 1,
+        username: user?.username || "Unknown",
+        isBot: user?.isBot || false,
+      };
+    });
+
+    return { entries, totalCount };
   }
 }

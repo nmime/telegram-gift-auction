@@ -8,7 +8,7 @@
   ],
   "info": {
     "title": "Gift Auction API",
-    "description": "\n## Overview\nMulti-round auction system API inspired by Telegram Gift Auctions.\n\n## Features\n- **Multi-round auctions** with configurable items per round\n- **Anti-sniping mechanism** that extends rounds when late bids are placed\n- **Real-time updates** via WebSocket\n- **Financial integrity** with atomic transactions\n- **JWT authentication** with rate limiting\n\n## Authentication\nThis API uses JWT Bearer token authentication. Call `POST /api/auth/login` to obtain a token.\n\nInclude the token in requests: `Authorization: Bearer <token>`\n\n## Rate Limiting\n- 10 requests per second (burst)\n- 50 requests per 10 seconds\n- 200 requests per minute\n\n## WebSocket Events\nConnect to the WebSocket server at `/` and emit:\n- `join-auction` - Subscribe to auction updates (pass auctionId)\n- `leave-auction` - Unsubscribe from auction\n\nServer emits:\n- `auction-update` - Auction state changed\n- `new-bid` - New bid placed\n- `anti-sniping` - Round extended\n- `round-complete` - Round ended with winners\n- `auction-complete` - Auction finished\n      ",
+    "description": "\n## Overview\nMulti-round auction system API inspired by Telegram Gift Auctions.\n\n## Features\n- **Multi-round auctions** with configurable items per round\n- **Anti-sniping mechanism** that extends rounds when late bids are placed\n- **Real-time updates** via WebSocket\n- **Financial integrity** with atomic transactions\n- **JWT authentication** with rate limiting\n- **Ultra-fast bidding** via Redis Lua scripts (2,500+ bids/sec)\n\n## Authentication\nThis API uses JWT Bearer token authentication. Call `POST /api/auth/login` to obtain a token.\n\nInclude the token in requests: `Authorization: Bearer <token>`\n\n## Rate Limiting\n- 10 requests per second (burst)\n- 50 requests per 10 seconds\n- 200 requests per minute\n\n## WebSocket Events\nConnect to the WebSocket server at `/` and emit:\n- `join-auction` - Subscribe to auction updates (pass auctionId)\n- `leave-auction` - Unsubscribe from auction\n\nServer emits:\n- `auction-update` - Auction state changed\n- `new-bid` - New bid placed\n- `anti-sniping` - Round extended\n- `round-complete` - Round ended with winners\n- `auction-complete` - Auction finished\n      ",
     "version": "1.0.0"
   },
   "paths": {
@@ -649,6 +649,59 @@
           "auctions",
           "bid",
           "placeBid"
+        ],
+        "x-samchon-controller": "AuctionsController"
+      }
+    },
+    "/auctions/{id}/fast-bid": {
+      "post": {
+        "description": "Place fast bid (high-performance Redis path)\n\nPlaces a bid using the Redis-cached fast path for maximum throughput.\nReturns a simplified response without full auction state.\nFalls back to standard bid if cache is not warmed.\n\n**Performance:** ~2ms latency, 2,500+ bids/sec",
+        "tags": [
+          "auctions"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "description": "Auction ID"
+          }
+        ],
+        "requestBody": {
+          "description": "Bid amount",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/IPlaceBid"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Fast bid result with rank",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IFastBidResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "x-samchon-accessor": [
+          "auctions",
+          "fast_bid",
+          "placeFastBid"
         ],
         "x-samchon-controller": "AuctionsController"
       }
@@ -1717,6 +1770,39 @@
           "minWinningBid"
         ],
         "description": "Minimum winning bid response"
+      },
+      "IFastBidResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "description": "Whether the bid was placed successfully"
+          },
+          "amount": {
+            "type": "number",
+            "description": "The bid amount that was placed"
+          },
+          "previousAmount": {
+            "type": "number",
+            "description": "Previous bid amount (if updating existing bid)"
+          },
+          "rank": {
+            "type": "number",
+            "description": "Current rank in the leaderboard"
+          },
+          "isNewBid": {
+            "type": "boolean",
+            "description": "Whether this is a new bid or an update to existing"
+          },
+          "error": {
+            "type": "string",
+            "description": "Error message if the bid failed"
+          }
+        },
+        "required": [
+          "success"
+        ],
+        "description": "Fast bid response (high-performance Redis path)"
       }
     },
     "securitySchemes": {

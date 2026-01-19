@@ -115,7 +115,66 @@ async refreshLeadership(): Promise<boolean> {
 
 If leader crashes, key expires after 5 seconds, and another server becomes leader automatically.
 
-## Bid Flow Implementation
+## Ultra-Fast Bid Path (Redis Lua Script)
+
+For maximum throughput, the system provides an ultra-fast bidding path that bypasses the 5-layer protection model in favor of a single atomic Lua script:
+
+```
+┌─────────────────────────────────────────────────────────┐
+│                    HTTP Request                          │
+│                POST /auctions/:id/fast-bid               │
+└─────────────────────────────────────────────────────────┘
+                           │
+                           ▼
+┌─────────────────────────────────────────────────────────┐
+│  Single Lua Script (Atomic, ~0.02ms)                    │
+│  ─────────────────────────────────────────────────────  │
+│  1. Check auction status from cached meta               │
+│  2. Verify round timing (not expired)                   │
+│  3. Validate user balance from Redis hash               │
+│  4. Handle existing bid (return frozen funds)           │
+│  5. Freeze new bid amount                               │
+│  6. Update ZSET leaderboard with encoded score          │
+│  7. Mark balance and bid as dirty for sync              │
+│  8. Return success with amounts                         │
+└─────────────────────────────────────────────────────────┘
+                           │
+                           ▼
+┌─────────────────────────────────────────────────────────┐
+│  Async Operations (Non-blocking)                        │
+│  ─────────────────────────────────────────────────────  │
+│  • WebSocket new-bid event                              │
+│  • Anti-sniping check (extend round if needed)          │
+│  • Outbid notifications                                 │
+└─────────────────────────────────────────────────────────┘
+                           │
+                           ▼
+┌─────────────────────────────────────────────────────────┐
+│  Background Sync (Every 5 seconds)                      │
+│  ─────────────────────────────────────────────────────  │
+│  • Write dirty balances to MongoDB                      │
+│  • Write dirty bids to MongoDB                          │
+│  • Clear dirty flags                                    │
+└─────────────────────────────────────────────────────────┘
+```
+
+### Performance Comparison
+
+| Metric | Standard (5-Layer) | Ultra-Fast (Lua) |
+|--------|-------------------|------------------|
+| Latency | ~50-100ms | ~2ms |
+| Throughput | ~20 bids/sec | 2,500+ bids/sec |
+| Consistency | Immediate | Eventual (5s sync) |
+| Protection | Full ACID | Atomic Lua + Dirty Tracking |
+
+### When to Use Each Path
+
+- **Standard Path** (`POST /auctions/:id/bid`): When strong consistency is required, low-traffic auctions
+- **Ultra-Fast Path** (`POST /auctions/:id/fast-bid`): High-traffic scenarios, when 5-second eventual consistency is acceptable
+
+---
+
+## Standard Bid Flow (5-Layer Protection)
 
 ```typescript
 POST /api/auctions/:id/bid { amount: 1000 }

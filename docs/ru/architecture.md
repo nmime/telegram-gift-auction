@@ -25,14 +25,20 @@
 │  │                                                               │  │
 │  │  AuctionsService          UsersService         TimerService  │  │
 │  │  ├─ placeBid()            ├─ deposit()         ├─ start()    │  │
-│  │  ├─ completeRound()       ├─ withdraw()        ├─ stop()     │  │
-│  │  ├─ antiSniping()         └─ getBalance()      └─ broadcast()│  │
+│  │  ├─ placeBidFast()        ├─ withdraw()        ├─ stop()     │  │
+│  │  ├─ completeRound()       └─ getBalance()      └─ broadcast()│  │
+│  │  ├─ antiSniping()                                            │  │
 │  │  └─ getLeaderboard()                                         │  │
 │  │                                                               │  │
 │  │  LeaderboardService       TransactionsService   BotService   │  │
 │  │  ├─ addBid() [ZADD]       ├─ recordTransaction()├─ simulate()│  │
 │  │  ├─ removeBid() [ZREM]    └─ getHistory()       └─ bid()     │  │
 │  │  └─ getTop() [ZRANGE]                                        │  │
+│  │                                                               │  │
+│  │  BidCacheService (Ультра-быстрый путь)                       │  │
+│  │  ├─ placeBidUltraFast()   [Единый Lua скрипт]                │  │
+│  │  ├─ warmupAuctionCache()                                     │  │
+│  │  └─ getAuctionMeta()                                         │  │
 │  │                                                               │  │
 │  │  EventsGateway            NotificationsService               │  │
 │  │  ├─ emitNewBid()          ├─ notifyOutbid()                  │  │
@@ -90,6 +96,10 @@
 | `timer-service:leader` | STRING | Выборы лидера для трансляции таймеров (TTL 5с) |
 | `bid:{auctionId}:{odId}` | STRING | Распределённая блокировка для операций со ставками |
 | `cooldown:{auctionId}:{odId}` | STRING | 1-секундный кулдаун ставок (TTL 1с) |
+| `auction:{auctionId}:balance:{userId}` | HASH | Кэш баланса пользователя (available, frozen) |
+| `auction:{auctionId}:meta` | HASH | Кэш метаданных аукциона (статус, раунд, тайминг) |
+| `auction:{auctionId}:dirty:users` | SET | Пользователи с изменёнными балансами (для синхронизации) |
+| `auction:{auctionId}:dirty:bids` | SET | Изменённые ставки (для синхронизации) |
 
 ### Формула score лидерборда
 

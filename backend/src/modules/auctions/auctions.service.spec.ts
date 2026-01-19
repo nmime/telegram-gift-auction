@@ -7,7 +7,7 @@ import { Auction, AuctionStatus, Bid, User } from "@/schemas";
 import { UsersService } from "@/modules/users";
 import { EventsGateway } from "@/modules/events";
 import { NotificationsService } from "@/modules/notifications";
-import { REDLOCK, REDIS_CLIENT } from "@/modules/redis";
+import { redlock, redisClient } from "@/modules/redis";
 
 describe("AuctionsService", () => {
   let service: AuctionsService;
@@ -87,8 +87,8 @@ describe("AuctionsService", () => {
         { provide: UsersService, useValue: mockUsersService },
         { provide: EventsGateway, useValue: mockEventsGateway },
         { provide: NotificationsService, useValue: mockNotificationsService },
-        { provide: REDLOCK, useValue: mockRedlock },
-        { provide: REDIS_CLIENT, useValue: mockRedis },
+        { provide: redlock, useValue: mockRedlock },
+        { provide: redisClient, useValue: mockRedis },
       ],
     }).compile();
 

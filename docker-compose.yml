@@ -51,8 +51,8 @@ services:
 
   backend:
     build:
-      context: ./backend
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: backend/Dockerfile
     container_name: auction-backend
     ports:
       - "127.0.0.1:4000:4000"
@@ -72,8 +72,8 @@ services:
 
   frontend:
     build:
-      context: ./frontend
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: frontend/Dockerfile
     container_name: auction-frontend
     ports:
       - "127.0.0.1:5173:80"

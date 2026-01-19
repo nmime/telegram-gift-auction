@@ -461,8 +461,10 @@ h4 {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: var(--spacing-md) 0;
+  padding: var(--spacing-md) var(--spacing-lg);
   margin-bottom: var(--spacing-md);
+  margin-left: calc(-1 * var(--spacing-lg));
+  margin-right: calc(-1 * var(--spacing-lg));
   gap: var(--spacing-md);
   background: linear-gradient(135deg, var(--bg-primary) 0%, var(--bg-secondary) 100%);
   z-index: 100;
@@ -864,7 +866,9 @@ table tbody tr:hover {
     flex-direction: row;
     align-items: center;
     gap: var(--spacing-sm);
-    padding: var(--spacing-sm) 0;
+    padding: var(--spacing-sm) var(--spacing-md);
+    margin-left: calc(-1 * var(--spacing-md));
+    margin-right: calc(-1 * var(--spacing-md));
     padding-top: calc(var(--spacing-sm) + env(safe-area-inset-top, 0px));
   }
 

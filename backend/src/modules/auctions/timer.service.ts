@@ -1,6 +1,6 @@
 import { Injectable, Logger, Inject, OnModuleDestroy } from "@nestjs/common";
 import Redis from "ioredis";
-import { REDIS_CLIENT } from "@/modules/redis";
+import { redisClient } from "@/modules/redis";
 import { EventsGateway } from "@/modules/events";
 
 interface TimerState {
@@ -34,7 +34,7 @@ export class TimerService implements OnModuleDestroy {
   private isLeader = false;
 
   constructor(
-    @Inject(REDIS_CLIENT) private readonly redis: Redis,
+    @Inject(redisClient) private readonly redis: Redis,
     private readonly eventsGateway: EventsGateway,
   ) {
     // Generate unique instance ID

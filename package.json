@@ -3,20 +3,16 @@
   "version": "1.0.0",
   "description": "Multi-round auction system inspired by Telegram Gift Auctions",
   "private": true,
-  "workspaces": [
-    "backend",
-    "frontend"
-  ],
   "scripts": {
-    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
-    "dev:backend": "npm run start:dev --workspace=backend",
-    "dev:frontend": "npm run dev --workspace=frontend",
-    "build": "npm run build --workspace=backend && npm run build --workspace=frontend",
-    "start": "npm run start:prod --workspace=backend",
-    "test": "npm run test --workspace=backend",
-    "test:e2e": "npm run test:e2e --workspace=backend",
-    "test:stress": "npm run test:stress --workspace=backend",
-    "lint": "npm run lint --workspaces"
+    "dev": "concurrently \"pnpm dev:backend\" \"pnpm dev:frontend\"",
+    "dev:backend": "pnpm --filter backend start:dev",
+    "dev:frontend": "pnpm --filter frontend dev",
+    "build": "pnpm --filter backend build && pnpm --filter frontend build",
+    "start": "pnpm --filter backend start:prod",
+    "test": "pnpm --filter backend test",
+    "test:e2e": "pnpm --filter backend test:e2e",
+    "test:stress": "pnpm --filter backend test:stress",
+    "lint": "pnpm -r lint"
   },
   "devDependencies": {
     "concurrently": "^9.2.1",
@@ -24,5 +20,6 @@
   },
   "engines": {
     "node": ">=22.0.0"
-  }
+  },
+  "packageManager": "pnpm@10.28.0"
 }

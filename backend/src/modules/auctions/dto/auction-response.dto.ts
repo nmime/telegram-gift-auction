@@ -177,6 +177,29 @@ export interface IPlaceBidResponse {
 }
 
 /**
+ * Fast bid response (simplified for high-performance bidding)
+ */
+export interface IFastBidResponse {
+  /** Whether the bid was successful */
+  success: boolean;
+
+  /** Current bid amount (after this bid) */
+  amount?: number;
+
+  /** Previous bid amount (before this bid) */
+  previousAmount?: number;
+
+  /** Current rank in the leaderboard (1-based) */
+  rank?: number;
+
+  /** Whether this is a new bid (vs increase) */
+  isNewBid?: boolean;
+
+  /** Error message if not successful */
+  error?: string;
+}
+
+/**
  * Financial audit response
  */
 export interface IAuditResponse {

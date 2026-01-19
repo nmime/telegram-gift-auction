@@ -1,5 +1,5 @@
 # Infrastructure only - for local development
-# Run apps manually with: npm run start:dev
+# Run apps manually with: pnpm dev
 
 services:
   mongodb:

@@ -35,6 +35,7 @@ interface Config {
   warmupRequests: number;
   testSuites: string[];
   verbose: boolean;
+  useFastBid: boolean;
 }
 
 interface TestUser {
@@ -254,6 +255,10 @@ function parseArgs(args: string[]): Partial<Config> & { help?: boolean } {
         config.highFrequencyDelayMs = parseInt(nextArg, 10);
         i++;
         break;
+      case '--fast':
+      case '--fast-bid':
+        config.useFastBid = true;
+        break;
     }
   }
 
@@ -282,6 +287,7 @@ ${c.cyan}OPTIONS:${c.reset}
   --ws-url <url>            WebSocket URL (default: ws://localhost:4000)
   --stress-duration <ms>    High-frequency test duration (default: 5000)
   --stress-delay <ms>       Delay between stress bids (default: 50)
+  --fast, --fast-bid        Use Redis-based fast bid endpoint for maximum throughput
   -v, --verbose             Enable verbose output
 
 ${c.cyan}TEST SUITES:${c.reset}
@@ -447,14 +453,15 @@ class LoadTester {
 
   private async placeBid(user: TestUser, auctionId: string, amount: number, retry = true): Promise<BidResult> {
     const start = performance.now();
+    const endpoint = this.config.useFastBid ? 'fast-bid' : 'bid';
     try {
       const res = retry
-        ? await fetchWithRetry(`${this.config.apiUrl}/auctions/${auctionId}/bid`, {
+        ? await fetchWithRetry(`${this.config.apiUrl}/auctions/${auctionId}/${endpoint}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${user.token}` },
             body: JSON.stringify({ amount }),
           })
-        : await fetch(`${this.config.apiUrl}/auctions/${auctionId}/bid`, {
+        : await fetch(`${this.config.apiUrl}/auctions/${auctionId}/${endpoint}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${user.token}` },
             body: JSON.stringify({ amount }),
@@ -463,11 +470,18 @@ class LoadTester {
       const responseTimeMs = performance.now() - start;
 
       if (res.ok) {
+        // For fast-bid, check success field in response
+        if (this.config.useFastBid) {
+          const data = await res.json().catch(() => ({ success: true })) as { success: boolean; error?: string };
+          if (!data.success) {
+            return { success: false, responseTimeMs, error: data.error || 'Fast bid failed', statusCode: res.status };
+          }
+        }
         return { success: true, responseTimeMs };
       }
 
       const error = await res.json().catch(() => ({ message: 'Unknown' }));
-      return { success: false, responseTimeMs, error: error.message, statusCode: res.status };
+      return { success: false, responseTimeMs, error: error.message || error.error, statusCode: res.status };
     } catch (err) {
       return { success: false, responseTimeMs: performance.now() - start, error: (err as Error).message };
     }
@@ -1208,6 +1222,7 @@ async function main(): Promise<void> {
     warmupRequests: parsedArgs.warmupRequests || 10,
     testSuites: parsedArgs.testSuites || ['all'],
     verbose: parsedArgs.verbose || false,
+    useFastBid: parsedArgs.useFastBid || false,
   };
 
   console.log();
@@ -1220,6 +1235,7 @@ async function main(): Promise<void> {
   console.log(`${c.dim}Deposit:${c.reset}   ${formatNumber(config.depositAmount)}`);
   console.log(`${c.dim}Items:${c.reset}     ${config.itemCount}`);
   console.log(`${c.dim}Suites:${c.reset}    ${config.testSuites.join(', ')}`);
+  console.log(`${c.dim}Fast Bid:${c.reset}  ${config.useFastBid ? c.green + 'ENABLED (Redis path)' + c.reset : 'disabled'}`);
   console.log(`${'═'.repeat(50)}`);
   console.log();
 

@@ -5,6 +5,7 @@ import { AuctionsService } from "./auctions.service";
 import { AuctionSchedulerService } from "./auction-scheduler.service";
 import { BotService } from "./bot.service";
 import { TimerService } from "./timer.service";
+import { CacheSyncService } from "@/modules/redis/cache-sync.service";
 import {
   Auction,
   AuctionSchema,
@@ -39,7 +40,8 @@ import { NotificationsModule } from "@/modules/notifications";
     AuctionSchedulerService,
     BotService,
     TimerService,
+    CacheSyncService,
   ],
-  exports: [AuctionsService, BotService, TimerService],
+  exports: [AuctionsService, BotService, TimerService, CacheSyncService],
 })
 export class AuctionsModule {}

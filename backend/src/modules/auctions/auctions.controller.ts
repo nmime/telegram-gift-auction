@@ -11,6 +11,7 @@ import {
   ILeaderboardResponse,
   IMinWinningBidResponse,
   IPlaceBidResponse,
+  IFastBidResponse,
   IAuditResponse,
 } from "./dto";
 import { IUserBidResponse } from "@/modules/bids";
@@ -171,6 +172,41 @@ export class AuctionsController {
         updatedAt: bid.updatedAt,
       },
       auction: this.formatAuction(auction),
+    };
+  }
+
+  /**
+   * Place fast bid (high-performance Redis path)
+   *
+   * Places a bid using the Redis-cached fast path for maximum throughput.
+   * Returns a simplified response without full auction state.
+   * Falls back to standard bid if cache is not warmed.
+   *
+   * @tag auctions
+   * @security bearer
+   * @param id Auction ID
+   * @param body Bid amount
+   * @returns Fast bid result with rank
+   */
+  @TypedRoute.Post(":id/fast-bid")
+  @UseGuards(AuthGuard)
+  async placeFastBid(
+    @TypedParam("id") id: string,
+    @TypedBody() body: IPlaceBid,
+    @Req() req: AuthenticatedRequest,
+  ): Promise<IFastBidResponse> {
+    const result = await this.auctionsService.placeBidFast(
+      id,
+      req.user.sub,
+      body,
+    );
+    return {
+      success: result.success,
+      amount: result.amount,
+      previousAmount: result.previousAmount,
+      rank: result.rank,
+      isNewBid: result.isNewBid,
+      error: result.error,
     };
   }
 

@@ -134,6 +134,38 @@ Place or increase a bid.
 - `409` - Amount already taken
 - `429` - Cooldown active
 
+### POST /auctions/:id/fast-bid
+
+Place bid via high-performance Redis path (~2ms latency, 2,500+ bids/sec).
+
+Falls back to standard bid if cache is not warmed.
+
+**Request:**
+```json
+{
+  "amount": 500
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "amount": 500,
+  "previousAmount": 100,
+  "rank": 3,
+  "isNewBid": false
+}
+```
+
+**Error Response:**
+```json
+{
+  "success": false,
+  "error": "INSUFFICIENT_BALANCE"
+}
+```
+
 ### GET /auctions/:id/leaderboard
 
 Get current auction rankings (Redis ZSET-powered).

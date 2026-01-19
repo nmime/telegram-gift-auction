@@ -1,0 +1,48 @@
+# Dependencies
+node_modules
+**/node_modules
+
+# Build outputs
+dist
+**/dist
+coverage
+**/coverage
+
+# Git
+.git
+.gitignore
+
+# IDE
+.idea
+.vscode
+*.swp
+*.swo
+
+# Environment files (build args should be used instead)
+.env
+.env.*
+!.env.example
+
+# Logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# Test files
+**/*.spec.ts
+**/*.test.ts
+**/__tests__
+
+# Documentation
+*.md
+!README.md
+LICENSE
+
+# Docker files (prevent recursive copy)
+**/Dockerfile*
+docker-compose*.yml
+
+# Misc
+.DS_Store
+Thumbs.db
+*.tgz
