@@ -44,9 +44,9 @@ WORKDIR /app
 COPY pnpm-lock.yaml pnpm-workspace.yaml package.json ./
 COPY backend/package.json ./backend/
 
-# Install production dependencies only
+# Install production dependencies only (ignore-scripts to skip prepare hook)
 RUN pnpm fetch --prod && \
-    pnpm install --offline --frozen-lockfile --prod
+    pnpm install --offline --frozen-lockfile --prod --ignore-scripts
 
 # Copy built files
 COPY --from=builder /app/backend/dist ./backend/dist
