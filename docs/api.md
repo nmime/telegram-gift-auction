@@ -136,7 +136,7 @@ Place or increase a bid.
 
 ### POST /auctions/:id/fast-bid
 
-Place bid via high-performance Redis path (~2ms latency, 2,500+ bids/sec).
+Place bid via high-performance Redis path (~2ms latency, ~500 rps × number of CPUs).
 
 Falls back to standard bid if cache is not warmed.
 

@@ -4,8 +4,8 @@
 
 | Feature | Throughput | Latency |
 |---------|------------|---------|
-| **WebSocket Bidding** | **30,000+ bids/sec** | p99 < 5ms |
-| HTTP Fast Bid (Redis) | ~2,500 bids/sec | p99 < 20ms |
+| **WebSocket Bidding** | **~3,000 rps × number of CPUs** | p99 < 5ms |
+| HTTP Fast Bid (Redis) | ~500 rps × number of CPUs | p99 < 20ms |
 | Standard Bid (MongoDB) | ~20 bids/sec | p99 < 4s |
 
 **Cluster Mode**: Set `CLUSTER_WORKERS=4` for multi-core scaling (linear throughput increase).
@@ -50,7 +50,7 @@
 │  │  ├─ warmupAuctionCache()                                     │  │
 │  │  └─ getAuctionMeta()                                         │  │
 │  │                                                               │  │
-│  │  EventsGateway (⚡30k bids/sec)  NotificationsService         │  │
+│  │  EventsGateway (⚡3k rps/CPU)    NotificationsService         │  │
 │  │  ├─ handlePlaceBid()      ├─ notifyOutbid()                  │  │
 │  │  ├─ handleAuth()          ├─ notifyWin()                     │  │
 │  │  ├─ emitNewBid()          └─ notifyBidCarryover()            │  │
@@ -283,7 +283,7 @@ await notificationsService.notifyWin(odId auctionTitle, amount);
 
 ### EventsGateway (⚡ WebSocket Bidding)
 
-**Maximum throughput path: 30,000+ bids/sec with p99 < 5ms**
+**Maximum throughput path: ~3,000 rps × number of CPUs with p99 < 5ms**
 
 ```typescript
 // Client-side usage
@@ -308,7 +308,7 @@ socket.on('bid-response', ({ success, amount, previousAmount, error }) => {
 
 ### BidCacheService (Ultra-Fast Path)
 
-High-performance Redis-based bidding (~1ms latency, 5,000-10,000+ bids/sec):
+High-performance Redis-based bidding (~1ms latency, ~3,000 rps × number of CPUs):
 
 ```typescript
 // Single Lua script does ALL validation + bid placement atomically:
@@ -381,7 +381,7 @@ MongoDB transactions add ~50-100ms latency under concurrent load. A single Lua s
 - Eliminates network round-trips (HGETALL + validation + update in one call)
 - Does ALL validation + bid placement in one call
 - Returns all auction meta (no extra Redis call needed for anti-sniping/notifications)
-- Enables 5,000-10,000+ bids/sec vs ~20 bids/sec with MongoDB
+- Enables ~3,000 rps × number of CPUs vs ~20 bids/sec with MongoDB
 
 ### Why Background Sync Instead of Write-Through?
 
@@ -401,7 +401,7 @@ Lazy cache loading adds 5-10ms latency for the first bidder. Eager warmup on auc
 
 HTTP requests add ~5-10ms overhead for headers, connection handling, and response formatting. WebSocket bidding eliminates this entirely:
 - Bid payload goes directly to server over established connection
-- Combined with Lua script: **30,000+ bids/sec** with p99 < 5ms
+- Combined with Lua script: **~3,000 rps × number of CPUs** with p99 < 5ms
 - No rate limiting overhead (connection is already authenticated)
 - Instant bid confirmations via `bid-response` event
 

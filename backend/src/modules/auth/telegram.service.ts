@@ -35,7 +35,7 @@ export class TelegramService {
   private readonly maxAuthAge = 86400; // 24 hours
 
   constructor(private readonly configService: ConfigService) {
-    this.botToken = this.configService.get<string>("telegram.botToken")!;
+    this.botToken = this.configService.get<string>("BOT_TOKEN")!;
   }
 
   validateWidgetAuth(payload: TelegramUser): TelegramUser {

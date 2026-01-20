@@ -67,7 +67,7 @@ export class CustomThrottlerGuard extends ThrottlerGuard {
     configService: ConfigService,
   ) {
     super(options, storageService, reflector);
-    this.isDevelopment = configService.get<string>("nodeEnv") === "development";
+    this.isDevelopment = configService.get<string>("NODE_ENV") === "development";
   }
 
   protected async getTracker(request: FastifyRequest): Promise<string> {

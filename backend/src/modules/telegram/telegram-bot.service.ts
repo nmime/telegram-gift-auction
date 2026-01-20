@@ -31,12 +31,10 @@ export class TelegramBotService implements OnModuleInit, OnModuleDestroy {
     private readonly configService: ConfigService,
     private readonly i18n: I18nService,
   ) {
-    this.botToken = this.configService.get<string>("telegram.botToken")!;
-    this.webhookSecret =
-      this.configService.get<string>("telegram.webhookSecret") || "";
-    this.miniAppUrl =
-      this.configService.get<string>("telegram.miniAppUrl") || "";
-    this.nodeEnv = this.configService.get<string>("nodeEnv") || "development";
+    this.botToken = this.configService.get<string>("BOT_TOKEN")!;
+    this.webhookSecret = this.configService.get<string>("WEBHOOK_SECRET") || "";
+    this.miniAppUrl = this.configService.get<string>("MINI_APP_URL") || "";
+    this.nodeEnv = this.configService.get<string>("NODE_ENV") || "development";
 
     this.bot = new Bot<BotContext>(this.botToken);
     this.setupMiddleware();
@@ -65,8 +63,7 @@ export class TelegramBotService implements OnModuleInit, OnModuleDestroy {
   }
 
   private setupHandlers() {
-    const webAppUrl =
-      this.configService.get<string>("telegram.miniAppUrl") || "";
+    const webAppUrl = this.configService.get<string>("MINI_APP_URL") || "";
     const isHttps = webAppUrl.startsWith("https://");
 
     // Handle /start command

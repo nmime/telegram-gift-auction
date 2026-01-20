@@ -1,34 +1,20 @@
+/**
+ * Application configuration
+ * Access via ConfigService.get('KEY') where KEY matches the env var name
+ */
 export const configuration = () => ({
-  nodeEnv: process.env.NODE_ENV || "development",
-  port: parseInt(process.env.PORT || "4000", 10),
-
-  cors: {
-    origin: process.env.CORS_ORIGIN || "http://localhost:5173",
-  },
-
-  database: {
-    uri: process.env.MONGODB_URI || "mongodb://localhost:27017/auction",
-  },
-
-  redis: {
-    url: process.env.REDIS_URL || "redis://localhost:6379",
-  },
-
-  jwt: {
-    secret: process.env.JWT_SECRET!, // Required - validated by Joi
-    expiresIn: "24h",
-  },
-
-  throttle: {
-    ttl: parseInt(process.env.THROTTLE_TTL || "60000", 10),
-    limit: parseInt(process.env.THROTTLE_LIMIT || "100", 10),
-  },
-
-  telegram: {
-    botToken: process.env.BOT_TOKEN || "",
-    webhookSecret: process.env.WEBHOOK_SECRET || "",
-    miniAppUrl: process.env.MINI_APP_URL || "",
-  },
+  NODE_ENV: process.env.NODE_ENV || "development",
+  PORT: parseInt(process.env.PORT || "4000", 10),
+  CORS_ORIGIN: process.env.CORS_ORIGIN || "http://localhost:5173",
+  MONGODB_URI: process.env.MONGODB_URI || "mongodb://localhost:27017/auction",
+  REDIS_URL: process.env.REDIS_URL || "redis://localhost:6379",
+  JWT_SECRET: process.env.JWT_SECRET!, // Required - validated by Joi
+  JWT_EXPIRES_IN: process.env.JWT_EXPIRES_IN || "24h",
+  THROTTLE_TTL: parseInt(process.env.THROTTLE_TTL || "60000", 10),
+  THROTTLE_LIMIT: parseInt(process.env.THROTTLE_LIMIT || "100", 10),
+  BOT_TOKEN: process.env.BOT_TOKEN || "",
+  WEBHOOK_SECRET: process.env.WEBHOOK_SECRET || "",
+  MINI_APP_URL: process.env.MINI_APP_URL || "",
 });
 
 export type Configuration = ReturnType<typeof configuration>;

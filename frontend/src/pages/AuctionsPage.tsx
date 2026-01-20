@@ -47,29 +47,29 @@ export default function AuctionsPage() {
 
   return (
     <div>
-      <div className="flex justify-between items-center" style={{ marginBottom: '24px' }}>
+      <div className="page-header">
         <h1>Auctions</h1>
-        <div className="flex gap-2">
+        <div className="filter-buttons">
           <button
-            className={`btn ${filter === '' ? 'btn-primary' : 'btn-secondary'}`}
+            className={`btn btn-sm ${filter === '' ? 'btn-primary' : 'btn-secondary'}`}
             onClick={() => setFilter('')}
           >
             All
           </button>
           <button
-            className={`btn ${filter === 'active' ? 'btn-primary' : 'btn-secondary'}`}
+            className={`btn btn-sm ${filter === 'active' ? 'btn-primary' : 'btn-secondary'}`}
             onClick={() => setFilter('active')}
           >
             Active
           </button>
           <button
-            className={`btn ${filter === 'pending' ? 'btn-primary' : 'btn-secondary'}`}
+            className={`btn btn-sm ${filter === 'pending' ? 'btn-primary' : 'btn-secondary'}`}
             onClick={() => setFilter('pending')}
           >
             Pending
           </button>
           <button
-            className={`btn ${filter === 'completed' ? 'btn-primary' : 'btn-secondary'}`}
+            className={`btn btn-sm ${filter === 'completed' ? 'btn-primary' : 'btn-secondary'}`}
             onClick={() => setFilter('completed')}
           >
             Completed

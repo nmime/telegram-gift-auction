@@ -13,8 +13,7 @@ export class TelegramController {
     private readonly telegramBotService: TelegramBotService,
     private readonly configService: ConfigService,
   ) {
-    this.webhookSecret =
-      this.configService.get<string>("telegram.webhookSecret") || "";
+    this.webhookSecret = this.configService.get<string>("WEBHOOK_SECRET") || "";
   }
 
   /**

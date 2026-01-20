@@ -2,7 +2,7 @@
  * Fast Bid Performance Test
  *
  * Tests the high-performance Redis-based bidding system
- * Target: 5,000-10,000+ bids/sec
+ * Target: ~3,000 rps × number of CPUs
  */
 
 import { Test, TestingModule } from "@nestjs/testing";

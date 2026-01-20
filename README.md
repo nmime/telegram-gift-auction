@@ -23,7 +23,7 @@ This isn't just another auction demo — it's a **battle-tested, production-read
 | **Financial Integrity** | Atomic operations with comprehensive audit system — zero money lost or created |
 | **Last-Second Sniping** | Anti-sniping mechanism with transparent round extensions |
 | **Scalability** | Redis adapter enables horizontal scaling across multiple servers |
-| **High Performance** | Ultra-fast Redis Lua scripts + WebSocket bidding achieve **30,000+ bids/sec** with sub-5ms p99 latency |
+| **High Performance** | Ultra-fast Redis Lua scripts + WebSocket bidding achieve **~3,000 rps × number of CPUs** with sub-5ms p99 latency |
 | **Real-time UX** | WebSocket events ensure no user misses critical auction updates |
 | **Telegram Native** | Full integration: Login Widget, Mini App auth, bot notifications |
 
@@ -63,7 +63,7 @@ This isn't just another auction demo — it's a **battle-tested, production-read
 
 ### ⚡ WebSocket Bidding (Maximum Performance)
 - **Direct WebSocket bids** bypass HTTP overhead entirely
-- **30,000+ bids/sec** with p99 latency under 5ms
+- **~3,000 rps × number of CPUs** with p99 latency under 5ms
 - **JWT authentication** via socket events
 - **Real-time bid responses** with instant confirmation
 
@@ -302,7 +302,7 @@ CLUSTER_WORKERS=auto pnpm start
 # Or specify exact number of workers
 CLUSTER_WORKERS=4 pnpm start
 
-# Results: 30,000+ bids/sec with p99 < 5ms
+# Results: ~3,000 rps × number of CPUs with p99 < 5ms
 ```
 
 ### Running Load Tests
@@ -476,7 +476,7 @@ socket.on('auth-response', ({ success, userId }) => {
 // 2. Join auction room
 socket.emit('join-auction', auctionId);
 
-// 3. Place bids (30,000+ bids/sec possible!)
+// 3. Place bids (~3,000 rps × number of CPUs possible!)
 socket.emit('place-bid', { auctionId, amount: 1000 });
 socket.on('bid-response', ({ success, amount, error }) => {
   if (success) console.log('Bid placed:', amount);
@@ -604,7 +604,7 @@ Real-time MongoDB writes would negate the speed benefits. A 5-second sync interv
 Lazy cache loading (warming users on first bid) adds 5-10ms latency for the first bidder. Eager warmup on auction start pre-loads all users with positive balance, ensuring consistent sub-2ms latency for everyone.
 
 **Why WebSocket Bidding?**
-HTTP requests add ~5-10ms overhead for headers, connection handling, and response formatting. WebSocket bidding eliminates this entirely — the bid payload goes directly to the server over an established connection. Combined with the Lua script, this achieves **30,000+ bids/sec** with p99 under 5ms.
+HTTP requests add ~5-10ms overhead for headers, connection handling, and response formatting. WebSocket bidding eliminates this entirely — the bid payload goes directly to the server over an established connection. Combined with the Lua script, this achieves **~3,000 rps × number of CPUs** with p99 under 5ms.
 
 **Why Cluster Mode?**
 Node.js is single-threaded. On multi-core servers, a single process can't utilize all CPU cores. Cluster mode spawns multiple worker processes, each handling requests independently. With the Redis adapter, Socket.IO events are synchronized across workers, enabling linear scaling with CPU cores.

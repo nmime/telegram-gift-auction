@@ -3,11 +3,13 @@ import { getModelToken, getConnectionToken } from "@nestjs/mongoose";
 import { BadRequestException, NotFoundException } from "@nestjs/common";
 import { Types } from "mongoose";
 import { AuctionsService } from "./auctions.service";
+import { TimerService } from "./timer.service";
 import { Auction, AuctionStatus, Bid, User } from "@/schemas";
 import { UsersService } from "@/modules/users";
 import { EventsGateway } from "@/modules/events";
 import { NotificationsService } from "@/modules/notifications";
-import { redlock, redisClient } from "@/modules/redis";
+import { redlock, redisClient, BidCacheService } from "@/modules/redis";
+import { CacheSyncService } from "@/modules/redis/cache-sync.service";
 
 describe("AuctionsService", () => {
   let service: AuctionsService;
@@ -76,6 +78,25 @@ describe("AuctionsService", () => {
     set: jest.fn(),
   };
 
+  const mockTimerService = {
+    startTimer: jest.fn(),
+    stopTimer: jest.fn(),
+    updateTimer: jest.fn(),
+  };
+
+  const mockBidCacheService = {
+    isCacheWarmed: jest.fn().mockResolvedValue(false),
+    warmupAuctionCache: jest.fn(),
+    placeBidUltraFast: jest.fn(),
+    getAuctionMeta: jest.fn(),
+    setAuctionMeta: jest.fn(),
+    getTopBidders: jest.fn(),
+  };
+
+  const mockCacheSyncService = {
+    fullSync: jest.fn(),
+  };
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -87,6 +108,9 @@ describe("AuctionsService", () => {
         { provide: UsersService, useValue: mockUsersService },
         { provide: EventsGateway, useValue: mockEventsGateway },
         { provide: NotificationsService, useValue: mockNotificationsService },
+        { provide: TimerService, useValue: mockTimerService },
+        { provide: BidCacheService, useValue: mockBidCacheService },
+        { provide: CacheSyncService, useValue: mockCacheSyncService },
         { provide: redlock, useValue: mockRedlock },
         { provide: redisClient, useValue: mockRedis },
       ],

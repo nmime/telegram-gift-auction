@@ -32,7 +32,7 @@ function App() {
     <ErrorBoundary>
       <div className="container" style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
         <Header />
-        <main className="main-content" style={{ flex: 1 }}>
+        <main className="main-content" style={{ flex: 1, paddingTop: 'var(--spacing-lg)' }}>
           <Routes>
             <Route path="/" element={<AuctionsPage />} />
             <Route path="/auctions" element={<AuctionsPage />} />

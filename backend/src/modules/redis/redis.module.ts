@@ -21,7 +21,7 @@ import { redisClient, redlock } from "./constants";
       provide: redisClient,
       useFactory: (configService: ConfigService) => {
         const url =
-          configService.get<string>("redis.url") || "redis://localhost:6379";
+          configService.get<string>("REDIS_URL") || "redis://localhost:6379";
         const redis = new Redis(url, {
           maxRetriesPerRequest: 3,
           retryStrategy: (times) => Math.min(times * 50, 2000),

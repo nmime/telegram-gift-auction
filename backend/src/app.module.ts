@@ -32,7 +32,7 @@ import { NotificationsModule } from "./modules/notifications";
     MongooseModule.forRootAsync({
       imports: [ConfigModule],
       useFactory: (configService: ConfigService) => ({
-        uri: configService.get<string>("database.uri"),
+        uri: configService.get<string>("MONGODB_URI"),
       }),
       inject: [ConfigService],
     }),
@@ -63,8 +63,8 @@ import { NotificationsModule } from "./modules/notifications";
         },
         {
           name: "long",
-          ttl: configService.get<number>("throttle.ttl") || 60000,
-          limit: configService.get<number>("throttle.limit") || 300,
+          ttl: configService.get<number>("THROTTLE_TTL") || 60000,
+          limit: configService.get<number>("THROTTLE_LIMIT") || 300,
         },
       ],
       inject: [ConfigService],

@@ -13,7 +13,7 @@ import type {
   TelegramWidgetUser,
 } from '../types';
 
-const apiBase = import.meta.env.VITE_API_URL;
+const API_BASE = import.meta.env.VITE_API_URL;
 const tokenKey = 'auth_token';
 
 let accessToken: string | null = localStorage.getItem(tokenKey);
@@ -75,7 +75,7 @@ async function fetchApi<T>(url: string, options?: FetchOptions): Promise<T> {
     headers['Authorization'] = `Bearer ${accessToken}`;
   }
 
-  const response = await fetch(`${apiBase}${url}`, {
+  const response = await fetch(`${API_BASE}${url}`, {
     ...fetchOptions,
     headers,
   });

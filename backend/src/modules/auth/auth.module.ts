@@ -14,9 +14,9 @@ import { User, UserSchema } from "@/schemas";
       imports: [ConfigModule],
       global: true,
       useFactory: (configService: ConfigService) => ({
-        secret: configService.get<string>("jwt.secret"),
+        secret: configService.get<string>("JWT_SECRET"),
         signOptions: {
-          expiresIn: "24h",
+          expiresIn: (configService.get<string>("JWT_EXPIRES_IN") || "24h") as "24h",
         },
       }),
       inject: [ConfigService],

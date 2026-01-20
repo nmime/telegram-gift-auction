@@ -3,19 +3,33 @@ import { JwtService } from "@nestjs/jwt";
 import { Server, Socket } from "socket.io";
 import { createAdapter } from "@socket.io/redis-adapter";
 import Redis from "ioredis";
+import { AsyncApi, AsyncApiPub, AsyncApiSub } from "@nmime/nestjs-asyncapi";
 import { AuctionDocument, BidDocument } from "@/schemas";
 import { redisClient, BidCacheService } from "@/modules/redis";
+import type { PlaceBidPayload } from "./events.dto";
+// Stub classes for nestjs-asyncapi decorators (actual schemas from typia)
+import {
+  AuthPayload,
+  AuthResponse,
+  PlaceBidPayload as PlaceBidPayloadStub,
+  BidResponse,
+  AuctionIdPayload,
+  AuctionRoomResponse,
+  NewBidEvent,
+  AuctionUpdateEvent,
+  CountdownEvent,
+  AntiSnipingEvent,
+  RoundStartEvent,
+  RoundCompleteEvent,
+  AuctionCompleteEvent,
+} from "./events.stubs";
 
 interface AuthenticatedSocket extends Socket {
   userId?: string;
   username?: string;
 }
 
-interface PlaceBidPayload {
-  auctionId: string;
-  amount: number;
-}
-
+@AsyncApi()
 @Injectable()
 export class EventsGateway {
   private readonly logger = new Logger(EventsGateway.name);
@@ -66,6 +80,18 @@ export class EventsGateway {
    * Authenticate socket connection with JWT token
    * Must be called before place-bid
    */
+  @AsyncApiSub({
+    channel: "auth",
+    summary: "Authenticate WebSocket connection",
+    description: "Send JWT token to authenticate the socket connection. Must be called before place-bid.",
+    message: { payload: AuthPayload },
+  })
+  @AsyncApiPub({
+    channel: "auth-response",
+    summary: "Authentication result",
+    description: "Response to auth event with success status and user info",
+    message: { payload: AuthResponse },
+  })
   private handleAuth(client: AuthenticatedSocket, token: string) {
     try {
       const payload = this.jwtService.verify(token);
@@ -87,8 +113,20 @@ export class EventsGateway {
 
   /**
    * Ultra-fast WebSocket bid placement
-   * Skips HTTP overhead for maximum throughput (~10k+ bids/sec with cluster)
+   * Skips HTTP overhead for maximum throughput (~3,000 rps × number of CPUs)
    */
+  @AsyncApiSub({
+    channel: "place-bid",
+    summary: "Place a bid via WebSocket",
+    description: "Ultra-fast bid placement. Requires prior authentication via 'auth' event.",
+    message: { payload: PlaceBidPayloadStub },
+  })
+  @AsyncApiPub({
+    channel: "bid-response",
+    summary: "Bid placement result",
+    description: "Response to place-bid event with success status and bid details",
+    message: { payload: BidResponse },
+  })
   private async handlePlaceBid(
     client: AuthenticatedSocket,
     payload: PlaceBidPayload,
@@ -203,6 +241,18 @@ export class EventsGateway {
     });
   }
 
+  @AsyncApiSub({
+    channel: "join-auction",
+    summary: "Join an auction room",
+    description: "Subscribe to real-time updates for a specific auction",
+    message: { payload: AuctionIdPayload },
+  })
+  @AsyncApiPub({
+    channel: "join-auction-response",
+    summary: "Join auction result",
+    description: "Confirmation of joining the auction room",
+    message: { payload: AuctionRoomResponse },
+  })
   private handleJoinAuction(client: Socket, auctionId: string) {
     client.join(`auction:${auctionId}`);
 
@@ -218,6 +268,18 @@ export class EventsGateway {
     client.emit("join-auction-response", { success: true });
   }
 
+  @AsyncApiSub({
+    channel: "leave-auction",
+    summary: "Leave an auction room",
+    description: "Unsubscribe from real-time updates for a specific auction",
+    message: { payload: AuctionIdPayload },
+  })
+  @AsyncApiPub({
+    channel: "leave-auction-response",
+    summary: "Leave auction result",
+    description: "Confirmation of leaving the auction room",
+    message: { payload: AuctionRoomResponse },
+  })
   private handleLeaveAuction(client: Socket, auctionId: string) {
     client.leave(`auction:${auctionId}`);
 
@@ -236,6 +298,12 @@ export class EventsGateway {
     client.emit("leave-auction-response", { success: true });
   }
 
+  @AsyncApiPub({
+    channel: "auction-update",
+    summary: "Auction state changed",
+    description: "Broadcast when auction status, current round, or rounds configuration changes",
+    message: { payload: AuctionUpdateEvent },
+  })
   emitAuctionUpdate(auction: AuctionDocument) {
     if (!this.server) return;
     this.server.to(`auction:${auction._id.toString()}`).emit("auction-update", {
@@ -246,6 +314,12 @@ export class EventsGateway {
     });
   }
 
+  @AsyncApiPub({
+    channel: "new-bid",
+    summary: "New bid placed",
+    description: "Broadcast to auction room when a bid is placed or increased",
+    message: { payload: NewBidEvent },
+  })
   emitNewBid(
     auctionId: string,
     bidInfo: { amount: number; timestamp: Date; isIncrease: boolean },
@@ -266,6 +340,12 @@ export class EventsGateway {
     });
   }
 
+  @AsyncApiPub({
+    channel: "anti-sniping",
+    summary: "Anti-sniping extension",
+    description: "Broadcast when round end time is extended due to late bid (anti-sniping protection)",
+    message: { payload: AntiSnipingEvent },
+  })
   emitAntiSnipingExtension(auction: AuctionDocument, extensionCount: number) {
     if (!this.server) return;
     const currentRound = auction.rounds[auction.currentRound - 1];
@@ -277,6 +357,12 @@ export class EventsGateway {
     });
   }
 
+  @AsyncApiPub({
+    channel: "round-start",
+    summary: "Round started",
+    description: "Broadcast when a new round begins in the auction",
+    message: { payload: RoundStartEvent },
+  })
   emitRoundStart(auction: AuctionDocument, roundNumber: number) {
     if (!this.server) return;
     const round = auction.rounds[roundNumber - 1];
@@ -289,6 +375,12 @@ export class EventsGateway {
     });
   }
 
+  @AsyncApiPub({
+    channel: "round-complete",
+    summary: "Round completed",
+    description: "Broadcast when a round ends with winner information",
+    message: { payload: RoundCompleteEvent },
+  })
   emitRoundComplete(
     auction: AuctionDocument,
     roundNumber: number,
@@ -306,6 +398,12 @@ export class EventsGateway {
     });
   }
 
+  @AsyncApiPub({
+    channel: "auction-complete",
+    summary: "Auction completed",
+    description: "Broadcast when the entire auction ends (all rounds finished)",
+    message: { payload: AuctionCompleteEvent },
+  })
   emitAuctionComplete(auction: AuctionDocument) {
     if (!this.server) return;
     this.server
@@ -322,6 +420,12 @@ export class EventsGateway {
     this.server.emit(event, data);
   }
 
+  @AsyncApiPub({
+    channel: "countdown",
+    summary: "Countdown tick",
+    description: "Broadcast every second with remaining time and server clock for synchronization",
+    message: { payload: CountdownEvent },
+  })
   emitCountdown(
     auctionId: string,
     data: {

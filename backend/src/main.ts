@@ -8,11 +8,13 @@ import {
 import { Logger } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { SwaggerModule, OpenAPIObject } from "@nestjs/swagger";
+import { AsyncApiModule, AsyncApiDocumentBuilder } from "@nmime/nestjs-asyncapi";
+import { getAllSchemas } from "./modules/events/asyncapi.schemas";
 import { Server } from "socket.io";
 import helmet from "@fastify/helmet";
 import { AppModule } from "./app.module";
-import { EventsGateway } from "./modules/events/events.gateway";
-import { JsonLoggerService } from "./common/logger";
+import { EventsGateway } from "./modules/events";
+import { JsonLoggerService } from "./common";
 import * as fs from "fs";
 import * as path from "path";
 
@@ -34,7 +36,7 @@ async function bootstrap() {
   });
 
   // CORS configuration
-  const corsOrigin = configService.get<string>("cors.origin")!;
+  const corsOrigin = configService.get<string>("CORS_ORIGIN")!;
   app.enableCors({
     origin: corsOrigin,
     credentials: true,
@@ -42,9 +44,9 @@ async function bootstrap() {
 
   app.setGlobalPrefix("api");
 
-  const port = configService.get<number>("port")!;
-  const nodeEnv = configService.get<string>("nodeEnv");
-  const miniAppUrl = configService.get<string>("telegram.miniAppUrl");
+  const port = configService.get<number>("PORT")!;
+  const nodeEnv = configService.get<string>("NODE_ENV");
+  const miniAppUrl = configService.get<string>("MINI_APP_URL");
 
   // Server URL: use MINI_APP_URL in production, localhost in development
   const serverUrl =
@@ -73,6 +75,41 @@ async function bootstrap() {
       'swagger.json not found - API docs disabled. Run "npx nestia swagger" to generate.',
     );
   }
+
+  // AsyncAPI documentation for WebSocket events
+  const wsServerUrl =
+  nodeEnv === "production" && miniAppUrl
+  ? miniAppUrl.replace(/^http/, "ws")
+  : `ws://localhost:${port}`;
+
+  const asyncApiOptions = new AsyncApiDocumentBuilder()
+  .setAsyncApiVersion("3.0.0")
+  .setTitle("Gift Auction WebSocket API")
+  .setDescription(
+  "Real-time WebSocket events for the auction system. Supports bidding (~3,000 rps × number of CPUs), countdown sync, and live auction updates.",
+  )
+  .setVersion("1.0.0")
+  .setDefaultContentType("application/json")
+  .addServer("auction-ws", {
+  url: wsServerUrl,
+  protocol: "socket.io",
+  description: "Auction WebSocket server (Socket.IO)",
+  })
+  .build();
+
+  const asyncApiDocument = await AsyncApiModule.createDocument(
+  app,
+  asyncApiOptions,
+  );
+
+  // Inject typia-generated schemas (replaces empty decorator-based schemas)
+  asyncApiDocument.components = {
+  ...(asyncApiDocument.components as object),
+  schemas: getAllSchemas(),
+  };
+
+  await AsyncApiModule.setup("api/async-docs", app, asyncApiDocument);
+  logger.log("AsyncAPI docs available at /api/async-docs");
 
   await app.listen(port, "0.0.0.0");
 

@@ -5,7 +5,7 @@ import { redisClient } from "./constants";
 /**
  * High-performance Redis-based bid caching system
  *
- * Achieves ~5,000-10,000+ bids/sec by:
+ * Achieves ~3,000 rps × number of CPUs by:
  * 1. Using Lua scripts for atomic operations (single round-trip)
  * 2. Storing balances and bids in Redis during active auction
  * 3. Syncing to MongoDB periodically (background) and at round end
