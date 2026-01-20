@@ -39,6 +39,14 @@ export default function Footer() {
           {t('footer.apiDocs')}
         </a>
         <a
+          href="https://telegram-gift-auction.funfiesta.games/api/async-docs"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="footer-link"
+        >
+          {t('footer.asyncApiDocs')}
+        </a>
+        <a
           href="https://github.com/nmime/telegram-gift-auction"
           target="_blank"
           rel="noopener noreferrer"

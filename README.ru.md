@@ -6,6 +6,7 @@
 [![Telegram Бот](https://img.shields.io/badge/Telegram-@tggiftauctionbot-0088cc?style=for-the-badge&logo=telegram)](https://t.me/tggiftauctionbot)
 [![Mini App](https://img.shields.io/badge/Mini%20App-Открыть-green?style=for-the-badge)](https://t.me/tggiftauctionbot/app)
 [![API Docs](https://img.shields.io/badge/API-Swagger-orange?style=for-the-badge)](https://telegram-gift-auction.funfiesta.games/api/docs)
+[![AsyncAPI Docs](https://img.shields.io/badge/AsyncAPI-WebSocket-purple?style=for-the-badge)](https://telegram-gift-auction.funfiesta.games/api/async-docs)
 
 [English version](./README.md)
 

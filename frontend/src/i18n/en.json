@@ -175,6 +175,7 @@
     "telegramBot": "Telegram Bot",
     "miniApp": "Mini App",
     "apiDocs": "API Docs",
+    "asyncApiDocs": "AsyncAPI Docs",
     "madeWith": "Made with",
     "by": "by"
   }
