@@ -17,6 +17,7 @@ import { EventsGateway } from "./modules/events";
 import { JsonLoggerService } from "./common";
 import * as fs from "fs";
 import * as path from "path";
+import * as yaml from "js-yaml";
 
 const logger = new Logger("Bootstrap");
 
@@ -77,39 +78,62 @@ async function bootstrap() {
   }
 
   // AsyncAPI documentation for WebSocket events
-  const wsServerUrl =
-  nodeEnv === "production" && miniAppUrl
-  ? miniAppUrl.replace(/^http/, "ws")
-  : `ws://localhost:${port}`;
+  const asyncApiHtmlPath = path.join(__dirname, "..", "..", "asyncapi.html");
+  const asyncApiYamlPath = path.join(__dirname, "..", "..", "asyncapi.yaml");
 
-  const asyncApiOptions = new AsyncApiDocumentBuilder()
-  .setAsyncApiVersion("3.0.0")
-  .setTitle("Gift Auction WebSocket API")
-  .setDescription(
-  "Real-time WebSocket events for the auction system. Supports bidding (~3,000 rps × number of CPUs), countdown sync, and live auction updates.",
-  )
-  .setVersion("1.0.0")
-  .setDefaultContentType("application/json")
-  .addServer("auction-ws", {
-  url: wsServerUrl,
-  protocol: "socket.io",
-  description: "Auction WebSocket server (Socket.IO)",
-  })
-  .build();
+  if (isProduction && fs.existsSync(asyncApiHtmlPath)) {
+    // Production: serve pre-generated static files
+    const httpAdapter = app.getHttpAdapter();
+    const html = fs.readFileSync(asyncApiHtmlPath, "utf-8");
+    const yamlContent = fs.readFileSync(asyncApiYamlPath, "utf-8");
+    const json = JSON.stringify(yaml.load(yamlContent));
 
-  const asyncApiDocument = await AsyncApiModule.createDocument(
-  app,
-  asyncApiOptions,
-  );
+    httpAdapter.get("/api/async-docs", (_req: unknown, res: { type: (t: string) => void; send: (b: string) => void }) => {
+      res.type("text/html");
+      res.send(html);
+    });
+    httpAdapter.get("/api/async-docs-yaml", (_req: unknown, res: { type: (t: string) => void; send: (b: string) => void }) => {
+      res.type("text/yaml");
+      res.send(yamlContent);
+    });
+    httpAdapter.get("/api/async-docs-json", (_req: unknown, res: { type: (t: string) => void; send: (b: string) => void }) => {
+      res.type("application/json");
+      res.send(json);
+    });
+    logger.log("AsyncAPI docs loaded from pre-generated asyncapi.html");
+  } else {
+    // Development: generate dynamically
+    const wsServerUrl = `ws://localhost:${port}`;
 
-  // Inject typia-generated schemas (replaces empty decorator-based schemas)
-  asyncApiDocument.components = {
-  ...(asyncApiDocument.components as object),
-  schemas: getAllSchemas(),
-  };
+    const asyncApiOptions = new AsyncApiDocumentBuilder()
+      .setAsyncApiVersion("3.0.0")
+      .setTitle("Gift Auction WebSocket API")
+      .setDescription(
+        "Real-time WebSocket events for the auction system. Supports bidding (~3,000 rps × number of CPUs), countdown sync, and live auction updates.",
+      )
+      .setVersion("1.0.0")
+      .setDefaultContentType("application/json")
+      .addServer("auction-ws", {
+        url: wsServerUrl,
+        protocol: "socket.io",
+        description: "Auction WebSocket server (Socket.IO)",
+      })
+      .build();
 
-  await AsyncApiModule.setup("api/async-docs", app, asyncApiDocument);
-  logger.log("AsyncAPI docs available at /api/async-docs");
+    const asyncApiDocument = await AsyncApiModule.createDocument(
+      app,
+      asyncApiOptions,
+    );
+
+    // Inject typia-generated schemas (replaces empty decorator-based schemas)
+    asyncApiDocument.components = {
+      ...(asyncApiDocument.components as object),
+      schemas: getAllSchemas(),
+    };
+
+    await AsyncApiModule.setup("api/async-docs", app, asyncApiDocument);
+    logger.log("AsyncAPI docs available at /api/async-docs");
+  }
 
   await app.listen(port, "0.0.0.0");
 
