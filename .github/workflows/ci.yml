@@ -13,22 +13,26 @@ jobs:
     permissions:
       contents: read
       security-events: write
-      repository-projects: read
     strategy:
       fail-fast: false
       matrix:
         language: [javascript-typescript]
+    env:
+      CODEQL_DISABLE_CUSTOM_PROPERTIES: true
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+
+      - name: Setup Node.js for CodeQL
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
 
       - name: Initialize CodeQL
         uses: github/codeql-action/init@v4
         with:
           languages: ${{ matrix.language }}
           queries: security-and-quality
-        env:
-          CODEQL_SKIP_CUSTOM_PROPERTIES: true
 
       - name: Autobuild
         uses: github/codeql-action/autobuild@v4
@@ -131,7 +135,8 @@ jobs:
           NODE_OPTIONS: --max-old-space-size=4096
           MONGODB_MEMORY_SERVER_DOWNLOAD_CACHE: /tmp/mongodb-memory-server
           MONGODB_MEMORY_SERVER_SKIP_DOWNLOAD: 'false'
-        timeout-minutes: 30
+          MONGODB_MEMORY_SERVER_DEBUG: '1'
+        timeout-minutes: 45
         continue-on-error: true
 
       - name: Generate coverage report
