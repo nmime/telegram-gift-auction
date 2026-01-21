@@ -8,7 +8,7 @@
   ],
   "info": {
     "title": "Gift Auction API",
-    "description": "\n## Overview\nMulti-round auction system API inspired by Telegram Gift Auctions.\n\n## Features\n- **Multi-round auctions** with configurable items per round\n- **Anti-sniping mechanism** that extends rounds when late bids are placed\n- **Real-time updates** via WebSocket\n- **Financial integrity** with atomic transactions\n- **JWT authentication** with rate limiting\n- **Ultra-fast bidding** via Redis Lua scripts (2,500+ bids/sec)\n\n## Authentication\nThis API uses JWT Bearer token authentication. Call `POST /api/auth/login` to obtain a token.\n\nInclude the token in requests: `Authorization: Bearer <token>`\n\n## Rate Limiting\n- 10 requests per second (burst)\n- 50 requests per 10 seconds\n- 200 requests per minute\n\n## WebSocket Events\nConnect to the WebSocket server at `/` and emit:\n- `join-auction` - Subscribe to auction updates (pass auctionId)\n- `leave-auction` - Unsubscribe from auction\n\nServer emits:\n- `auction-update` - Auction state changed\n- `new-bid` - New bid placed\n- `anti-sniping` - Round extended\n- `round-complete` - Round ended with winners\n- `auction-complete` - Auction finished\n      ",
+    "description": "\n## Overview\nMulti-round auction system API inspired by Telegram Gift Auctions.\n\n## Features\n- **Multi-round auctions** with configurable items per round\n- **Anti-sniping mechanism** that extends rounds when late bids are placed\n- **Real-time updates** via WebSocket\n- **Financial integrity** with atomic transactions\n- **JWT authentication** with rate limiting\n- **Ultra-fast bidding** via Redis Lua scripts (~3,000 rps × number of CPUs)\n\n## Authentication\nThis API uses JWT Bearer token authentication. Call `POST /api/auth/login` to obtain a token.\n\nInclude the token in requests: `Authorization: Bearer <token>`\n\n## Rate Limiting\n- 10 requests per second (burst)\n- 50 requests per 10 seconds\n- 200 requests per minute\n\n## WebSocket Events\nConnect to the WebSocket server at `/` and emit:\n- `join-auction` - Subscribe to auction updates (pass auctionId)\n- `leave-auction` - Unsubscribe from auction\n\nServer emits:\n- `auction-update` - Auction state changed\n- `new-bid` - New bid placed\n- `anti-sniping` - Round extended\n- `round-complete` - Round ended with winners\n- `auction-complete` - Auction finished\n      ",
     "version": "1.0.0"
   },
   "paths": {
@@ -128,6 +128,49 @@
         "x-samchon-controller": "UsersController"
       }
     },
+    "/users/language": {
+      "put": {
+        "description": "Update user language preference\n\nSets the user's preferred language for the app and notifications.",
+        "tags": [
+          "users"
+        ],
+        "parameters": [],
+        "requestBody": {
+          "description": "Language code",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ILanguageUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Updated language code",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ILanguageResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "x-samchon-accessor": [
+          "users",
+          "language",
+          "updateLanguage"
+        ],
+        "x-samchon-controller": "UsersController"
+      }
+    },
     "/transactions": {
       "get": {
         "description": "Get transaction history\n\nReturns a paginated list of transactions for the authenticated user,\nordered by most recent first.",
@@ -217,43 +260,6 @@
           "getMyBids"
         ],
         "x-samchon-controller": "BidsController"
-      }
-    },
-    "/auth/login": {
-      "post": {
-        "description": "Login or register user\n\nAuthenticates a user by username. Creates a new user if the username does not exist.\nReturns JWT access token.",
-        "tags": [
-          "auth"
-        ],
-        "parameters": [],
-        "requestBody": {
-          "description": "Login credentials",
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/ILogin"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "201": {
-            "description": "Login response with user data and access token",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ILoginResponse"
-                }
-              }
-            }
-          }
-        },
-        "x-samchon-accessor": [
-          "auth",
-          "login"
-        ],
-        "x-samchon-controller": "AuthController"
       }
     },
     "/auth/telegram/widget": {
@@ -655,7 +661,7 @@
     },
     "/auctions/{id}/fast-bid": {
       "post": {
-        "description": "Place fast bid (high-performance Redis path)\n\nPlaces a bid using the Redis-cached fast path for maximum throughput.\nReturns a simplified response without full auction state.\nFalls back to standard bid if cache is not warmed.\n\n**Performance:** ~2ms latency, 2,500+ bids/sec",
+        "description": "Place fast bid (high-performance Redis path)\n\nPlaces a bid using the Redis-cached fast path for maximum throughput.\nReturns a simplified response without full auction state.\nFalls back to standard bid if cache is not warmed.",
         "tags": [
           "auctions"
         ],
@@ -708,7 +714,7 @@
     },
     "/auctions/{id}/leaderboard": {
       "get": {
-        "description": "Get auction leaderboard\n\nReturns the current ranking of all active bids, sorted by amount descending.",
+        "description": "Get auction leaderboard\n\nReturns the current ranking of active bids in current round and past winners.",
         "tags": [
           "auctions"
         ],
@@ -721,18 +727,33 @@
             },
             "required": true,
             "description": "Auction ID"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "number"
+            },
+            "required": false,
+            "description": "Maximum number of entries to return (default: 50)"
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "schema": {
+              "type": "number"
+            },
+            "required": false,
+            "description": "Number of entries to skip (default: 0)"
           }
         ],
         "responses": {
           "200": {
-            "description": "Leaderboard entries",
+            "description": "Leaderboard with pagination and past winners",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/ILeaderboardEntry"
-                  }
+                  "$ref": "#/components/schemas/ILeaderboardResponse"
                 }
               }
             }
@@ -862,6 +883,39 @@
           "amount"
         ],
         "description": "Balance operation request (deposit/withdraw)"
+      },
+      "ILanguageResponse": {
+        "type": "object",
+        "properties": {
+          "languageCode": {
+            "type": "string",
+            "description": "Updated language code"
+          }
+        },
+        "required": [
+          "languageCode"
+        ],
+        "description": "Language update response"
+      },
+      "ILanguageUpdate": {
+        "type": "object",
+        "properties": {
+          "language": {
+            "oneOf": [
+              {
+                "const": "en"
+              },
+              {
+                "const": "ru"
+              }
+            ],
+            "description": "Language code (en or ru)"
+          }
+        },
+        "required": [
+          "language"
+        ],
+        "description": "Language update request"
       },
       "ITransactionResponse": {
         "type": "object",
@@ -1127,6 +1181,10 @@
           "photoUrl": {
             "type": "string",
             "description": "User photo URL (from Telegram)"
+          },
+          "languageCode": {
+            "type": "string",
+            "description": "User preferred language code (en, ru)"
           }
         },
         "required": [
@@ -1136,22 +1194,6 @@
           "frozenBalance"
         ],
         "description": "User data in auth responses"
-      },
-      "ILogin": {
-        "type": "object",
-        "properties": {
-          "username": {
-            "type": "string",
-            "minLength": 3,
-            "maxLength": 30,
-            "pattern": "^[a-zA-Z0-9_]+$",
-            "description": "Username for login or registration. New users are automatically created."
-          }
-        },
-        "required": [
-          "username"
-        ],
-        "description": "Login request DTO"
       },
       "ITelegramWidgetAuth": {
         "type": "object",
@@ -1418,13 +1460,21 @@
           "completed": {
             "type": "boolean",
             "description": "Whether round is completed"
+          },
+          "winnerBidIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "IDs of winning bids for this round"
           }
         },
         "required": [
           "roundNumber",
           "itemsCount",
           "extensionsCount",
-          "completed"
+          "completed",
+          "winnerBidIds"
         ],
         "description": "Round state in auction response"
       },
@@ -1680,6 +1730,68 @@
         ],
         "description": "Place bid request DTO"
       },
+      "IFastBidResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "description": "Whether the bid was successful"
+          },
+          "amount": {
+            "type": "number",
+            "description": "Current bid amount (after this bid)"
+          },
+          "previousAmount": {
+            "type": "number",
+            "description": "Previous bid amount (before this bid)"
+          },
+          "rank": {
+            "type": "number",
+            "description": "Current rank in the leaderboard (1-based)"
+          },
+          "isNewBid": {
+            "type": "boolean",
+            "description": "Whether this is a new bid (vs increase)"
+          },
+          "error": {
+            "type": "string",
+            "description": "Error message if not successful"
+          }
+        },
+        "required": [
+          "success"
+        ],
+        "description": "Fast bid response (simplified for high-performance bidding)"
+      },
+      "ILeaderboardResponse": {
+        "type": "object",
+        "properties": {
+          "leaderboard": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ILeaderboardEntry"
+            },
+            "description": "Active bids in current round"
+          },
+          "totalCount": {
+            "type": "number",
+            "description": "Total count of active bids"
+          },
+          "pastWinners": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/IPastWinnerEntry"
+            },
+            "description": "Past round winners"
+          }
+        },
+        "required": [
+          "leaderboard",
+          "totalCount",
+          "pastWinners"
+        ],
+        "description": "Leaderboard response with pagination"
+      },
       "ILeaderboardEntry": {
         "type": "object",
         "properties": {
@@ -1699,37 +1811,6 @@
             "type": "boolean",
             "description": "Whether the bidder is a bot"
           },
-          "status": {
-            "oneOf": [
-              {
-                "const": "active"
-              },
-              {
-                "const": "won"
-              },
-              {
-                "const": "lost"
-              },
-              {
-                "const": "refunded"
-              },
-              {
-                "const": "cancelled"
-              }
-            ],
-            "description": "Bid status"
-          },
-          "itemNumber": {
-            "oneOf": [
-              {
-                "type": "null"
-              },
-              {
-                "type": "number"
-              }
-            ],
-            "description": "Item number won (if applicable)"
-          },
           "isWinning": {
             "type": "boolean",
             "description": "Whether this bid is currently in a winning position"
@@ -1745,11 +1826,64 @@
           "amount",
           "username",
           "isBot",
-          "status",
           "isWinning",
           "createdAt"
         ],
-        "description": "Leaderboard entry"
+        "description": "Leaderboard entry (active bid in current round)"
+      },
+      "IPastWinnerEntry": {
+        "type": "object",
+        "properties": {
+          "round": {
+            "type": "number",
+            "description": "Round number where this bid won"
+          },
+          "itemNumber": {
+            "type": "number",
+            "description": "Item number won"
+          },
+          "amount": {
+            "type": "number",
+            "description": "Bid amount in Stars"
+          },
+          "username": {
+            "type": "string",
+            "description": "Username of the winner"
+          },
+          "isBot": {
+            "type": "boolean",
+            "description": "Whether the winner is a bot"
+          },
+          "createdAt": {
+            "type": "string",
+            "description": "Bid creation time",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "round",
+          "itemNumber",
+          "amount",
+          "username",
+          "isBot",
+          "createdAt"
+        ],
+        "description": "Past round winner entry"
+      },
+      "ILeaderboardQuery": {
+        "type": "object",
+        "properties": {
+          "limit": {
+            "type": "number",
+            "description": "Maximum number of entries to return (default: 50)"
+          },
+          "offset": {
+            "type": "number",
+            "description": "Number of entries to skip (default: 0)"
+          }
+        },
+        "required": [],
+        "description": "Leaderboard pagination query parameters"
       },
       "IMinWinningBidResponse": {
         "type": "object",
@@ -1770,39 +1904,6 @@
           "minWinningBid"
         ],
         "description": "Minimum winning bid response"
-      },
-      "IFastBidResponse": {
-        "type": "object",
-        "properties": {
-          "success": {
-            "type": "boolean",
-            "description": "Whether the bid was placed successfully"
-          },
-          "amount": {
-            "type": "number",
-            "description": "The bid amount that was placed"
-          },
-          "previousAmount": {
-            "type": "number",
-            "description": "Previous bid amount (if updating existing bid)"
-          },
-          "rank": {
-            "type": "number",
-            "description": "Current rank in the leaderboard"
-          },
-          "isNewBid": {
-            "type": "boolean",
-            "description": "Whether this is a new bid or an update to existing"
-          },
-          "error": {
-            "type": "string",
-            "description": "Error message if the bid failed"
-          }
-        },
-        "required": [
-          "success"
-        ],
-        "description": "Fast bid response (high-performance Redis path)"
       }
     },
     "securitySchemes": {

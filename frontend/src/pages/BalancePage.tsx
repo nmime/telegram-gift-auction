@@ -32,7 +32,11 @@ export default function BalancePage() {
   const handleWithdraw = async () => {
     if (loading || !user) return;
     const value = parseInt(amount) || 0;
-    if (value <= 0 || value > user.balance) return;
+    if (value <= 0) return;
+    if (value > user.balance) {
+      showNotification(t('auction.insufficientBalance'), 'error');
+      return;
+    }
 
     setLoading(true);
     try {

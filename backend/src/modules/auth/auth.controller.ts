@@ -4,7 +4,6 @@ import { AuthService } from "./auth.service";
 import { TelegramService } from "./telegram.service";
 import { AuthGuard, AuthenticatedRequest } from "@/common";
 import {
-  ILogin,
   ILoginResponse,
   IUserResponse,
   ILogoutResponse,
@@ -18,21 +17,6 @@ export class AuthController {
     private readonly authService: AuthService,
     private readonly telegramService: TelegramService,
   ) {}
-
-  /**
-   * Login or register user
-   *
-   * Authenticates a user by username. Creates a new user if the username does not exist.
-   * Returns JWT access token.
-   *
-   * @tag auth
-   * @param body Login credentials
-   * @returns Login response with user data and access token
-   */
-  @TypedRoute.Post("login")
-  async login(@TypedBody() body: ILogin): Promise<ILoginResponse> {
-    return this.authService.login(body.username);
-  }
 
   /**
    * Login via Telegram Login Widget

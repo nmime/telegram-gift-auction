@@ -32,31 +32,6 @@ export class AuthService {
     private jwtService: JwtService,
   ) {}
 
-  async login(username: string): Promise<AuthResponse> {
-    let user = await this.userModel.findOne({ username });
-
-    if (!user) {
-      user = await this.userModel.create({ username });
-    }
-
-    const payload: JwtPayload = {
-      sub: user._id.toString(),
-      username: user.username,
-    };
-
-    const accessToken = await this.jwtService.signAsync(payload);
-
-    return {
-      user: {
-        id: user._id.toString(),
-        username: user.username,
-        balance: user.balance,
-        frozenBalance: user.frozenBalance,
-      },
-      accessToken,
-    };
-  }
-
   async loginWithTelegramWidget(
     telegramUser: TelegramUser,
   ): Promise<AuthResponse> {
@@ -83,12 +58,15 @@ export class AuthService {
         isPremium: telegramUser.is_premium || false,
       });
     } else {
-      // Update user info if changed
+      // Update all Telegram fields on each login
       user.firstName = telegramUser.first_name;
       user.lastName = telegramUser.last_name;
       user.photoUrl = telegramUser.photo_url;
       user.languageCode = telegramUser.language_code;
       user.isPremium = telegramUser.is_premium || false;
+      if (telegramUser.username) {
+        user.username = telegramUser.username;
+      }
       await user.save();
     }
 

@@ -7,7 +7,7 @@ export type UserDocument = User & Document;
 export class User {
   _id!: Types.ObjectId;
 
-  @Prop({ required: true, unique: true })
+  @Prop({ required: true })
   username!: string;
 
   @Prop({ default: 0, min: 0 })

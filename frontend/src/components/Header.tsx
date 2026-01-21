@@ -32,7 +32,11 @@ export default function Header() {
           <span className="balance-currency">{t('balance.currency')}</span>
         </Link>
         <Link to="/profile" className="user-avatar">
-          {(user?.firstName || user?.username || '?').charAt(0).toUpperCase()}
+          {user?.photoUrl ? (
+            <img src={user.photoUrl} alt="" className="user-avatar-img" />
+          ) : (
+            (user?.firstName || user?.username || '?').charAt(0).toUpperCase()
+          )}
         </Link>
       </div>
 
@@ -43,7 +47,11 @@ export default function Header() {
           <span className="balance-currency">{t('balance.currency')}</span>
         </Link>
         <Link to="/profile" className="user-avatar">
-          {(user?.firstName || user?.username || '?').charAt(0).toUpperCase()}
+          {user?.photoUrl ? (
+            <img src={user.photoUrl} alt="" className="user-avatar-img" />
+          ) : (
+            (user?.firstName || user?.username || '?').charAt(0).toUpperCase()
+          )}
         </Link>
       </div>
     </header>

@@ -22,7 +22,11 @@ export default function ProfilePage() {
     <div>
       <div className="profile-header">
         <div className="profile-avatar-large">
-          {(user?.firstName || user?.username || '?').charAt(0).toUpperCase()}
+          {user?.photoUrl ? (
+            <img src={user.photoUrl} alt="" className="profile-avatar-img" />
+          ) : (
+            (user?.firstName || user?.username || '?').charAt(0).toUpperCase()
+          )}
         </div>
         <div className="profile-name">{displayName}</div>
         {user?.username && (

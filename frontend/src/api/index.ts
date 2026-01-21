@@ -102,16 +102,6 @@ async function fetchApi<T>(url: string, options?: FetchOptions): Promise<T> {
   return response.json() as Promise<T>;
 }
 
-export async function login(username: string): Promise<LoginResponse> {
-  const response = await fetchApi<LoginResponse>('/auth/login', {
-    method: 'POST',
-    body: JSON.stringify({ username }),
-    skipAuthCheck: true,
-  });
-  setToken(response.accessToken);
-  return response;
-}
-
 export async function loginWithTelegramWidget(user: TelegramWidgetUser): Promise<LoginResponse> {
   const response = await fetchApi<LoginResponse>('/auth/telegram/widget', {
     method: 'POST',
