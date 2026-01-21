@@ -64,16 +64,14 @@ describe("Authentication Integration Tests", () => {
             }),
           ],
         }),
+        // Use minimal I18nModule config for testing
+        // The full config requires I18nTranslations provider which is not needed for unit tests
         I18nModule.forRoot({
           fallbackLanguage: "en",
           loaderOptions: {
             path: path.join(__dirname, "../../../i18n/"),
-            watch: true,
+            watch: false, // Disable file watching in tests
           },
-          resolvers: [
-            { use: QueryResolver, options: ["lang"] },
-            AcceptLanguageResolver,
-          ],
         }),
         MongooseModule.forRoot(mongoUri),
         AuthModule,
