@@ -21,5 +21,5 @@ module.exports = {
   collectCoverage: false,
   testTimeout: 300000,
   maxWorkers: process.env.CI ? 2 : '50%',
-  testPathIgnorePatterns: process.env.SKIP_INTEGRATION_TESTS ? ['/integration/'] : [],
+  testPathIgnorePatterns: process.env.SKIP_INTEGRATION_TESTS === 'true' ? ['/integration/'] : [],
 };
