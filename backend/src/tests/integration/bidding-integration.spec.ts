@@ -48,24 +48,6 @@ import { redisClient } from "@/modules/redis/constants";
 import { ICreateAuction, IPlaceBid } from "@/modules/auctions/dto";
 import { ConfigModule } from "@nestjs/config";
 
-// Mock Redis to avoid connection issues during integration tests
-jest.mock("ioredis", () => ({
-  default: class MockRedis {
-    constructor() {
-      // Mock constructor
-    }
-    ping = jest.fn().mockResolvedValue("PONG");
-    quit = jest.fn().mockResolvedValue(null);
-    on = jest.fn().mockReturnThis();
-    setex = jest.fn().mockResolvedValue("OK");
-    get = jest.fn().mockResolvedValue(null);
-    del = jest.fn().mockResolvedValue(0);
-    exists = jest.fn().mockResolvedValue(0);
-    mget = jest.fn().mockResolvedValue([]);
-    keys = jest.fn().mockResolvedValue([]);
-  },
-}));
-
 // MongoDB Memory Server with replica set requires time to download binary on first run
 jest.setTimeout(180000);
 
