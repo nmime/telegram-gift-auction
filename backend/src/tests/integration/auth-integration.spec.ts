@@ -25,6 +25,9 @@ import {
   BidDocument,
 } from "@/schemas";
 
+// MongoDB Memory Server with replica set requires time to download binary on first run
+jest.setTimeout(180000);
+
 describe("Authentication Integration Tests", () => {
   let app: INestApplication;
   let authService: AuthService;
@@ -83,7 +86,7 @@ describe("Authentication Integration Tests", () => {
       getModelToken(Transaction.name),
     );
     bidModel = moduleFixture.get<Model<BidDocument>>(getModelToken(Bid.name));
-  });
+  }, 300000);
 
   afterAll(async () => {
     if (mongoConnection) {
@@ -1100,8 +1103,8 @@ describe("Authentication Integration Tests", () => {
       // Verify user was added to request
       expect(mockRequest.user).toBeDefined();
       if (mockRequest.user) {
-        expect(mockRequest.user.sub).toBe("507f1f77bcf86cd799439013");
-        expect(mockRequest.user.username).toBe("modifieduser");
+        expect((mockRequest.user as any).sub).toBe("507f1f77bcf86cd799439013");
+        expect((mockRequest.user as any).username).toBe("modifieduser");
       }
     });
 

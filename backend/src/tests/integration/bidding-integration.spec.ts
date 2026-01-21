@@ -46,6 +46,9 @@ import { redisClient } from "@/modules/redis/constants";
 import { ICreateAuction, IPlaceBid } from "@/modules/auctions/dto";
 import { ConfigModule } from "@nestjs/config";
 
+// MongoDB Memory Server with replica set requires time to download binary on first run
+jest.setTimeout(180000);
+
 describe("Bidding Integration Tests", () => {
   let app: INestApplication;
   let auctionsService: AuctionsService;
@@ -128,7 +131,7 @@ describe("Bidding Integration Tests", () => {
       );
     }
     testUsers = await Promise.all(userPromises);
-  });
+  }, 300000);
 
   afterAll(async () => {
     // Clean up test data
@@ -581,7 +584,7 @@ describe("Bidding Integration Tests", () => {
         testAuction._id.toString(),
       );
       expect(bids).toHaveLength(1);
-      expect(bids[0].amount).toBe(200);
+      expect(bids?.[0]?.amount).toBe(200);
       expect(bids?.[0]?.userId.toString()).toBe(testUsers[0]!._id.toString());
     });
 
@@ -619,7 +622,7 @@ describe("Bidding Integration Tests", () => {
         testUsers[0]!._id.toString(),
       );
       expect(userBids).toHaveLength(1);
-      expect(userBids[0].status).toBe(BidStatus.LOST);
+      expect(userBids?.[0]?.status).toBe(BidStatus.LOST);
     });
   });
 

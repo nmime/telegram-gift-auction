@@ -18,5 +18,5 @@ module.exports = {
   coverageDirectory: './coverage',
   testEnvironment: 'node',
   collectCoverage: false,
-  testTimeout: 60000,
+  testTimeout: 300000,
 };

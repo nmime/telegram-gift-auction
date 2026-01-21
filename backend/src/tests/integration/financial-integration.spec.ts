@@ -19,6 +19,9 @@ import {
 } from "@/schemas";
 import { BadRequestException } from "@nestjs/common";
 
+// MongoDB Memory Server with replica set requires time to download binary on first run
+jest.setTimeout(180000);
+
 describe("Financial Transaction Integration Tests", () => {
   let mongoServer: MongoMemoryServer;
   let module: TestingModule;
@@ -57,7 +60,7 @@ describe("Financial Transaction Integration Tests", () => {
       getModelToken(AuditLog.name),
     );
     connection = module.get<Connection>(Connection);
-  });
+  }, 300000);
 
   afterAll(async () => {
     await connection.close();

@@ -23,6 +23,9 @@ import {
   AuditLogDocument,
 } from "@/schemas";
 
+// MongoDB Memory Server with replica set requires time to download binary on first run
+jest.setTimeout(180000);
+
 describe("Transaction Consistency Integration Tests", () => {
   let mongod: MongoMemoryServer;
   let connection: Connection;
@@ -66,7 +69,7 @@ describe("Transaction Consistency Integration Tests", () => {
     );
 
     connection = userModel.db;
-  }, 60000);
+  }, 300000);
 
   afterAll(async () => {
     if (connection) {

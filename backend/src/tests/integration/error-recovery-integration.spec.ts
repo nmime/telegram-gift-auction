@@ -39,6 +39,10 @@ import { Types } from "mongoose";
  * - Timeout and retry handling
  * - Partial failure handling
  */
+
+// MongoDB Memory Server with replica set requires time to download binary on first run
+jest.setTimeout(180000);
+
 describe("Error Recovery and Resilience Integration Tests", () => {
   let usersService: UsersService;
   let auctionsService: AuctionsService;

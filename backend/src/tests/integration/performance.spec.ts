@@ -86,6 +86,9 @@ async function measureAsync<T>(
   return { result, duration };
 }
 
+// MongoDB Memory Server with replica set requires time to download binary on first run
+jest.setTimeout(180000);
+
 describe("Performance & Load Tests", () => {
   const timestamp = Date.now();
   let adminConn: api.IConnection;
@@ -93,7 +96,7 @@ describe("Performance & Load Tests", () => {
 
   beforeAll(async () => {
     adminConn = await createConnection(`perf_admin_${timestamp}`);
-  });
+  }, 300000);
 
   describe("1. Throughput Tests (6 tests)", () => {
     test("1.1: 100 simultaneous login requests → all succeed", async () => {
