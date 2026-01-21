@@ -128,17 +128,6 @@ jobs:
           SKIP_INTEGRATION_TESTS: 'true'
         timeout-minutes: 20
 
-      - name: Run integration tests
-        run: pnpm test
-        env:
-          CI: true
-          NODE_OPTIONS: --max-old-space-size=4096
-          MONGODB_MEMORY_SERVER_DOWNLOAD_CACHE: /tmp/mongodb-memory-server
-          MONGODB_MEMORY_SERVER_SKIP_DOWNLOAD: 'false'
-          MONGODB_MEMORY_SERVER_DEBUG: '1'
-        timeout-minutes: 45
-        continue-on-error: true
-
       - name: Generate coverage report
         run: pnpm test -- --coverage
         continue-on-error: true
