@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { Test, TestingModule } from "@nestjs/testing";
 import { AuditController } from "@/modules/audit/audit.controller";
 import { AuditLogService } from "@/modules/audit/services";
@@ -205,7 +204,7 @@ describe("AuditController", () => {
       const result = await controller.getLogs({});
 
       // Service returns sorted results
-      expect(result.data[0].createdAt).toBeDefined();
+      expect(result.data?.[0]?.createdAt).toBeDefined();
     });
 
     it("should include total count and pagination info", async () => {
@@ -334,9 +333,9 @@ describe("AuditController", () => {
 
       const result = await controller.getSummary({});
 
-      expect(result[0].successCount + result[0].failureCount).toBe(
-        result[0].count,
-      );
+      expect(
+        (result?.[0]?.successCount ?? 0) + (result?.[0]?.failureCount ?? 0),
+      ).toBe(result?.[0]?.count);
     });
   });
 
@@ -348,7 +347,7 @@ describe("AuditController", () => {
       const result = await controller.getUserLogs(userId);
 
       expect(result).toHaveLength(1);
-      expect(result[0].userId).toBe(userId);
+      expect(result?.[0]?.userId).toBe(userId);
       expect(mockAuditLogService.findByUser).toHaveBeenCalledWith(userId, {
         limit: 100,
         skip: 0,
@@ -382,7 +381,7 @@ describe("AuditController", () => {
 
       const result = await controller.getUserLogs(userId);
 
-      expect(result[0]).toMatchObject({
+      expect(result?.[0]).toMatchObject({
         id: expect.any(String),
         userId: expect.any(String),
         action: expect.any(String),
@@ -413,7 +412,7 @@ describe("AuditController", () => {
       const result = await controller.getActionLogs(action);
 
       expect(result).toHaveLength(1);
-      expect(result[0].action).toBe(action);
+      expect(result?.[0]?.action).toBe(action);
       expect(mockAuditLogService.findByAction).toHaveBeenCalledWith(action, {
         limit: 100,
         skip: 0,
@@ -449,7 +448,7 @@ describe("AuditController", () => {
           { ...mockAuditLog, action },
         ]);
 
-        const result = await controller.getActionLogs(action);
+        await controller.getActionLogs(action);
 
         expect(mockAuditLogService.findByAction).toHaveBeenCalledWith(
           action,
@@ -480,7 +479,11 @@ describe("AuditController", () => {
       // In a real scenario, admin access would be checked
       const allLogs = [
         mockAuditLog,
-        { ...mockAuditLog, _id: new Types.ObjectId(), userId: new Types.ObjectId() },
+        {
+          ...mockAuditLog,
+          _id: new Types.ObjectId(),
+          userId: new Types.ObjectId(),
+        },
       ];
       mockAuditLogService.findWithFilters.mockResolvedValue(allLogs);
       mockAuditLogService.countLogs.mockResolvedValue(2);
@@ -495,11 +498,21 @@ describe("AuditController", () => {
         AuditController.prototype,
       ).filter(
         (name) =>
-          name !== "constructor" && typeof controller[name] === "function",
+          name !== "constructor" &&
+          typeof (controller as unknown as Record<string, unknown>)[name] ===
+            "function",
       );
 
       // All methods should be GET operations only
-      const writeMethodNames = ["post", "put", "patch", "delete", "create", "update", "remove"];
+      const writeMethodNames = [
+        "post",
+        "put",
+        "patch",
+        "delete",
+        "create",
+        "update",
+        "remove",
+      ];
       const hasWriteMethod = methods.some((method) =>
         writeMethodNames.some((writeName) =>
           method.toLowerCase().includes(writeName),

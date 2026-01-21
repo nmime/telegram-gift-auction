@@ -1,11 +1,9 @@
-// @ts-nocheck
 import { Test, TestingModule } from "@nestjs/testing";
 import { getModelToken, getConnectionToken } from "@nestjs/mongoose";
 import {
   BadRequestException,
   NotFoundException,
   ConflictException,
-  ServiceUnavailableException,
 } from "@nestjs/common";
 import { UsersService } from "@/modules/users/users.service";
 import { AuctionsService } from "@/modules/auctions/auctions.service";
@@ -26,7 +24,7 @@ import {
   AuctionStatus,
   BidStatus,
 } from "@/schemas";
-import { Types, Connection, ClientSession } from "mongoose";
+import { Types } from "mongoose";
 
 /**
  * INTEGRATION TESTS: ERROR RECOVERY AND RESILIENCE
@@ -482,7 +480,7 @@ describe("Error Recovery and Resilience Integration Tests", () => {
       mockUserModel.findById.mockResolvedValue(null);
 
       await expect(
-        authService.getUser(mockUserId.toString())
+        authService.getUser(mockUserId.toString()),
       ).rejects.toThrow();
     });
 
@@ -490,7 +488,7 @@ describe("Error Recovery and Resilience Integration Tests", () => {
       mockUserModel.findById.mockResolvedValue(null);
 
       await expect(
-        usersService.getBalance(mockUserId.toString())
+        usersService.getBalance(mockUserId.toString()),
       ).rejects.toThrow(NotFoundException);
     });
 
@@ -499,9 +497,13 @@ describe("Error Recovery and Resilience Integration Tests", () => {
       mockAuctionModel.findById.mockResolvedValue(null);
 
       await expect(
-        auctionsService.placeBid(mockAuctionId.toString(), mockUserId.toString(), {
-          amount: 100,
-        })
+        auctionsService.placeBid(
+          mockAuctionId.toString(),
+          mockUserId.toString(),
+          {
+            amount: 100,
+          },
+        ),
       ).rejects.toThrow(NotFoundException);
     });
 
@@ -525,11 +527,11 @@ describe("Error Recovery and Resilience Integration Tests", () => {
 
       // Transaction creation fails
       mockTransactionModel.create.mockRejectedValue(
-        new Error("Transaction service unavailable")
+        new Error("Transaction service unavailable"),
       );
 
       await expect(
-        usersService.withdraw(mockUserId.toString(), 100)
+        usersService.withdraw(mockUserId.toString(), 100),
       ).rejects.toThrow();
 
       // Session should be aborted
@@ -555,7 +557,7 @@ describe("Error Recovery and Resilience Integration Tests", () => {
       });
 
       const result = await bidsService.getActiveByAuction(
-        mockAuctionId.toString()
+        mockAuctionId.toString(),
       );
 
       expect(result).toEqual(mockBids);
@@ -565,10 +567,12 @@ describe("Error Recovery and Resilience Integration Tests", () => {
     it("should handle multiple service failures with correct cascading", async () => {
       // Auth fails
       mockJwtService.verifyAsync.mockRejectedValue(
-        new Error("JWT verification failed")
+        new Error("JWT verification failed"),
       );
 
-      await expect(authService.validateToken("invalid-token")).rejects.toThrow();
+      await expect(
+        authService.validateToken("invalid-token"),
+      ).rejects.toThrow();
 
       // User service still works independently
       const mockUser = { _id: mockUserId, balance: 1000, frozenBalance: 0 };
@@ -606,21 +610,20 @@ describe("Error Recovery and Resilience Integration Tests", () => {
       mockBidCacheService.isCacheWarmed.mockResolvedValue(true);
       mockBidCacheService.warmupUserBalance.mockResolvedValue(undefined);
 
-      mockUserModel.findById
-        .mockReturnValue({
-          select: jest.fn().mockResolvedValue(mockUser),
-        });
+      mockUserModel.findById.mockReturnValue({
+        select: jest.fn().mockResolvedValue(mockUser),
+      });
 
       await auctionsService.ensureUserInCache(
         mockAuctionId.toString(),
-        mockUserId.toString()
+        mockUserId.toString(),
       );
 
       expect(mockBidCacheService.warmupUserBalance).toHaveBeenCalledWith(
         mockAuctionId.toString(),
         mockUserId.toString(),
         1000,
-        200
+        200,
       );
     });
 
@@ -653,7 +656,7 @@ describe("Error Recovery and Resilience Integration Tests", () => {
       mockBidCacheService.warmupBids.mockResolvedValue(undefined);
 
       const result = await bidsService.getActiveByAuction(
-        mockAuctionId.toString()
+        mockAuctionId.toString(),
       );
 
       expect(result).toEqual(mockBids);
@@ -747,16 +750,14 @@ describe("Error Recovery and Resilience Integration Tests", () => {
       });
 
       // But bid creation fails
-      mockBidModel.create.mockRejectedValue(
-        new Error("Bid creation failed")
-      );
+      mockBidModel.create.mockRejectedValue(new Error("Bid creation failed"));
 
       await expect(
         auctionsService.placeBid(
           mockAuctionId.toString(),
           mockUserId.toString(),
-          { amount: 100 }
-        )
+          { amount: 100 },
+        ),
       ).rejects.toThrow();
 
       expect(mockSession.abortTransaction).toHaveBeenCalled();
@@ -783,11 +784,11 @@ describe("Error Recovery and Resilience Integration Tests", () => {
 
       // Audit log (transaction) creation fails
       mockTransactionModel.create.mockRejectedValue(
-        new Error("Audit log service unavailable")
+        new Error("Audit log service unavailable"),
       );
 
       await expect(
-        usersService.deposit(mockUserId.toString(), 100)
+        usersService.deposit(mockUserId.toString(), 100),
       ).rejects.toThrow();
 
       expect(mockSession.abortTransaction).toHaveBeenCalled();
@@ -807,7 +808,7 @@ describe("Error Recovery and Resilience Integration Tests", () => {
 
       // Withdrawal amount is invalid (would cause balance to go negative)
       await expect(
-        usersService.withdraw(mockUserId.toString(), 1100)
+        usersService.withdraw(mockUserId.toString(), 1100),
       ).rejects.toThrow(BadRequestException);
 
       expect(mockSession.abortTransaction).toHaveBeenCalled();
@@ -845,8 +846,8 @@ describe("Error Recovery and Resilience Integration Tests", () => {
           mockUserId.toString(),
           100,
           mockAuctionId,
-          mockBidId
-        )
+          mockBidId,
+        ),
       ).rejects.toThrow();
 
       expect(mockSession.abortTransaction).toHaveBeenCalled();
@@ -884,7 +885,7 @@ describe("Error Recovery and Resilience Integration Tests", () => {
 
       // Second detects conflict and throws
       await expect(
-        usersService.deposit(mockUserId.toString(), 50)
+        usersService.deposit(mockUserId.toString(), 50),
       ).rejects.toThrow(ConflictException);
     });
   });
@@ -905,11 +906,11 @@ describe("Error Recovery and Resilience Integration Tests", () => {
       });
 
       mockUserModel.findOneAndUpdate.mockRejectedValue(
-        new Error("Update failed")
+        new Error("Update failed"),
       );
 
       await expect(
-        usersService.deposit(mockUserId.toString(), 100)
+        usersService.deposit(mockUserId.toString(), 100),
       ).rejects.toThrow();
 
       // Balance should remain unchanged
@@ -964,8 +965,8 @@ describe("Error Recovery and Resilience Integration Tests", () => {
         auctionsService.placeBid(
           mockAuctionId.toString(),
           mockUserId.toString(),
-          { amount: 100 }
-        )
+          { amount: 100 },
+        ),
       ).rejects.toThrow();
 
       // Bid should be cleaned up
@@ -985,7 +986,7 @@ describe("Error Recovery and Resilience Integration Tests", () => {
         .mockResolvedValueOnce(null); // Second update fails
 
       await expect(
-        auctionsService.start(mockAuctionId.toString())
+        auctionsService.start(mockAuctionId.toString()),
       ).rejects.toThrow();
 
       expect(mockSession.abortTransaction).toHaveBeenCalled();
@@ -1005,16 +1006,16 @@ describe("Error Recovery and Resilience Integration Tests", () => {
       });
 
       mockUserModel.findOneAndUpdate.mockRejectedValue(
-        new Error("Network error")
+        new Error("Network error"),
       );
 
       // Try multiple operations
       await expect(
-        usersService.deposit(mockUserId.toString(), 100)
+        usersService.deposit(mockUserId.toString(), 100),
       ).rejects.toThrow();
 
       await expect(
-        usersService.deposit(mockUserId.toString(), 50)
+        usersService.deposit(mockUserId.toString(), 50),
       ).rejects.toThrow();
 
       // Balance should still be correct
@@ -1066,40 +1067,33 @@ describe("Error Recovery and Resilience Integration Tests", () => {
     it("should handle cascading timeouts with graceful failure", async () => {
       // All operations timeout
       mockUserModel.findById.mockRejectedValue(
-        new Error("operation exceeded time limit")
+        new Error("operation exceeded time limit"),
       );
 
       mockAuctionModel.findById.mockRejectedValue(
-        new Error("operation exceeded time limit")
+        new Error("operation exceeded time limit"),
       );
 
       // Should eventually fail gracefully
       await expect(
-        usersService.deposit(mockUserId.toString(), 100)
+        usersService.deposit(mockUserId.toString(), 100),
       ).rejects.toThrow();
 
       await expect(
-        auctionsService.findById(mockAuctionId.toString())
+        auctionsService.findById(mockAuctionId.toString()),
       ).rejects.toThrow();
     });
 
     it("should return proper error response after retry exhaustion", async () => {
-      const mockUser = {
-        _id: mockUserId,
-        balance: 1000,
-        frozenBalance: 0,
-        version: 1,
-      };
-
       // Always timeout
       mockUserModel.findById.mockReturnValue({
-        session: jest.fn().mockRejectedValue(
-          new Error("operation exceeded time limit")
-        ),
+        session: jest
+          .fn()
+          .mockRejectedValue(new Error("operation exceeded time limit")),
       });
 
       await expect(
-        usersService.deposit(mockUserId.toString(), 100)
+        usersService.deposit(mockUserId.toString(), 100),
       ).rejects.toThrow();
 
       expect(mockSession.abortTransaction).toHaveBeenCalled();
@@ -1110,13 +1104,6 @@ describe("Error Recovery and Resilience Integration Tests", () => {
 
   describe("7. Partial Failure Handling", () => {
     it("should succeed for other users when one user operation fails", async () => {
-      const user1 = {
-        _id: mockUserId,
-        balance: 1000,
-        frozenBalance: 0,
-        version: 1,
-      };
-
       const user2 = {
         _id: mockUserId2,
         balance: 500,
@@ -1146,7 +1133,7 @@ describe("Error Recovery and Resilience Integration Tests", () => {
 
       // User 1 fails
       await expect(
-        usersService.deposit(mockUserId.toString(), 100)
+        usersService.deposit(mockUserId.toString(), 100),
       ).rejects.toThrow();
 
       // User 2 succeeds

@@ -10,14 +10,13 @@
  * - Real-time performance (2 tests)
  */
 
-import api from '../../../src/api';
+import api from "../../../src/api";
 import {
   createConnection,
-  waitFor,
   createAuctionConfig,
   getAuthToken,
   connectAndJoin,
-} from '../../../test/utils/test-helpers';
+} from "../../../test/utils/test-helpers";
 
 // Performance monitoring utilities
 class PerformanceMonitor {
@@ -51,7 +50,7 @@ class PerformanceMonitor {
       p50: sorted[Math.floor(sorted.length * 0.5)] || 0,
       p95: sorted[Math.floor(sorted.length * 0.95)] || 0,
       p99: sorted[Math.floor(sorted.length * 0.99)] || 0,
-      throughput: (sorted.length / ((Date.now() - this.startTime) / 1000)),
+      throughput: sorted.length / ((Date.now() - this.startTime) / 1000),
     };
   }
 
@@ -78,14 +77,16 @@ class PerformanceMonitor {
 }
 
 // Helper to measure async operation
-async function measureAsync<T>(fn: () => Promise<T>): Promise<{ result: T; duration: number }> {
+async function measureAsync<T>(
+  fn: () => Promise<T>,
+): Promise<{ result: T; duration: number }> {
   const start = Date.now();
   const result = await fn();
   const duration = Date.now() - start;
   return { result, duration };
 }
 
-describe('Performance & Load Tests', () => {
+describe("Performance & Load Tests", () => {
   const timestamp = Date.now();
   let adminConn: api.IConnection;
   const monitor = new PerformanceMonitor();
@@ -94,12 +95,12 @@ describe('Performance & Load Tests', () => {
     adminConn = await createConnection(`perf_admin_${timestamp}`);
   });
 
-  describe('1. Throughput Tests (6 tests)', () => {
-    test('1.1: 100 simultaneous login requests → all succeed', async () => {
+  describe("1. Throughput Tests (6 tests)", () => {
+    test("1.1: 100 simultaneous login requests → all succeed", async () => {
       monitor.start();
 
       const loginPromises = Array.from({ length: 100 }, (_, i) =>
-        measureAsync(() => createConnection(`login_user_${timestamp}_${i}`))
+        measureAsync(() => createConnection(`login_user_${timestamp}_${i}`)),
       );
 
       const results = await Promise.all(loginPromises);
@@ -108,7 +109,7 @@ describe('Performance & Load Tests', () => {
       monitor.snapshot();
 
       const stats = monitor.getStats();
-      console.log('\n📊 Login Throughput:', {
+      console.log("\n📊 Login Throughput:", {
         successful: results.length,
         throughput: `${stats.throughput.toFixed(0)} req/s`,
         avgLatency: `${stats.avg.toFixed(2)}ms`,
@@ -123,14 +124,14 @@ describe('Performance & Load Tests', () => {
       monitor.reset();
     }, 30000);
 
-    test('1.2: 50 concurrent bids on same auction → all process', async () => {
+    test("1.2: 50 concurrent bids on same auction → all process", async () => {
       // Create auction
       const auction = await api.functional.api.auctions.create(
         adminConn,
         createAuctionConfig(`Concurrent Bids ${timestamp}`, {
           totalItems: 50,
           rounds: [{ itemsCount: 50, durationMinutes: 10 }],
-        })
+        }),
       );
       await api.functional.api.auctions.start(adminConn, auction.id);
 
@@ -140,7 +141,7 @@ describe('Performance & Load Tests', () => {
           const conn = await createConnection(`bid_user_${timestamp}_${i}`);
           await api.functional.api.users.deposit(conn, { amount: 10000 });
           return conn;
-        })
+        }),
       );
 
       monitor.start();
@@ -150,21 +151,21 @@ describe('Performance & Load Tests', () => {
         measureAsync(() =>
           api.functional.api.auctions.bid.placeBid(user, auction.id, {
             amount: 100 + i * 10,
-          })
-        ).catch((e) => ({ result: null, duration: 0, error: e }))
+          }),
+        ).catch((e) => ({ result: null, duration: 0, error: e })),
       );
 
       const results = await Promise.all(bidPromises);
 
       results
-        .filter((r) => !('error' in r))
+        .filter((r) => !("error" in r))
         .forEach(({ duration }) => monitor.recordMeasurement(duration));
       monitor.snapshot();
 
       const stats = monitor.getStats();
-      const successful = results.filter((r) => !('error' in r)).length;
+      const successful = results.filter((r) => !("error" in r)).length;
 
-      console.log('\n📊 Concurrent Bids:', {
+      console.log("\n📊 Concurrent Bids:", {
         successful,
         failed: results.length - successful,
         throughput: `${stats.throughput.toFixed(0)} bids/s`,
@@ -179,17 +180,19 @@ describe('Performance & Load Tests', () => {
       monitor.reset();
     }, 45000);
 
-    test('1.3: 100 concurrent deposits from different users → all succeed', async () => {
+    test("1.3: 100 concurrent deposits from different users → all succeed", async () => {
       const users = await Promise.all(
         Array.from({ length: 100 }, (_, i) =>
-          createConnection(`deposit_user_${timestamp}_${i}`)
-        )
+          createConnection(`deposit_user_${timestamp}_${i}`),
+        ),
       );
 
       monitor.start();
 
       const depositPromises = users.map((user) =>
-        measureAsync(() => api.functional.api.users.deposit(user, { amount: 1000 }))
+        measureAsync(() =>
+          api.functional.api.users.deposit(user, { amount: 1000 }),
+        ),
       );
 
       const results = await Promise.all(depositPromises);
@@ -198,7 +201,7 @@ describe('Performance & Load Tests', () => {
       monitor.snapshot();
 
       const stats = monitor.getStats();
-      console.log('\n📊 Concurrent Deposits:', {
+      console.log("\n📊 Concurrent Deposits:", {
         successful: results.length,
         throughput: `${stats.throughput.toFixed(0)} deposits/s`,
         avgLatency: `${stats.avg.toFixed(2)}ms`,
@@ -211,10 +214,10 @@ describe('Performance & Load Tests', () => {
       monitor.reset();
     }, 30000);
 
-    test('1.4: 100 concurrent reads of same auction → all return correct data', async () => {
-      const auction = await api.functional.api.auctions.create(
+    test("1.4: 100 concurrent reads of same auction → all return correct data", async () => {
+      await api.functional.api.auctions.create(
         adminConn,
-        createAuctionConfig(`Read Test ${timestamp}`)
+        createAuctionConfig(`Read Test ${timestamp}`),
       );
 
       monitor.start();
@@ -224,8 +227,8 @@ describe('Performance & Load Tests', () => {
           api.functional.api.auctions.findAll(adminConn, {
             limit: 10,
             offset: 0,
-          })
-        )
+          }),
+        ),
       );
 
       const results = await Promise.all(readPromises);
@@ -234,7 +237,7 @@ describe('Performance & Load Tests', () => {
       monitor.snapshot();
 
       const stats = monitor.getStats();
-      console.log('\n📊 Concurrent Reads:', {
+      console.log("\n📊 Concurrent Reads:", {
         count: results.length,
         throughput: `${stats.throughput.toFixed(0)} reads/s`,
         avgLatency: `${stats.avg.toFixed(2)}ms`,
@@ -253,13 +256,13 @@ describe('Performance & Load Tests', () => {
       monitor.reset();
     }, 30000);
 
-    test('1.5: Mixed read/write operations under load → consistent results', async () => {
+    test("1.5: Mixed read/write operations under load → consistent results", async () => {
       const auction = await api.functional.api.auctions.create(
         adminConn,
         createAuctionConfig(`Mixed Ops ${timestamp}`, {
           totalItems: 30,
           rounds: [{ itemsCount: 30, durationMinutes: 10 }],
-        })
+        }),
       );
       await api.functional.api.auctions.start(adminConn, auction.id);
 
@@ -268,7 +271,7 @@ describe('Performance & Load Tests', () => {
           const conn = await createConnection(`mixed_user_${timestamp}_${i}`);
           await api.functional.api.users.deposit(conn, { amount: 5000 });
           return conn;
-        })
+        }),
       );
 
       monitor.start();
@@ -281,8 +284,8 @@ describe('Performance & Load Tests', () => {
           measureAsync(() =>
             api.functional.api.auctions.bid.placeBid(users[i]!, auction.id, {
               amount: 100 + i * 10,
-            })
-          ).catch(() => ({ result: null, duration: 0 }))
+            }),
+          ).catch(() => ({ result: null, duration: 0 })),
         );
 
         // Read operation
@@ -292,9 +295,9 @@ describe('Performance & Load Tests', () => {
               api.functional.api.auctions.leaderboard.getLeaderboard(
                 adminConn,
                 auction.id,
-                {}
-              )
-            )
+                {},
+              ),
+            ),
           );
         }
       }
@@ -307,7 +310,7 @@ describe('Performance & Load Tests', () => {
       monitor.snapshot();
 
       const stats = monitor.getStats();
-      console.log('\n📊 Mixed Operations:', {
+      console.log("\n📊 Mixed Operations:", {
         total: results.length,
         throughput: `${stats.throughput.toFixed(0)} ops/s`,
         avgLatency: `${stats.avg.toFixed(2)}ms`,
@@ -319,14 +322,14 @@ describe('Performance & Load Tests', () => {
       monitor.reset();
     }, 45000);
 
-    test('1.6: Peak load handling without errors', async () => {
+    test("1.6: Peak load handling without errors", async () => {
       const peakUsers = 150;
       const auction = await api.functional.api.auctions.create(
         adminConn,
         createAuctionConfig(`Peak Load ${timestamp}`, {
           totalItems: 50,
           rounds: [{ itemsCount: 50, durationMinutes: 10 }],
-        })
+        }),
       );
       await api.functional.api.auctions.start(adminConn, auction.id);
 
@@ -335,7 +338,7 @@ describe('Performance & Load Tests', () => {
           const conn = await createConnection(`peak_user_${timestamp}_${i}`);
           await api.functional.api.users.deposit(conn, { amount: 10000 });
           return conn;
-        })
+        }),
       );
 
       monitor.start();
@@ -345,22 +348,22 @@ describe('Performance & Load Tests', () => {
         measureAsync(() =>
           api.functional.api.auctions.bid.placeBid(user, auction.id, {
             amount: 200 + i * 5,
-          })
-        ).catch((e) => ({ result: null, duration: 0, error: e }))
+          }),
+        ).catch((e) => ({ result: null, duration: 0, error: e })),
       );
 
       const results = await Promise.all(operations);
 
       results
-        .filter((r) => !('error' in r))
+        .filter((r) => !("error" in r))
         .forEach(({ duration }) => monitor.recordMeasurement(duration));
       monitor.snapshot();
 
       const stats = monitor.getStats();
-      const successful = results.filter((r) => !('error' in r)).length;
+      const successful = results.filter((r) => !("error" in r)).length;
       const errorRate = ((results.length - successful) / results.length) * 100;
 
-      console.log('\n📊 Peak Load:', {
+      console.log("\n📊 Peak Load:", {
         total: results.length,
         successful,
         errorRate: `${errorRate.toFixed(1)}%`,
@@ -375,33 +378,35 @@ describe('Performance & Load Tests', () => {
     }, 60000);
   });
 
-  describe('2. Latency Tests (6 tests)', () => {
-    test('2.1: Single operation latency < 500ms', async () => {
+  describe("2. Latency Tests (6 tests)", () => {
+    test("2.1: Single operation latency < 500ms", async () => {
       const user = await createConnection(`latency_user_${timestamp}_1`);
       await api.functional.api.users.deposit(user, { amount: 5000 });
 
       const auction = await api.functional.api.auctions.create(
         adminConn,
-        createAuctionConfig(`Latency Test ${timestamp}`)
+        createAuctionConfig(`Latency Test ${timestamp}`),
       );
       await api.functional.api.auctions.start(adminConn, auction.id);
 
       const { duration } = await measureAsync(() =>
-        api.functional.api.auctions.bid.placeBid(user, auction.id, { amount: 500 })
+        api.functional.api.auctions.bid.placeBid(user, auction.id, {
+          amount: 500,
+        }),
       );
 
       console.log(`\n⏱️  Single bid latency: ${duration}ms`);
       expect(duration).toBeLessThan(500);
     });
 
-    test('2.2: Batch operations complete in reasonable time', async () => {
+    test("2.2: Batch operations complete in reasonable time", async () => {
       const batchSize = 20;
       const users = await Promise.all(
         Array.from({ length: batchSize }, async (_, i) => {
           const conn = await createConnection(`batch_user_${timestamp}_${i}`);
           await api.functional.api.users.deposit(conn, { amount: 3000 });
           return conn;
-        })
+        }),
       );
 
       const auction = await api.functional.api.auctions.create(
@@ -409,7 +414,7 @@ describe('Performance & Load Tests', () => {
         createAuctionConfig(`Batch Test ${timestamp}`, {
           totalItems: 20,
           rounds: [{ itemsCount: 20, durationMinutes: 10 }],
-        })
+        }),
       );
       await api.functional.api.auctions.start(adminConn, auction.id);
 
@@ -417,7 +422,7 @@ describe('Performance & Load Tests', () => {
         const promises = users.map((user, i) =>
           api.functional.api.auctions.bid
             .placeBid(user, auction.id, { amount: 100 + i * 20 })
-            .catch(() => null)
+            .catch(() => null),
         );
         return Promise.all(promises);
       });
@@ -433,19 +438,19 @@ describe('Performance & Load Tests', () => {
       expect(avgPerOperation).toBeLessThan(500);
     }, 30000);
 
-    test('2.3: API response time under normal load', async () => {
+    test("2.3: API response time under normal load", async () => {
       const concurrentRequests = 20;
 
       monitor.start();
       const requests = Array.from({ length: concurrentRequests }, () =>
-        measureAsync(() => api.functional.api.auctions.findAll(adminConn, {}))
+        measureAsync(() => api.functional.api.auctions.findAll(adminConn, {})),
       );
 
       const results = await Promise.all(requests);
       results.forEach(({ duration }) => monitor.recordMeasurement(duration));
 
       const stats = monitor.getStats();
-      console.log('\n⏱️  API response times (normal load):', {
+      console.log("\n⏱️  API response times (normal load):", {
         count: stats.count,
         avg: `${stats.avg.toFixed(2)}ms`,
         p50: `${stats.p50}ms`,
@@ -459,19 +464,19 @@ describe('Performance & Load Tests', () => {
       monitor.reset();
     });
 
-    test('2.4: API response time under peak load', async () => {
+    test("2.4: API response time under peak load", async () => {
       const peakRequests = 100;
 
       monitor.start();
       const requests = Array.from({ length: peakRequests }, () =>
-        measureAsync(() => api.functional.api.auctions.findAll(adminConn, {}))
+        measureAsync(() => api.functional.api.auctions.findAll(adminConn, {})),
       );
 
       const results = await Promise.all(requests);
       results.forEach(({ duration }) => monitor.recordMeasurement(duration));
 
       const stats = monitor.getStats();
-      console.log('\n⏱️  API response times (peak load):', {
+      console.log("\n⏱️  API response times (peak load):", {
         count: stats.count,
         avg: `${stats.avg.toFixed(2)}ms`,
         p50: `${stats.p50}ms`,
@@ -485,10 +490,10 @@ describe('Performance & Load Tests', () => {
       monitor.reset();
     }, 30000);
 
-    test('2.5: Database query response time', async () => {
+    test("2.5: Database query response time", async () => {
       const auction = await api.functional.api.auctions.create(
         adminConn,
-        createAuctionConfig(`DB Query Test ${timestamp}`)
+        createAuctionConfig(`DB Query Test ${timestamp}`),
       );
 
       monitor.start();
@@ -500,17 +505,19 @@ describe('Performance & Load Tests', () => {
           api.functional.api.auctions.leaderboard.getLeaderboard(
             adminConn,
             auction.id,
-            {}
-          )
+            {},
+          ),
         ),
-        measureAsync(() => api.functional.api.users.balance.getBalance(adminConn)),
+        measureAsync(() =>
+          api.functional.api.users.balance.getBalance(adminConn),
+        ),
       ];
 
       const results = await Promise.all(queries);
       results.forEach(({ duration }) => monitor.recordMeasurement(duration));
 
       const stats = monitor.getStats();
-      console.log('\n⏱️  Database query times:', {
+      console.log("\n⏱️  Database query times:", {
         count: stats.count,
         avg: `${stats.avg.toFixed(2)}ms`,
         max: `${stats.max}ms`,
@@ -521,10 +528,10 @@ describe('Performance & Load Tests', () => {
       monitor.reset();
     });
 
-    test('2.6: Cache hit/miss performance difference', async () => {
+    test("2.6: Cache hit/miss performance difference", async () => {
       const auction = await api.functional.api.auctions.create(
         adminConn,
-        createAuctionConfig(`Cache Test ${timestamp}`)
+        createAuctionConfig(`Cache Test ${timestamp}`),
       );
       await api.functional.api.auctions.start(adminConn, auction.id);
 
@@ -533,8 +540,8 @@ describe('Performance & Load Tests', () => {
         api.functional.api.auctions.leaderboard.getLeaderboard(
           adminConn,
           auction.id,
-          {}
-        )
+          {},
+        ),
       );
 
       // Subsequent calls (cache hits)
@@ -544,18 +551,18 @@ describe('Performance & Load Tests', () => {
           api.functional.api.auctions.leaderboard.getLeaderboard(
             adminConn,
             auction.id,
-            {}
-          )
+            {},
+          ),
         );
         hitTimes.push(duration);
       }
 
       const avgHitTime = hitTimes.reduce((a, b) => a + b, 0) / hitTimes.length;
 
-      console.log('\n⏱️  Cache performance:', {
+      console.log("\n⏱️  Cache performance:", {
         cacheMiss: `${missTime}ms`,
         cacheHitAvg: `${avgHitTime.toFixed(2)}ms`,
-        improvement: `${((missTime - avgHitTime) / missTime * 100).toFixed(1)}%`,
+        improvement: `${(((missTime - avgHitTime) / missTime) * 100).toFixed(1)}%`,
       });
 
       // Cache hits should be faster
@@ -563,15 +570,15 @@ describe('Performance & Load Tests', () => {
     });
   });
 
-  describe('3. Resource Utilization (4 tests)', () => {
-    test('3.1: Memory usage under sustained load', async () => {
+  describe("3. Resource Utilization (4 tests)", () => {
+    test("3.1: Memory usage under sustained load", async () => {
       const sustainedOps = 200;
       const auction = await api.functional.api.auctions.create(
         adminConn,
         createAuctionConfig(`Memory Test ${timestamp}`, {
           totalItems: 50,
           rounds: [{ itemsCount: 50, durationMinutes: 10 }],
-        })
+        }),
       );
       await api.functional.api.auctions.start(adminConn, auction.id);
 
@@ -580,18 +587,20 @@ describe('Performance & Load Tests', () => {
           const conn = await createConnection(`memory_user_${timestamp}_${i}`);
           await api.functional.api.users.deposit(conn, { amount: 5000 });
           return conn;
-        })
+        }),
       );
 
       monitor.start();
 
       // Sustained operations
       for (let batch = 0; batch < 5; batch++) {
-        const batchOps = users.slice(batch * 40, (batch + 1) * 40).map((user, i) =>
-          api.functional.api.auctions.bid
-            .placeBid(user, auction.id, { amount: 100 + batch * 40 + i })
-            .catch(() => null)
-        );
+        const batchOps = users
+          .slice(batch * 40, (batch + 1) * 40)
+          .map((user, i) =>
+            api.functional.api.auctions.bid
+              .placeBid(user, auction.id, { amount: 100 + batch * 40 + i })
+              .catch(() => null),
+          );
 
         await Promise.all(batchOps);
         monitor.snapshot();
@@ -601,7 +610,7 @@ describe('Performance & Load Tests', () => {
       }
 
       const memStats = monitor.getMemoryStats();
-      console.log('\n💾 Memory usage:', {
+      console.log("\n💾 Memory usage:", {
         heapUsedDelta: `${(memStats!.heapUsedDelta / 1024 / 1024).toFixed(2)} MB`,
         currentHeapUsed: `${memStats!.currentHeapUsed.toFixed(2)} MB`,
         currentHeapTotal: `${memStats!.currentHeapTotal.toFixed(2)} MB`,
@@ -613,15 +622,15 @@ describe('Performance & Load Tests', () => {
       monitor.reset();
     }, 60000);
 
-    test('3.2: Database connection pool management', async () => {
+    test("3.2: Database connection pool management", async () => {
       // Test many concurrent database operations
       const operations = Array.from({ length: 100 }, () =>
-        api.functional.api.auctions.findAll(adminConn, {})
+        api.functional.api.auctions.findAll(adminConn, {}),
       );
 
       const { duration } = await measureAsync(() => Promise.all(operations));
 
-      console.log('\n🔌 Connection pool test:', {
+      console.log("\n🔌 Connection pool test:", {
         operations: operations.length,
         duration: `${duration}ms`,
         avgPerOp: `${(duration / operations.length).toFixed(2)}ms`,
@@ -631,7 +640,7 @@ describe('Performance & Load Tests', () => {
       expect(duration).toBeLessThan(15000);
     }, 30000);
 
-    test('3.3: Memory leaks detection during long-running tests', async () => {
+    test("3.3: Memory leaks detection during long-running tests", async () => {
       const iterations = 50;
       const snapshots: number[] = [];
 
@@ -648,13 +657,13 @@ describe('Performance & Load Tests', () => {
       }
 
       // Check if memory is growing linearly (potential leak)
-      const growth = snapshots.map((s, i) =>
-        i > 0 ? s - snapshots[i - 1]! : 0
-      ).slice(1);
+      const growth = snapshots
+        .map((s, i) => (i > 0 ? s - snapshots[i - 1]! : 0))
+        .slice(1);
 
       const avgGrowth = growth.reduce((a, b) => a + b, 0) / growth.length;
 
-      console.log('\n🔍 Memory leak detection:', {
+      console.log("\n🔍 Memory leak detection:", {
         iterations,
         snapshots: snapshots.length,
         avgGrowthPerSnapshot: `${(avgGrowth / 1024 / 1024).toFixed(2)} MB`,
@@ -666,10 +675,10 @@ describe('Performance & Load Tests', () => {
       monitor.reset();
     }, 45000);
 
-    test('3.4: Cache hit rate monitoring', async () => {
+    test("3.4: Cache hit rate monitoring", async () => {
       const auction = await api.functional.api.auctions.create(
         adminConn,
-        createAuctionConfig(`Cache Hit Test ${timestamp}`)
+        createAuctionConfig(`Cache Hit Test ${timestamp}`),
       );
       await api.functional.api.auctions.start(adminConn, auction.id);
 
@@ -677,7 +686,7 @@ describe('Performance & Load Tests', () => {
       await api.functional.api.auctions.leaderboard.getLeaderboard(
         adminConn,
         auction.id,
-        {}
+        {},
       );
 
       // Multiple reads (should hit cache)
@@ -688,15 +697,17 @@ describe('Performance & Load Tests', () => {
             api.functional.api.auctions.leaderboard.getLeaderboard(
               adminConn,
               auction.id,
-              {}
-            )
-          )
-        )
+              {},
+            ),
+          ),
+        ),
       );
 
-      const avgLatency = results.reduce((sum, { duration }) => sum + duration, 0) / results.length;
+      const avgLatency =
+        results.reduce((sum, { duration }) => sum + duration, 0) /
+        results.length;
 
-      console.log('\n📈 Cache hit rate test:', {
+      console.log("\n📈 Cache hit rate test:", {
         reads,
         avgLatency: `${avgLatency.toFixed(2)}ms`,
       });
@@ -706,16 +717,16 @@ describe('Performance & Load Tests', () => {
     });
   });
 
-  describe('4. Scalability Tests (4 tests)', () => {
-    test('4.1: 1000 auctions in system → list operations still fast', async () => {
+  describe("4. Scalability Tests (4 tests)", () => {
+    test("4.1: 1000 auctions in system → list operations still fast", async () => {
       // This test would be slow with actual creation, so we test read performance
       // with existing data and project scalability
 
       const { duration, result } = await measureAsync(() =>
-        api.functional.api.auctions.findAll(adminConn, { limit: 100 })
+        api.functional.api.auctions.findAll(adminConn, { limit: 100 }),
       );
 
-      console.log('\n📊 Auction list scalability:', {
+      console.log("\n📊 Auction list scalability:", {
         returned: result.auctions.length,
         latency: `${duration}ms`,
       });
@@ -724,14 +735,14 @@ describe('Performance & Load Tests', () => {
       expect(duration).toBeLessThan(1000);
     });
 
-    test('4.2: 10,000 bids total → leaderboard query fast', async () => {
+    test("4.2: 10,000 bids total → leaderboard query fast", async () => {
       // Create auction with many bid slots
       const auction = await api.functional.api.auctions.create(
         adminConn,
         createAuctionConfig(`Scale Bids ${timestamp}`, {
           totalItems: 100,
           rounds: [{ itemsCount: 100, durationMinutes: 30 }],
-        })
+        }),
       );
       await api.functional.api.auctions.start(adminConn, auction.id);
 
@@ -739,10 +750,12 @@ describe('Performance & Load Tests', () => {
       const batchSize = 100;
       const users = await Promise.all(
         Array.from({ length: batchSize }, async (_, i) => {
-          const conn = await createConnection(`scale_bid_user_${timestamp}_${i}`);
+          const conn = await createConnection(
+            `scale_bid_user_${timestamp}_${i}`,
+          );
           await api.functional.api.users.deposit(conn, { amount: 20000 });
           return conn;
-        })
+        }),
       );
 
       // Place bids
@@ -750,8 +763,8 @@ describe('Performance & Load Tests', () => {
         users.map((user, i) =>
           api.functional.api.auctions.bid
             .placeBid(user, auction.id, { amount: 100 + i * 10 })
-            .catch(() => null)
-        )
+            .catch(() => null),
+        ),
       );
 
       // Test leaderboard query performance
@@ -759,11 +772,11 @@ describe('Performance & Load Tests', () => {
         api.functional.api.auctions.leaderboard.getLeaderboard(
           adminConn,
           auction.id,
-          { limit: 50 }
-        )
+          { limit: 50 },
+        ),
       );
 
-      console.log('\n📊 Leaderboard scalability:', {
+      console.log("\n📊 Leaderboard scalability:", {
         bidsInSystem: batchSize,
         queryLatency: `${duration}ms`,
       });
@@ -771,14 +784,14 @@ describe('Performance & Load Tests', () => {
       expect(duration).toBeLessThan(1000);
     }, 60000);
 
-    test('4.3: 1000 users → concurrent operations scale', async () => {
+    test("4.3: 1000 users → concurrent operations scale", async () => {
       // Test with subset representing scalability
       const userCount = 100; // Representative sample
 
       monitor.start();
 
       const operations = Array.from({ length: userCount }, (_, i) =>
-        measureAsync(() => createConnection(`scale_user_${timestamp}_${i}`))
+        measureAsync(() => createConnection(`scale_user_${timestamp}_${i}`)),
       );
 
       const results = await Promise.all(operations);
@@ -787,7 +800,7 @@ describe('Performance & Load Tests', () => {
       const stats = monitor.getStats();
       const projectedThroughput = stats.throughput; // ops/sec
 
-      console.log('\n📊 User scalability:', {
+      console.log("\n📊 User scalability:", {
         tested: userCount,
         throughput: `${projectedThroughput.toFixed(0)} users/s`,
         avgLatency: `${stats.avg.toFixed(2)}ms`,
@@ -801,12 +814,14 @@ describe('Performance & Load Tests', () => {
       monitor.reset();
     }, 45000);
 
-    test('4.4: Large transaction history → pagination works efficiently', async () => {
+    test("4.4: Large transaction history → pagination works efficiently", async () => {
       const user = await createConnection(`pagination_user_${timestamp}`);
 
       // Create some transaction history
       for (let i = 0; i < 20; i++) {
-        await api.functional.api.users.deposit(user, { amount: 100 }).catch(() => null);
+        await api.functional.api.users
+          .deposit(user, { amount: 100 })
+          .catch(() => null);
       }
 
       // Test pagination performance
@@ -820,13 +835,13 @@ describe('Performance & Load Tests', () => {
           api.functional.api.transactions.getTransactions(user, {
             limit: pageSize,
             offset: page * pageSize,
-          })
+          }),
         );
         monitor.recordMeasurement(duration);
       }
 
       const stats = monitor.getStats();
-      console.log('\n📊 Pagination performance:', {
+      console.log("\n📊 Pagination performance:", {
         pages: pages,
         pageSize,
         avgLatency: `${stats.avg.toFixed(2)}ms`,
@@ -841,13 +856,13 @@ describe('Performance & Load Tests', () => {
     }, 30000);
   });
 
-  describe('5. Edge Cases Under Load (3 tests)', () => {
-    test('5.1: Large auction data → system handles', async () => {
+  describe("5. Edge Cases Under Load (3 tests)", () => {
+    test("5.1: Large auction data → system handles", async () => {
       // Create auction with maximum configuration
-      const largeAuction = await api.functional.api.auctions.create(adminConn, {
+      await api.functional.api.auctions.create(adminConn, {
         title: `Large Auction ${timestamp}`.repeat(5), // Long title
         totalItems: 100,
-        rounds: Array.from({ length: 10 }, (_, i) => ({
+        rounds: Array.from({ length: 10 }, (_item, _i) => ({
           itemsCount: 10,
           durationMinutes: 60,
         })),
@@ -861,11 +876,11 @@ describe('Performance & Load Tests', () => {
 
       // Test operations with large data
       const { duration: readDuration } = await measureAsync(() =>
-        api.functional.api.auctions.findAll(adminConn, {})
+        api.functional.api.auctions.findAll(adminConn, {}),
       );
 
-      console.log('\n📦 Large data handling:', {
-        auctionItems: 100,
+      console.log("\n📦 Large data handling:", {
+        largeAuction: "tested", // Renamed from 'auctionItems' for clarity
         rounds: 10,
         readLatency: `${readDuration}ms`,
       });
@@ -873,19 +888,20 @@ describe('Performance & Load Tests', () => {
       expect(readDuration).toBeLessThan(1000);
     });
 
-    test('5.2: Large bid amounts → calculations accurate', async () => {
-      const largeAmountUser = await createConnection(`large_amount_${timestamp}`);
+    test("5.2: Large bid amounts → calculations accurate", async () => {
+      const largeAmountUser = await createConnection(
+        `large_amount_${timestamp}`,
+      );
       const largeAmount = 999999999; // Near max safe integer
 
       await api.functional.api.users.deposit(largeAmountUser, {
         amount: largeAmount,
       });
 
-      const balance = await api.functional.api.users.balance.getBalance(
-        largeAmountUser
-      );
+      const balance =
+        await api.functional.api.users.balance.getBalance(largeAmountUser);
 
-      console.log('\n💰 Large amount handling:', {
+      console.log("\n💰 Large amount handling:", {
         deposited: largeAmount,
         balance: balance.balance,
         match: balance.balance === largeAmount,
@@ -894,7 +910,7 @@ describe('Performance & Load Tests', () => {
       expect(balance.balance).toBe(largeAmount);
     });
 
-    test('5.3: Large result sets → pagination efficient', async () => {
+    test("5.3: Large result sets → pagination efficient", async () => {
       // Test with maximum pagination limit
       const maxLimit = 100;
 
@@ -902,10 +918,10 @@ describe('Performance & Load Tests', () => {
         api.functional.api.auctions.findAll(adminConn, {
           limit: maxLimit,
           offset: 0,
-        })
+        }),
       );
 
-      console.log('\n📄 Large result set:', {
+      console.log("\n📄 Large result set:", {
         limit: maxLimit,
         returned: result.auctions.length,
         latency: `${duration}ms`,
@@ -916,11 +932,11 @@ describe('Performance & Load Tests', () => {
     });
   });
 
-  describe('6. Real-time Performance (2 tests)', () => {
-    test('6.1: WebSocket events delivered within latency budget', async () => {
+  describe("6. Real-time Performance (2 tests)", () => {
+    test("6.1: WebSocket events delivered within latency budget", async () => {
       const auction = await api.functional.api.auctions.create(
         adminConn,
-        createAuctionConfig(`WS Latency ${timestamp}`)
+        createAuctionConfig(`WS Latency ${timestamp}`),
       );
       await api.functional.api.auctions.start(adminConn, auction.id);
 
@@ -934,7 +950,7 @@ describe('Performance & Load Tests', () => {
       // Measure event delivery latency
       const latencies: number[] = [];
 
-      socket.on('bid-placed', () => {
+      socket.on("bid-placed", () => {
         const latency = Date.now() - bidTime;
         latencies.push(latency);
       });
@@ -952,8 +968,9 @@ describe('Performance & Load Tests', () => {
       socket.disconnect();
 
       if (latencies.length > 0) {
-        const avgLatency = latencies.reduce((a, b) => a + b, 0) / latencies.length;
-        console.log('\n⚡ WebSocket event latency:', {
+        const avgLatency =
+          latencies.reduce((a, b) => a + b, 0) / latencies.length;
+        console.log("\n⚡ WebSocket event latency:", {
           events: latencies.length,
           avgLatency: `${avgLatency.toFixed(2)}ms`,
           maxLatency: `${Math.max(...latencies)}ms`,
@@ -964,13 +981,13 @@ describe('Performance & Load Tests', () => {
       }
     }, 30000);
 
-    test('6.2: Leaderboard updates real-time even under load', async () => {
+    test("6.2: Leaderboard updates real-time even under load", async () => {
       const auction = await api.functional.api.auctions.create(
         adminConn,
         createAuctionConfig(`RT Leaderboard ${timestamp}`, {
           totalItems: 20,
           rounds: [{ itemsCount: 20, durationMinutes: 10 }],
-        })
+        }),
       );
       await api.functional.api.auctions.start(adminConn, auction.id);
 
@@ -979,7 +996,7 @@ describe('Performance & Load Tests', () => {
           const conn = await createConnection(`rt_user_${timestamp}_${i}`);
           await api.functional.api.users.deposit(conn, { amount: 5000 });
           return conn;
-        })
+        }),
       );
 
       // Place bids under load
@@ -987,8 +1004,8 @@ describe('Performance & Load Tests', () => {
         users.map((user, i) =>
           api.functional.api.auctions.bid
             .placeBid(user, auction.id, { amount: 300 + i * 50 })
-            .catch(() => null)
-        )
+            .catch(() => null),
+        ),
       );
 
       // Check leaderboard updates quickly
@@ -996,11 +1013,11 @@ describe('Performance & Load Tests', () => {
         api.functional.api.auctions.leaderboard.getLeaderboard(
           adminConn,
           auction.id,
-          {}
-        )
+          {},
+        ),
       );
 
-      console.log('\n🏆 Real-time leaderboard:', {
+      console.log("\n🏆 Real-time leaderboard:", {
         bidsPlaced: users.length,
         leaderboardSize: result.leaderboard.length,
         queryLatency: `${duration}ms`,
@@ -1013,19 +1030,19 @@ describe('Performance & Load Tests', () => {
   });
 
   // Summary test
-  test('Performance Summary', () => {
-    console.log('\n' + '='.repeat(50));
-    console.log('📊 PERFORMANCE TEST SUITE COMPLETED');
-    console.log('='.repeat(50));
-    console.log('\n✅ All 26 performance and load tests passed!');
-    console.log('\nTest Categories:');
-    console.log('  • Throughput Tests: 6 tests');
-    console.log('  • Latency Tests: 6 tests');
-    console.log('  • Resource Utilization: 4 tests');
-    console.log('  • Scalability Tests: 4 tests');
-    console.log('  • Edge Cases Under Load: 3 tests');
-    console.log('  • Real-time Performance: 2 tests');
-    console.log('  • Summary: 1 test');
-    console.log('\nTotal: 26 comprehensive tests\n');
+  test("Performance Summary", () => {
+    console.log("\n" + "=".repeat(50));
+    console.log("📊 PERFORMANCE TEST SUITE COMPLETED");
+    console.log("=".repeat(50));
+    console.log("\n✅ All 26 performance and load tests passed!");
+    console.log("\nTest Categories:");
+    console.log("  • Throughput Tests: 6 tests");
+    console.log("  • Latency Tests: 6 tests");
+    console.log("  • Resource Utilization: 4 tests");
+    console.log("  • Scalability Tests: 4 tests");
+    console.log("  • Edge Cases Under Load: 3 tests");
+    console.log("  • Real-time Performance: 2 tests");
+    console.log("  • Summary: 1 test");
+    console.log("\nTotal: 26 comprehensive tests\n");
   });
 });

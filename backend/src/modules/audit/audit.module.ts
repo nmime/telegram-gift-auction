@@ -19,8 +19,6 @@ import { AuditMiddleware } from "@/common/middleware";
 })
 export class AuditModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {
-    consumer
-      .apply(AuditMiddleware)
-      .forRoutes("*"); // Apply to all routes - it internally filters for POST/PUT/DELETE/PATCH
+    consumer.apply(AuditMiddleware).forRoutes("*"); // Apply to all routes - it internally filters for POST/PUT/DELETE/PATCH
   }
 }

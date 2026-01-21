@@ -17,6 +17,8 @@ jest.mock("@grammyjs/validator", () => ({
 }));
 
 describe("Auth Module", () => {
+  const mockValidator = jest.requireMock("@grammyjs/validator");
+  const checkSignature = mockValidator.checkSignature as jest.Mock;
   describe("AuthService", () => {
     let service: AuthService;
     let mockUserModel: any;
@@ -109,7 +111,10 @@ describe("Auth Module", () => {
       });
 
       it("should generate username from telegram ID if username not provided", async () => {
-        const userWithoutUsername = { ...mockTelegramUser, username: undefined };
+        const userWithoutUsername = {
+          ...mockTelegramUser,
+          username: undefined,
+        };
         mockUserModel.findOne.mockResolvedValue(null);
         mockUserModel.create.mockResolvedValue({
           _id: "user_id_123",
@@ -184,7 +189,10 @@ describe("Auth Module", () => {
       });
 
       it("should not update username if not provided in telegram data", async () => {
-        const userWithoutUsername = { ...mockTelegramUser, username: undefined };
+        const userWithoutUsername = {
+          ...mockTelegramUser,
+          username: undefined,
+        };
         const existingUser = {
           _id: "user_id_123",
           username: "oldusername",
@@ -398,9 +406,9 @@ describe("Auth Module", () => {
           new Error("Malformed token"),
         );
 
-        await expect(
-          service.validateToken("malformed.token"),
-        ).rejects.toThrow(UnauthorizedException);
+        await expect(service.validateToken("malformed.token")).rejects.toThrow(
+          UnauthorizedException,
+        );
       });
 
       it("should handle missing token", async () => {
@@ -489,10 +497,15 @@ describe("Auth Module", () => {
   describe("TelegramService", () => {
     let service: TelegramService;
     let mockConfigService: jest.Mocked<ConfigService>;
-    const { validateWebAppData, checkSignature } =
-      require("@grammyjs/validator");
+    let validateWebAppData: jest.Mock;
+    let checkSignature: jest.Mock;
 
     beforeEach(async () => {
+      // Get mocked functions from jest.mock at top of file
+      const validator = jest.requireMock("@grammyjs/validator");
+      validateWebAppData = validator.validateWebAppData;
+      checkSignature = validator.checkSignature;
+
       mockConfigService = {
         get: jest.fn((key: string) => {
           if (key === "BOT_TOKEN") return "test_bot_token_123";
@@ -863,12 +876,9 @@ describe("Auth Module", () => {
         };
 
         mockTelegramService.validateWidgetAuth.mockReturnValue(validatedUser);
-        mockAuthService.loginWithTelegramWidget.mockResolvedValue(
-          authResponse,
-        );
+        mockAuthService.loginWithTelegramWidget.mockResolvedValue(authResponse);
 
-        const result =
-          await controller.loginWithTelegramWidget(widgetAuthData);
+        const result = await controller.loginWithTelegramWidget(widgetAuthData);
 
         expect(mockTelegramService.validateWidgetAuth).toHaveBeenCalledWith(
           widgetAuthData,
@@ -921,9 +931,9 @@ describe("Auth Module", () => {
         const result =
           await controller.loginWithTelegramMiniApp(webAppAuthData);
 
-        expect(
-          mockTelegramService.validateWebAppInitData,
-        ).toHaveBeenCalledWith(webAppAuthData.initData);
+        expect(mockTelegramService.validateWebAppInitData).toHaveBeenCalledWith(
+          webAppAuthData.initData,
+        );
         expect(mockAuthService.loginWithTelegramMiniApp).toHaveBeenCalledWith(
           validatedData,
         );
@@ -1173,9 +1183,7 @@ describe("Auth Module", () => {
       });
 
       it("should handle multiple Bearer keywords", async () => {
-        const context = createMockExecutionContext(
-          "Bearer Bearer some_token",
-        );
+        const context = createMockExecutionContext("Bearer Bearer some_token");
 
         mockJwtService.verifyAsync.mockRejectedValue(new Error("Invalid"));
 
@@ -1260,7 +1268,6 @@ describe("Auth Module", () => {
       });
 
       it("should accept auth_date at exactly 24 hours boundary", () => {
-        const { checkSignature } = require("@grammyjs/validator");
         checkSignature.mockReturnValue(true);
 
         const payload = {

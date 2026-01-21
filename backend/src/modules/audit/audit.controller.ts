@@ -8,7 +8,7 @@ import {
   AuditSummaryResponseDto,
 } from "./dto";
 import { AuthGuard } from "@/common";
-import { Types } from "mongoose";
+// Types imported but may not be used directly in all methods
 
 @Controller("api/audit")
 @UseGuards(AuthGuard)

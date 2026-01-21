@@ -1,13 +1,12 @@
 import { Test, TestingModule } from "@nestjs/testing";
-import { UnauthorizedException } from "@nestjs/common";
 import { JwtService } from "@nestjs/jwt";
+import { UnauthorizedException } from "@nestjs/common";
 import { AuthController } from "@/modules/auth/auth.controller";
 import { AuthService } from "@/modules/auth/auth.service";
 import { TelegramService } from "@/modules/auth/telegram.service";
-import { AuthGuard, AuthenticatedRequest } from "@/common";
+import { AuthenticatedRequest } from "@/common";
 import {
   ILoginResponse,
-  IUserResponse,
   ITelegramWidgetAuth,
   ITelegramWebAppAuth,
 } from "@/modules/auth/dto";
@@ -184,9 +183,7 @@ describe("AuthController", () => {
         accessToken: "jwt_token_xyz",
       };
 
-      mockTelegramService.validateWidgetAuth.mockReturnValue(
-        minimalWidgetAuth,
-      );
+      mockTelegramService.validateWidgetAuth.mockReturnValue(minimalWidgetAuth);
       mockAuthService.loginWithTelegramWidget.mockResolvedValue(
         minimalResponse,
       );
@@ -223,9 +220,7 @@ describe("AuthController", () => {
 
     it("should handle premium user flag correctly", async () => {
       const premiumWidgetAuth = { ...validWidgetAuth, is_premium: true };
-      mockTelegramService.validateWidgetAuth.mockReturnValue(
-        premiumWidgetAuth,
-      );
+      mockTelegramService.validateWidgetAuth.mockReturnValue(premiumWidgetAuth);
       mockAuthService.loginWithTelegramWidget.mockResolvedValue(
         expectedLoginResponse,
       );
@@ -281,8 +276,7 @@ describe("AuthController", () => {
         expectedWebAppResponse,
       );
 
-      const result =
-        await controller.loginWithTelegramMiniApp(validWebAppAuth);
+      const result = await controller.loginWithTelegramMiniApp(validWebAppAuth);
 
       expect(mockTelegramService.validateWebAppInitData).toHaveBeenCalledWith(
         validWebAppAuth.initData,
@@ -301,8 +295,7 @@ describe("AuthController", () => {
         expectedWebAppResponse,
       );
 
-      const result =
-        await controller.loginWithTelegramMiniApp(validWebAppAuth);
+      const result = await controller.loginWithTelegramMiniApp(validWebAppAuth);
 
       expect(result).toHaveProperty("user");
       expect(result).toHaveProperty("accessToken");
@@ -444,9 +437,7 @@ describe("AuthController", () => {
     };
 
     it("should return current user data when user exists", async () => {
-      mockAuthService.validateUser.mockResolvedValue(
-        mockUserDocument as any,
-      );
+      mockAuthService.validateUser.mockResolvedValue(mockUserDocument as any);
 
       const result = await controller.me(mockRequest);
 
@@ -505,9 +496,7 @@ describe("AuthController", () => {
         frozenBalance: 50,
       };
 
-      mockAuthService.validateUser.mockResolvedValue(
-        userWithObjectId as any,
-      );
+      mockAuthService.validateUser.mockResolvedValue(userWithObjectId as any);
 
       const result = await controller.me(mockRequest);
 
@@ -745,9 +734,7 @@ describe("AuthController", () => {
       };
 
       mockTelegramService.validateWidgetAuth.mockReturnValue(validatedUser);
-      mockAuthService.loginWithTelegramWidget.mockResolvedValue(
-        loginResponse,
-      );
+      mockAuthService.loginWithTelegramWidget.mockResolvedValue(loginResponse);
 
       const result = await controller.loginWithTelegramWidget(widgetAuth);
 
@@ -763,7 +750,8 @@ describe("AuthController", () => {
 
     it("should handle full webapp login flow", async () => {
       const webAppAuth: ITelegramWebAppAuth = {
-        initData: "query_id=test&user=%7B%22id%22%3A888%7D&auth_date=123&hash=h",
+        initData:
+          "query_id=test&user=%7B%22id%22%3A888%7D&auth_date=123&hash=h",
       };
 
       const validatedData = {
@@ -785,12 +773,8 @@ describe("AuthController", () => {
         accessToken: "webapp_jwt_token",
       };
 
-      mockTelegramService.validateWebAppInitData.mockReturnValue(
-        validatedData,
-      );
-      mockAuthService.loginWithTelegramMiniApp.mockResolvedValue(
-        loginResponse,
-      );
+      mockTelegramService.validateWebAppInitData.mockReturnValue(validatedData);
+      mockAuthService.loginWithTelegramMiniApp.mockResolvedValue(loginResponse);
 
       const result = await controller.loginWithTelegramMiniApp(webAppAuth);
 
@@ -824,12 +808,9 @@ describe("AuthController", () => {
       };
 
       mockTelegramService.validateWidgetAuth.mockReturnValue(widgetAuth);
-      mockAuthService.loginWithTelegramWidget.mockResolvedValue(
-        loginResponse,
-      );
+      mockAuthService.loginWithTelegramWidget.mockResolvedValue(loginResponse);
 
-      const loginResult =
-        await controller.loginWithTelegramWidget(widgetAuth);
+      const loginResult = await controller.loginWithTelegramWidget(widgetAuth);
 
       // Me request
       const meRequest: AuthenticatedRequest = {

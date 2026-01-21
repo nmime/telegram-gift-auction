@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { Test, TestingModule } from "@nestjs/testing";
 import { getModelToken, getConnectionToken } from "@nestjs/mongoose";
 import {
@@ -7,12 +6,8 @@ import {
   ConflictException,
 } from "@nestjs/common";
 import { UsersService } from "@/modules/users/users.service";
-import {
-  User,
-  Transaction,
-  TransactionType,
-} from "@/schemas";
-import { Types, Connection, ClientSession } from "mongoose";
+import { User, Transaction, TransactionType } from "@/schemas";
+import { Types } from "mongoose";
 
 describe("UsersService", () => {
   let service: UsersService;
@@ -100,18 +95,20 @@ describe("UsersService", () => {
         balance: 1000,
         frozenBalance: 200,
       });
-      expect(mockUserModel.findById).toHaveBeenCalledWith(mockUserId.toString());
+      expect(mockUserModel.findById).toHaveBeenCalledWith(
+        mockUserId.toString(),
+      );
     });
 
     it("should throw NotFoundException when user does not exist", async () => {
       mockUserModel.findById.mockResolvedValue(null);
 
-      await expect(
-        service.getBalance(mockUserId.toString()),
-      ).rejects.toThrow(NotFoundException);
-      await expect(
-        service.getBalance(mockUserId.toString()),
-      ).rejects.toThrow("User not found");
+      await expect(service.getBalance(mockUserId.toString())).rejects.toThrow(
+        NotFoundException,
+      );
+      await expect(service.getBalance(mockUserId.toString())).rejects.toThrow(
+        "User not found",
+      );
     });
 
     it("should handle user with zero balance", async () => {
@@ -197,15 +194,15 @@ describe("UsersService", () => {
     });
 
     it("should throw BadRequestException for negative amount", async () => {
-      await expect(service.deposit(mockUserId.toString(), -100)).rejects.toThrow(
-        BadRequestException,
-      );
+      await expect(
+        service.deposit(mockUserId.toString(), -100),
+      ).rejects.toThrow(BadRequestException);
     });
 
     it("should throw BadRequestException for non-integer amount", async () => {
-      await expect(service.deposit(mockUserId.toString(), 123.45)).rejects.toThrow(
-        BadRequestException,
-      );
+      await expect(
+        service.deposit(mockUserId.toString(), 123.45),
+      ).rejects.toThrow(BadRequestException);
     });
 
     it("should throw NotFoundException when user does not exist", async () => {
@@ -251,9 +248,13 @@ describe("UsersService", () => {
       mockUserModel.findById.mockReturnValue({
         session: jest.fn().mockResolvedValue(mockUser),
       });
-      mockUserModel.findOneAndUpdate.mockRejectedValue(new Error("Database error"));
+      mockUserModel.findOneAndUpdate.mockRejectedValue(
+        new Error("Database error"),
+      );
 
-      await expect(service.deposit(mockUserId.toString(), 100)).rejects.toThrow();
+      await expect(
+        service.deposit(mockUserId.toString(), 100),
+      ).rejects.toThrow();
       expect(mockSession.abortTransaction).toHaveBeenCalled();
       expect(mockSession.endSession).toHaveBeenCalled();
     });
@@ -328,15 +329,15 @@ describe("UsersService", () => {
     });
 
     it("should throw BadRequestException for negative amount", async () => {
-      await expect(service.withdraw(mockUserId.toString(), -100)).rejects.toThrow(
-        BadRequestException,
-      );
+      await expect(
+        service.withdraw(mockUserId.toString(), -100),
+      ).rejects.toThrow(BadRequestException);
     });
 
     it("should throw BadRequestException for non-integer amount", async () => {
-      await expect(service.withdraw(mockUserId.toString(), 50.75)).rejects.toThrow(
-        BadRequestException,
-      );
+      await expect(
+        service.withdraw(mockUserId.toString(), 50.75),
+      ).rejects.toThrow(BadRequestException);
     });
 
     it("should throw NotFoundException when user does not exist", async () => {
@@ -344,9 +345,9 @@ describe("UsersService", () => {
         session: jest.fn().mockResolvedValue(null),
       });
 
-      await expect(service.withdraw(mockUserId.toString(), 100)).rejects.toThrow(
-        NotFoundException,
-      );
+      await expect(
+        service.withdraw(mockUserId.toString(), 100),
+      ).rejects.toThrow(NotFoundException);
       expect(mockSession.abortTransaction).toHaveBeenCalled();
     });
 
@@ -361,12 +362,12 @@ describe("UsersService", () => {
         session: jest.fn().mockResolvedValue(mockUser),
       });
 
-      await expect(service.withdraw(mockUserId.toString(), 500)).rejects.toThrow(
-        BadRequestException,
-      );
-      await expect(service.withdraw(mockUserId.toString(), 500)).rejects.toThrow(
-        "Insufficient balance",
-      );
+      await expect(
+        service.withdraw(mockUserId.toString(), 500),
+      ).rejects.toThrow(BadRequestException);
+      await expect(
+        service.withdraw(mockUserId.toString(), 500),
+      ).rejects.toThrow("Insufficient balance");
       expect(mockSession.abortTransaction).toHaveBeenCalled();
     });
 
@@ -382,12 +383,12 @@ describe("UsersService", () => {
       });
       mockUserModel.findOneAndUpdate.mockResolvedValue(null);
 
-      await expect(service.withdraw(mockUserId.toString(), 100)).rejects.toThrow(
-        ConflictException,
-      );
-      await expect(service.withdraw(mockUserId.toString(), 100)).rejects.toThrow(
-        "Concurrent modification or insufficient balance",
-      );
+      await expect(
+        service.withdraw(mockUserId.toString(), 100),
+      ).rejects.toThrow(ConflictException);
+      await expect(
+        service.withdraw(mockUserId.toString(), 100),
+      ).rejects.toThrow("Concurrent modification or insufficient balance");
       expect(mockSession.abortTransaction).toHaveBeenCalled();
     });
 
@@ -588,7 +589,13 @@ describe("UsersService", () => {
       });
 
       await expect(
-        service.freezeBalance(mockUserId, 100, mockAuctionId, mockBidId, mockSession),
+        service.freezeBalance(
+          mockUserId,
+          100,
+          mockAuctionId,
+          mockBidId,
+          mockSession,
+        ),
       ).rejects.toThrow(NotFoundException);
     });
 
@@ -605,10 +612,22 @@ describe("UsersService", () => {
       });
 
       await expect(
-        service.freezeBalance(mockUserId, 100, mockAuctionId, mockBidId, mockSession),
+        service.freezeBalance(
+          mockUserId,
+          100,
+          mockAuctionId,
+          mockBidId,
+          mockSession,
+        ),
       ).rejects.toThrow(BadRequestException);
       await expect(
-        service.freezeBalance(mockUserId, 100, mockAuctionId, mockBidId, mockSession),
+        service.freezeBalance(
+          mockUserId,
+          100,
+          mockAuctionId,
+          mockBidId,
+          mockSession,
+        ),
       ).rejects.toThrow("Insufficient balance");
     });
 
@@ -626,10 +645,22 @@ describe("UsersService", () => {
       mockUserModel.findOneAndUpdate.mockResolvedValue(null);
 
       await expect(
-        service.freezeBalance(mockUserId, 100, mockAuctionId, mockBidId, mockSession),
+        service.freezeBalance(
+          mockUserId,
+          100,
+          mockAuctionId,
+          mockBidId,
+          mockSession,
+        ),
       ).rejects.toThrow(ConflictException);
       await expect(
-        service.freezeBalance(mockUserId, 100, mockAuctionId, mockBidId, mockSession),
+        service.freezeBalance(
+          mockUserId,
+          100,
+          mockAuctionId,
+          mockBidId,
+          mockSession,
+        ),
       ).rejects.toThrow("Failed to freeze balance");
     });
 
@@ -720,7 +751,13 @@ describe("UsersService", () => {
       });
 
       await expect(
-        service.unfreezeBalance(mockUserId, 100, mockAuctionId, mockBidId, mockSession),
+        service.unfreezeBalance(
+          mockUserId,
+          100,
+          mockAuctionId,
+          mockBidId,
+          mockSession,
+        ),
       ).rejects.toThrow(NotFoundException);
     });
 
@@ -738,10 +775,22 @@ describe("UsersService", () => {
       mockUserModel.findOneAndUpdate.mockResolvedValue(null);
 
       await expect(
-        service.unfreezeBalance(mockUserId, 400, mockAuctionId, mockBidId, mockSession),
+        service.unfreezeBalance(
+          mockUserId,
+          400,
+          mockAuctionId,
+          mockBidId,
+          mockSession,
+        ),
       ).rejects.toThrow(ConflictException);
       await expect(
-        service.unfreezeBalance(mockUserId, 400, mockAuctionId, mockBidId, mockSession),
+        service.unfreezeBalance(
+          mockUserId,
+          400,
+          mockAuctionId,
+          mockBidId,
+          mockSession,
+        ),
       ).rejects.toThrow("Failed to unfreeze balance");
     });
   });
@@ -806,7 +855,13 @@ describe("UsersService", () => {
       });
 
       await expect(
-        service.confirmBidWin(mockUserId, 100, mockAuctionId, mockBidId, mockSession),
+        service.confirmBidWin(
+          mockUserId,
+          100,
+          mockAuctionId,
+          mockBidId,
+          mockSession,
+        ),
       ).rejects.toThrow(NotFoundException);
     });
 
@@ -824,10 +879,22 @@ describe("UsersService", () => {
       mockUserModel.findOneAndUpdate.mockResolvedValue(null);
 
       await expect(
-        service.confirmBidWin(mockUserId, 500, mockAuctionId, mockBidId, mockSession),
+        service.confirmBidWin(
+          mockUserId,
+          500,
+          mockAuctionId,
+          mockBidId,
+          mockSession,
+        ),
       ).rejects.toThrow(ConflictException);
       await expect(
-        service.confirmBidWin(mockUserId, 500, mockAuctionId, mockBidId, mockSession),
+        service.confirmBidWin(
+          mockUserId,
+          500,
+          mockAuctionId,
+          mockBidId,
+          mockSession,
+        ),
       ).rejects.toThrow("Failed to confirm bid win");
     });
   });
@@ -893,7 +960,13 @@ describe("UsersService", () => {
       });
 
       await expect(
-        service.refundBid(mockUserId, 100, mockAuctionId, mockBidId, mockSession),
+        service.refundBid(
+          mockUserId,
+          100,
+          mockAuctionId,
+          mockBidId,
+          mockSession,
+        ),
       ).rejects.toThrow(NotFoundException);
     });
 
@@ -911,10 +984,22 @@ describe("UsersService", () => {
       mockUserModel.findOneAndUpdate.mockResolvedValue(null);
 
       await expect(
-        service.refundBid(mockUserId, 500, mockAuctionId, mockBidId, mockSession),
+        service.refundBid(
+          mockUserId,
+          500,
+          mockAuctionId,
+          mockBidId,
+          mockSession,
+        ),
       ).rejects.toThrow(ConflictException);
       await expect(
-        service.refundBid(mockUserId, 500, mockAuctionId, mockBidId, mockSession),
+        service.refundBid(
+          mockUserId,
+          500,
+          mockAuctionId,
+          mockBidId,
+          mockSession,
+        ),
       ).rejects.toThrow("Failed to refund bid");
     });
   });
@@ -1053,7 +1138,10 @@ describe("UsersService", () => {
         mockUserModel.findOneAndUpdate.mockResolvedValue(mockUpdatedUser);
         mockTransactionModel.create.mockResolvedValue([{}]);
 
-        const result = await service.deposit(mockUserId.toString(), depositAmount);
+        const result = await service.deposit(
+          mockUserId.toString(),
+          depositAmount,
+        );
         expect(result.balance).toBe(currentBalance);
       }
 
@@ -1082,9 +1170,17 @@ describe("UsersService", () => {
       mockUserModel.findOneAndUpdate.mockResolvedValue(mockUserAfterFreeze);
       mockTransactionModel.create.mockResolvedValue([{}]);
 
-      await service.freezeBalance(mockUserId, 300, mockAuctionId, mockBidId, mockSession);
+      await service.freezeBalance(
+        mockUserId,
+        300,
+        mockAuctionId,
+        mockBidId,
+        mockSession,
+      );
 
-      expect(mockUserAfterFreeze.balance + mockUserAfterFreeze.frozenBalance).toBe(1000);
+      expect(
+        mockUserAfterFreeze.balance + mockUserAfterFreeze.frozenBalance,
+      ).toBe(1000);
     });
   });
 

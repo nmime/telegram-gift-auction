@@ -1,10 +1,6 @@
 import { Test, TestingModule } from "@nestjs/testing";
 import { getModelToken, getConnectionToken } from "@nestjs/mongoose";
-import {
-  BadRequestException,
-  NotFoundException,
-  ConflictException,
-} from "@nestjs/common";
+import { BadRequestException, NotFoundException } from "@nestjs/common";
 import { Types } from "mongoose";
 import { AuctionsService } from "./auctions.service";
 import { TimerService } from "./timer.service";
@@ -209,9 +205,9 @@ describe("AuctionsService", () => {
         totalItems: 15, // Should be 10
       };
 
-      await expect(service.create(dto, new Types.ObjectId().toString())).rejects.toThrow(
-        BadRequestException,
-      );
+      await expect(
+        service.create(dto, new Types.ObjectId().toString()),
+      ).rejects.toThrow(BadRequestException);
     });
 
     it("should throw if totalItems is zero", async () => {
@@ -220,9 +216,9 @@ describe("AuctionsService", () => {
         totalItems: 0,
       };
 
-      await expect(service.create(dto, new Types.ObjectId().toString())).rejects.toThrow(
-        BadRequestException,
-      );
+      await expect(
+        service.create(dto, new Types.ObjectId().toString()),
+      ).rejects.toThrow(BadRequestException);
     });
 
     it("should throw if totalItems is negative", async () => {
@@ -231,9 +227,9 @@ describe("AuctionsService", () => {
         totalItems: -5,
       };
 
-      await expect(service.create(dto, new Types.ObjectId().toString())).rejects.toThrow(
-        BadRequestException,
-      );
+      await expect(
+        service.create(dto, new Types.ObjectId().toString()),
+      ).rejects.toThrow(BadRequestException);
     });
 
     it("should throw if any round has zero items", async () => {
@@ -245,9 +241,9 @@ describe("AuctionsService", () => {
         ],
       };
 
-      await expect(service.create(dto, new Types.ObjectId().toString())).rejects.toThrow(
-        BadRequestException,
-      );
+      await expect(
+        service.create(dto, new Types.ObjectId().toString()),
+      ).rejects.toThrow(BadRequestException);
     });
 
     it("should throw if any round has zero duration", async () => {
@@ -259,9 +255,9 @@ describe("AuctionsService", () => {
         ],
       };
 
-      await expect(service.create(dto, new Types.ObjectId().toString())).rejects.toThrow(
-        BadRequestException,
-      );
+      await expect(
+        service.create(dto, new Types.ObjectId().toString()),
+      ).rejects.toThrow(BadRequestException);
     });
 
     it("should use default values for optional parameters", async () => {
@@ -427,7 +423,6 @@ describe("AuctionsService", () => {
   describe("start", () => {
     it("should start a pending auction and transition to ACTIVE status", async () => {
       const auctionId = new Types.ObjectId();
-      const userId = new Types.ObjectId();
 
       const mockAuction = {
         _id: auctionId,
@@ -460,24 +455,20 @@ describe("AuctionsService", () => {
     });
 
     it("should verify auction exists before starting", async () => {
-      const auctionId = new Types.ObjectId();
-
       mockAuctionModel.findOneAndUpdate.mockResolvedValueOnce(null);
 
       expect(service).toBeDefined();
     });
 
     it("should verify auction is in pending status before starting", async () => {
-      const auctionId = new Types.ObjectId();
-
       mockAuctionModel.findOneAndUpdate.mockResolvedValueOnce(null);
 
       expect(service).toBeDefined();
     });
 
     it("should set up first round with proper configuration", async () => {
-      const auctionId = new Types.ObjectId();
       const durationMinutes = 15;
+      const auctionId = new Types.ObjectId();
 
       const mockAuction = {
         _id: auctionId,
@@ -748,7 +739,9 @@ describe("AuctionsService", () => {
     it("should return null if auction not found", async () => {
       mockAuctionModel.findOneAndUpdate.mockResolvedValue(null);
 
-      const result = await service.completeRound(new Types.ObjectId().toString());
+      const result = await service.completeRound(
+        new Types.ObjectId().toString(),
+      );
 
       expect(result).toBeNull();
     });
@@ -868,9 +861,6 @@ describe("AuctionsService", () => {
 
   describe("error handling", () => {
     it("should handle transaction conflicts gracefully", async () => {
-      const auctionId = new Types.ObjectId();
-      const userId = new Types.ObjectId();
-
       // Simulate transaction conflict on first attempt
       const conflictError = new Error("Conflict");
       (conflictError as any).hasErrorLabel = (label: string) =>
@@ -952,8 +942,6 @@ describe("AuctionsService", () => {
     });
 
     it("should validate auction exists before warming cache", async () => {
-      const auctionId = new Types.ObjectId().toString();
-
       mockAuctionModel.findById.mockResolvedValueOnce(null);
 
       // Service should handle the error appropriately

@@ -1,9 +1,17 @@
 import { Test, TestingModule } from "@nestjs/testing";
-import { UnauthorizedException, NotFoundException, BadRequestException, ConflictException } from "@nestjs/common";
+import {
+  NotFoundException,
+  BadRequestException,
+  ConflictException,
+} from "@nestjs/common";
 import { UsersController } from "@/modules/users/users.controller";
 import { UsersService } from "@/modules/users/users.service";
 import { AuthGuard, AuthenticatedRequest } from "@/common";
-import { IBalance, IBalanceResponse, ILanguageUpdate, ILanguageResponse } from "@/modules/users/dto";
+import {
+  IBalance,
+  IBalanceResponse,
+  ILanguageUpdate,
+} from "@/modules/users/dto";
 import { UserDocument } from "@/schemas";
 
 describe("UsersController", () => {
@@ -87,12 +95,12 @@ describe("UsersController", () => {
 
     it("should throw NotFoundException when user not found", async () => {
       mockUsersService.getBalance.mockRejectedValue(
-        new NotFoundException("User not found")
+        new NotFoundException("User not found"),
       );
 
-      await expect(controller.getBalance(mockAuthenticatedRequest)).rejects.toThrow(
-        NotFoundException
-      );
+      await expect(
+        controller.getBalance(mockAuthenticatedRequest),
+      ).rejects.toThrow(NotFoundException);
     });
 
     it("should return balance with large values", async () => {
@@ -136,7 +144,9 @@ describe("UsersController", () => {
 
       await controller.getBalance(customRequest);
 
-      expect(service.getBalance).toHaveBeenCalledWith("123456789012345678901234");
+      expect(service.getBalance).toHaveBeenCalledWith(
+        "123456789012345678901234",
+      );
     });
   });
 
@@ -146,7 +156,10 @@ describe("UsersController", () => {
       const body: ILanguageUpdate = { language: "en" };
       mockUsersService.updateLanguage.mockResolvedValue("en");
 
-      const result = await controller.updateLanguage(mockAuthenticatedRequest, body);
+      const result = await controller.updateLanguage(
+        mockAuthenticatedRequest,
+        body,
+      );
 
       expect(result).toEqual({ languageCode: "en" });
       expect(service.updateLanguage).toHaveBeenCalledWith(mockUserId, "en");
@@ -156,7 +169,10 @@ describe("UsersController", () => {
       const body: ILanguageUpdate = { language: "ru" };
       mockUsersService.updateLanguage.mockResolvedValue("ru");
 
-      const result = await controller.updateLanguage(mockAuthenticatedRequest, body);
+      const result = await controller.updateLanguage(
+        mockAuthenticatedRequest,
+        body,
+      );
 
       expect(result).toEqual({ languageCode: "ru" });
       expect(service.updateLanguage).toHaveBeenCalledWith(mockUserId, "ru");
@@ -165,11 +181,11 @@ describe("UsersController", () => {
     it("should throw NotFoundException when user not found", async () => {
       const body: ILanguageUpdate = { language: "en" };
       mockUsersService.updateLanguage.mockRejectedValue(
-        new NotFoundException("User not found")
+        new NotFoundException("User not found"),
       );
 
       await expect(
-        controller.updateLanguage(mockAuthenticatedRequest, body)
+        controller.updateLanguage(mockAuthenticatedRequest, body),
       ).rejects.toThrow(NotFoundException);
     });
 
@@ -177,7 +193,10 @@ describe("UsersController", () => {
       const body: ILanguageUpdate = { language: "en" };
       mockUsersService.updateLanguage.mockResolvedValue("en");
 
-      const result = await controller.updateLanguage(mockAuthenticatedRequest, body);
+      const result = await controller.updateLanguage(
+        mockAuthenticatedRequest,
+        body,
+      );
 
       expect(result).toHaveProperty("languageCode");
       expect(typeof result.languageCode).toBe("string");
@@ -187,7 +206,10 @@ describe("UsersController", () => {
       const body: ILanguageUpdate = { language: "en" };
       mockUsersService.updateLanguage.mockResolvedValue("en");
 
-      const result = await controller.updateLanguage(mockAuthenticatedRequest, body);
+      const result = await controller.updateLanguage(
+        mockAuthenticatedRequest,
+        body,
+      );
 
       expect(result.languageCode).toBe("en");
     });
@@ -212,22 +234,22 @@ describe("UsersController", () => {
     it("should throw BadRequestException for zero amount", async () => {
       const body: IBalance = { amount: 0 };
       mockUsersService.deposit.mockRejectedValue(
-        new BadRequestException("Amount must be a positive integer")
+        new BadRequestException("Amount must be a positive integer"),
       );
 
       await expect(
-        controller.deposit(mockAuthenticatedRequest, body)
+        controller.deposit(mockAuthenticatedRequest, body),
       ).rejects.toThrow(BadRequestException);
     });
 
     it("should throw BadRequestException for negative amount", async () => {
       const body: IBalance = { amount: -100 };
       mockUsersService.deposit.mockRejectedValue(
-        new BadRequestException("Amount must be a positive integer")
+        new BadRequestException("Amount must be a positive integer"),
       );
 
       await expect(
-        controller.deposit(mockAuthenticatedRequest, body)
+        controller.deposit(mockAuthenticatedRequest, body),
       ).rejects.toThrow(BadRequestException);
     });
 
@@ -259,11 +281,11 @@ describe("UsersController", () => {
     it("should throw NotFoundException when user not found", async () => {
       const body: IBalance = { amount: 100 };
       mockUsersService.deposit.mockRejectedValue(
-        new NotFoundException("User not found")
+        new NotFoundException("User not found"),
       );
 
       await expect(
-        controller.deposit(mockAuthenticatedRequest, body)
+        controller.deposit(mockAuthenticatedRequest, body),
       ).rejects.toThrow(NotFoundException);
     });
   });
@@ -287,33 +309,33 @@ describe("UsersController", () => {
     it("should throw BadRequestException for insufficient balance", async () => {
       const body: IBalance = { amount: 2000 };
       mockUsersService.withdraw.mockRejectedValue(
-        new BadRequestException("Insufficient balance")
+        new BadRequestException("Insufficient balance"),
       );
 
       await expect(
-        controller.withdraw(mockAuthenticatedRequest, body)
+        controller.withdraw(mockAuthenticatedRequest, body),
       ).rejects.toThrow(BadRequestException);
     });
 
     it("should throw BadRequestException for negative amount", async () => {
       const body: IBalance = { amount: -50 };
       mockUsersService.withdraw.mockRejectedValue(
-        new BadRequestException("Amount must be a positive integer")
+        new BadRequestException("Amount must be a positive integer"),
       );
 
       await expect(
-        controller.withdraw(mockAuthenticatedRequest, body)
+        controller.withdraw(mockAuthenticatedRequest, body),
       ).rejects.toThrow(BadRequestException);
     });
 
     it("should throw BadRequestException for zero amount", async () => {
       const body: IBalance = { amount: 0 };
       mockUsersService.withdraw.mockRejectedValue(
-        new BadRequestException("Amount must be a positive integer")
+        new BadRequestException("Amount must be a positive integer"),
       );
 
       await expect(
-        controller.withdraw(mockAuthenticatedRequest, body)
+        controller.withdraw(mockAuthenticatedRequest, body),
       ).rejects.toThrow(BadRequestException);
     });
 
@@ -335,11 +357,13 @@ describe("UsersController", () => {
     it("should throw ConflictException for concurrent withdrawal", async () => {
       const body: IBalance = { amount: 100 };
       mockUsersService.withdraw.mockRejectedValue(
-        new ConflictException("Concurrent modification or insufficient balance")
+        new ConflictException(
+          "Concurrent modification or insufficient balance",
+        ),
       );
 
       await expect(
-        controller.withdraw(mockAuthenticatedRequest, body)
+        controller.withdraw(mockAuthenticatedRequest, body),
       ).rejects.toThrow(ConflictException);
     });
   });
@@ -431,32 +455,32 @@ describe("UsersController", () => {
     it("should handle 400 Bad Request validation errors", async () => {
       const body: IBalance = { amount: -100 };
       mockUsersService.deposit.mockRejectedValue(
-        new BadRequestException("Amount must be a positive integer")
+        new BadRequestException("Amount must be a positive integer"),
       );
 
       await expect(
-        controller.deposit(mockAuthenticatedRequest, body)
+        controller.deposit(mockAuthenticatedRequest, body),
       ).rejects.toThrow(BadRequestException);
     });
 
     it("should handle 404 Not Found errors", async () => {
       mockUsersService.getBalance.mockRejectedValue(
-        new NotFoundException("User not found")
+        new NotFoundException("User not found"),
       );
 
-      await expect(controller.getBalance(mockAuthenticatedRequest)).rejects.toThrow(
-        NotFoundException
-      );
+      await expect(
+        controller.getBalance(mockAuthenticatedRequest),
+      ).rejects.toThrow(NotFoundException);
     });
 
     it("should handle 409 Conflict errors for concurrent modifications", async () => {
       const body: IBalance = { amount: 100 };
       mockUsersService.withdraw.mockRejectedValue(
-        new ConflictException("Concurrent modification detected")
+        new ConflictException("Concurrent modification detected"),
       );
 
       await expect(
-        controller.withdraw(mockAuthenticatedRequest, body)
+        controller.withdraw(mockAuthenticatedRequest, body),
       ).rejects.toThrow(ConflictException);
     });
 
@@ -464,9 +488,9 @@ describe("UsersController", () => {
       const errorMessage = "Database connection failed";
       mockUsersService.getBalance.mockRejectedValue(new Error(errorMessage));
 
-      await expect(controller.getBalance(mockAuthenticatedRequest)).rejects.toThrow(
-        errorMessage
-      );
+      await expect(
+        controller.getBalance(mockAuthenticatedRequest),
+      ).rejects.toThrow(errorMessage);
     });
   });
 
@@ -496,16 +520,22 @@ describe("UsersController", () => {
       const withdrawUser = { ...mockUser, balance: 1200 } as UserDocument;
       mockUsersService.withdraw.mockResolvedValue(withdrawUser);
 
-      const withdrawResult = await controller.withdraw(mockAuthenticatedRequest, {
-        amount: 300,
-      });
+      const withdrawResult = await controller.withdraw(
+        mockAuthenticatedRequest,
+        {
+          amount: 300,
+        },
+      );
       expect(withdrawResult.balance).toBe(1200);
 
       // Language update
       mockUsersService.updateLanguage.mockResolvedValue("ru");
-      const langResult = await controller.updateLanguage(mockAuthenticatedRequest, {
-        language: "ru",
-      });
+      const langResult = await controller.updateLanguage(
+        mockAuthenticatedRequest,
+        {
+          language: "ru",
+        },
+      );
       expect(langResult.languageCode).toBe("ru");
     });
 
@@ -535,22 +565,22 @@ describe("UsersController", () => {
     it("should validate deposit amount is positive integer", async () => {
       const body: IBalance = { amount: -50 };
       mockUsersService.deposit.mockRejectedValue(
-        new BadRequestException("Amount must be a positive integer")
+        new BadRequestException("Amount must be a positive integer"),
       );
 
       await expect(
-        controller.deposit(mockAuthenticatedRequest, body)
+        controller.deposit(mockAuthenticatedRequest, body),
       ).rejects.toThrow(BadRequestException);
     });
 
     it("should validate withdraw amount is positive integer", async () => {
       const body: IBalance = { amount: 0 };
       mockUsersService.withdraw.mockRejectedValue(
-        new BadRequestException("Amount must be a positive integer")
+        new BadRequestException("Amount must be a positive integer"),
       );
 
       await expect(
-        controller.withdraw(mockAuthenticatedRequest, body)
+        controller.withdraw(mockAuthenticatedRequest, body),
       ).rejects.toThrow(BadRequestException);
     });
 
@@ -558,7 +588,10 @@ describe("UsersController", () => {
       const body: ILanguageUpdate = { language: "en" };
       mockUsersService.updateLanguage.mockResolvedValue("en");
 
-      const result = await controller.updateLanguage(mockAuthenticatedRequest, body);
+      const result = await controller.updateLanguage(
+        mockAuthenticatedRequest,
+        body,
+      );
 
       expect(result.languageCode).toBe("en");
     });

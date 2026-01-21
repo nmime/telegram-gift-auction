@@ -77,7 +77,7 @@ describe("BidsService", () => {
       });
       expect(mockBidModel.populate).toHaveBeenCalledWith(
         "userId",
-        "username isBot"
+        "username isBot",
       );
       expect(result).toEqual(mockBids);
       expect(result.length).toBe(2);
@@ -109,7 +109,7 @@ describe("BidsService", () => {
 
       expect(mockBidModel.populate).toHaveBeenCalledWith(
         "userId",
-        "username isBot"
+        "username isBot",
       );
     });
 
@@ -189,7 +189,7 @@ describe("BidsService", () => {
 
       expect(mockBidModel.populate).toHaveBeenCalledWith(
         "userId",
-        "username isBot"
+        "username isBot",
       );
     });
 
@@ -247,7 +247,7 @@ describe("BidsService", () => {
       });
       expect(mockBidModel.populate).toHaveBeenCalledWith(
         "auctionId",
-        "title status"
+        "title status",
       );
       expect(result).toEqual(mockBids);
       expect(result.length).toBe(2);
@@ -305,7 +305,7 @@ describe("BidsService", () => {
 
       expect(mockBidModel.populate).toHaveBeenCalledWith(
         "auctionId",
-        "title status"
+        "title status",
       );
     });
 
@@ -425,7 +425,7 @@ describe("BidsService", () => {
       mockBidModel.exec.mockResolvedValue(null);
 
       const result = await service.getByAuction(
-        new Types.ObjectId().toString()
+        new Types.ObjectId().toString(),
       );
 
       expect(result).toBeNull();
@@ -436,7 +436,7 @@ describe("BidsService", () => {
       mockBidModel.exec.mockRejectedValue(error);
 
       await expect(
-        service.getByAuction(new Types.ObjectId().toString())
+        service.getByAuction(new Types.ObjectId().toString()),
       ).rejects.toThrow("Database connection failed");
     });
 
@@ -445,7 +445,7 @@ describe("BidsService", () => {
       mockBidModel.countDocuments.mockRejectedValue(error);
 
       await expect(
-        service.countByAuction(new Types.ObjectId().toString())
+        service.countByAuction(new Types.ObjectId().toString()),
       ).rejects.toThrow("Count operation failed");
     });
 
@@ -478,8 +478,10 @@ describe("BidsService", () => {
 
       // Earlier bid should come before later bid when amounts are equal
       expect(
-        result && result[0] && result[1] &&
-        result[0].createdAt.getTime() < result[1].createdAt.getTime()
+        result &&
+          result[0] &&
+          result[1] &&
+          result[0].createdAt.getTime() < result[1].createdAt.getTime(),
       ).toBe(true);
     });
 
@@ -503,7 +505,6 @@ describe("BidsService", () => {
 
     it("should handle concurrent operations", async () => {
       const auctionId = new Types.ObjectId().toString();
-      const userId = new Types.ObjectId().toString();
 
       mockBidModel.exec.mockResolvedValue([]);
       mockBidModel.countDocuments.mockResolvedValue(5);
@@ -556,7 +557,9 @@ describe("BidsService", () => {
 
       expect(result && result[0] && typeof result[0].amount).toBe("number");
       expect(result && result[0] && typeof result[0].status).toBe("string");
-      expect(result && result[0] && result[0].createdAt instanceof Date).toBe(true);
+      expect(result && result[0] && result[0].createdAt instanceof Date).toBe(
+        true,
+      );
     });
 
     it("should handle decimal amounts correctly", async () => {

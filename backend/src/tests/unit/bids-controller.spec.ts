@@ -647,7 +647,11 @@ describe("BidsController", () => {
           userId: mockUserId,
           amount: 100 + i,
           status:
-            i % 2 === 0 ? BidStatus.ACTIVE : i % 3 === 0 ? BidStatus.WON : BidStatus.LOST,
+            i % 2 === 0
+              ? BidStatus.ACTIVE
+              : i % 3 === 0
+                ? BidStatus.WON
+                : BidStatus.LOST,
           wonRound: i % 3 === 0 ? i : undefined,
           itemNumber: i % 3 === 0 ? i * 2 : undefined,
           createdAt: new Date(`2024-01-${(i % 28) + 1}T10:00:00Z`),
@@ -664,7 +668,7 @@ describe("BidsController", () => {
 
       it("should handle bids with various amounts correctly", async () => {
         const amounts = [1, 10, 100, 1000, 10000, 99999];
-        const mockBids = amounts.map((amount, i) => ({
+        const mockBids = amounts.map((amount, _i) => ({
           _id: new Types.ObjectId(),
           auctionId: mockAuctionId,
           userId: mockUserId,

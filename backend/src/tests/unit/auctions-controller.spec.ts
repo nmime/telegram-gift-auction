@@ -3,7 +3,6 @@ import { BadRequestException, NotFoundException } from "@nestjs/common";
 import { AuctionsController } from "@/modules/auctions/auctions.controller";
 import { AuctionsService } from "@/modules/auctions/auctions.service";
 import { BotService } from "@/modules/auctions/bot.service";
-import { AuthGuard } from "@/common";
 import { AuctionStatus } from "@/schemas";
 import { Types } from "mongoose";
 
@@ -143,7 +142,10 @@ describe("AuctionsController", () => {
 
       auctionsService.create.mockResolvedValue(expectedAuction as any);
 
-      const result = await controller.create(validCreateDto, mockAuthenticatedRequest);
+      const result = await controller.create(
+        validCreateDto,
+        mockAuthenticatedRequest,
+      );
 
       expect(auctionsService.create).toHaveBeenCalledWith(
         validCreateDto,
@@ -165,7 +167,10 @@ describe("AuctionsController", () => {
 
       auctionsService.create.mockResolvedValue(expectedAuction as any);
 
-      const result = await controller.create(validCreateDto, mockAuthenticatedRequest);
+      const result = await controller.create(
+        validCreateDto,
+        mockAuthenticatedRequest,
+      );
 
       expect(result).toHaveProperty("id");
       expect(result).toHaveProperty("status", AuctionStatus.PENDING);
@@ -181,7 +186,10 @@ describe("AuctionsController", () => {
 
       auctionsService.create.mockResolvedValue(expectedAuction as any);
 
-      const result = await controller.create(validCreateDto, mockAuthenticatedRequest);
+      const result = await controller.create(
+        validCreateDto,
+        mockAuthenticatedRequest,
+      );
 
       expect(result.status).toBe(AuctionStatus.PENDING);
     });
@@ -195,7 +203,10 @@ describe("AuctionsController", () => {
 
       auctionsService.create.mockResolvedValue(expectedAuction as any);
 
-      const result = await controller.create(validCreateDto, mockAuthenticatedRequest);
+      const result = await controller.create(
+        validCreateDto,
+        mockAuthenticatedRequest,
+      );
 
       expect(result.roundsConfig).toHaveLength(2);
       expect(result.roundsConfig[0]!.itemsCount).toBe(5);
@@ -212,9 +223,9 @@ describe("AuctionsController", () => {
         new BadRequestException("Sum of items in rounds must equal totalItems"),
       );
 
-      await expect(controller.create(invalidDto, mockAuthenticatedRequest)).rejects.toThrow(
-        BadRequestException,
-      );
+      await expect(
+        controller.create(invalidDto, mockAuthenticatedRequest),
+      ).rejects.toThrow(BadRequestException);
     });
 
     it("should throw error when totalItems is zero or negative", async () => {
@@ -227,9 +238,9 @@ describe("AuctionsController", () => {
         new BadRequestException("Total items must be positive"),
       );
 
-      await expect(controller.create(invalidDto, mockAuthenticatedRequest)).rejects.toThrow(
-        BadRequestException,
-      );
+      await expect(
+        controller.create(invalidDto, mockAuthenticatedRequest),
+      ).rejects.toThrow(BadRequestException);
     });
 
     it("should throw error when round duration is invalid", async () => {
@@ -245,9 +256,9 @@ describe("AuctionsController", () => {
         new BadRequestException("Round items and duration must be positive"),
       );
 
-      await expect(controller.create(invalidDto, mockAuthenticatedRequest)).rejects.toThrow(
-        BadRequestException,
-      );
+      await expect(
+        controller.create(invalidDto, mockAuthenticatedRequest),
+      ).rejects.toThrow(BadRequestException);
     });
 
     it("should require user authentication", async () => {
@@ -289,9 +300,13 @@ describe("AuctionsController", () => {
       );
       auctionsService.findAll.mockResolvedValue(pendingAuctions as any);
 
-      const result = await controller.findAll({ status: AuctionStatus.PENDING });
+      const result = await controller.findAll({
+        status: AuctionStatus.PENDING,
+      });
 
-      expect(auctionsService.findAll).toHaveBeenCalledWith(AuctionStatus.PENDING);
+      expect(auctionsService.findAll).toHaveBeenCalledWith(
+        AuctionStatus.PENDING,
+      );
       expect(result).toHaveLength(1);
       expect(result[0]!.status).toBe(AuctionStatus.PENDING);
     });
@@ -314,7 +329,9 @@ describe("AuctionsController", () => {
       );
       auctionsService.findAll.mockResolvedValue(completedAuctions as any);
 
-      const result = await controller.findAll({ status: AuctionStatus.COMPLETED });
+      const result = await controller.findAll({
+        status: AuctionStatus.COMPLETED,
+      });
 
       expect(result).toHaveLength(1);
       expect(result[0]!.status).toBe(AuctionStatus.COMPLETED);
@@ -338,7 +355,9 @@ describe("AuctionsController", () => {
     it("should handle empty results", async () => {
       auctionsService.findAll.mockResolvedValue([]);
 
-      const result = await controller.findAll({ status: AuctionStatus.CANCELLED });
+      const result = await controller.findAll({
+        status: AuctionStatus.CANCELLED,
+      });
 
       expect(result).toEqual([]);
     });
@@ -374,9 +393,9 @@ describe("AuctionsController", () => {
         new NotFoundException("Auction not found"),
       );
 
-      await expect(controller.findOne("507f1f77bcf86cd799439099")).rejects.toThrow(
-        NotFoundException,
-      );
+      await expect(
+        controller.findOne("507f1f77bcf86cd799439099"),
+      ).rejects.toThrow(NotFoundException);
     });
 
     it("should throw BadRequestException for invalid ID format", async () => {
@@ -417,12 +436,16 @@ describe("AuctionsController", () => {
         new BadRequestException("Only owner can start auction"),
       );
 
-      await expect(controller.start(validId)).rejects.toThrow(BadRequestException);
+      await expect(controller.start(validId)).rejects.toThrow(
+        BadRequestException,
+      );
     });
 
     it("should only start PENDING auctions", async () => {
       auctionsService.start.mockRejectedValue(
-        new BadRequestException("Auction can only be started from pending status"),
+        new BadRequestException(
+          "Auction can only be started from pending status",
+        ),
       );
 
       await expect(controller.start(validId)).rejects.toThrow(
@@ -460,10 +483,14 @@ describe("AuctionsController", () => {
 
     it("should throw error if auction already started", async () => {
       auctionsService.start.mockRejectedValue(
-        new BadRequestException("Auction can only be started from pending status"),
+        new BadRequestException(
+          "Auction can only be started from pending status",
+        ),
       );
 
-      await expect(controller.start(validId)).rejects.toThrow(BadRequestException);
+      await expect(controller.start(validId)).rejects.toThrow(
+        BadRequestException,
+      );
     });
 
     it("should start bots when botsEnabled is true", async () => {
@@ -534,7 +561,9 @@ describe("AuctionsController", () => {
     it("should include current active round details", async () => {
       auctionsService.findById.mockResolvedValue(mockAuctionDocument as any);
 
-      const result = await controller.findOne(mockAuctionDocument._id.toString());
+      const result = await controller.findOne(
+        mockAuctionDocument._id.toString(),
+      );
 
       expect(result.currentRound).toBe(1);
       expect(result.rounds[0]!.completed).toBe(false);
@@ -577,7 +606,9 @@ describe("AuctionsController", () => {
 
       auctionsService.findById.mockResolvedValue(auctionWithExtensions as any);
 
-      const result = await controller.findOne(auctionWithExtensions._id.toString());
+      const result = await controller.findOne(
+        auctionWithExtensions._id.toString(),
+      );
 
       expect(result.rounds[0]!.extensionsCount).toBe(3);
     });
@@ -690,7 +721,11 @@ describe("AuctionsController", () => {
 
       const result = await controller.getLeaderboard(validId, {});
 
-      expect(auctionsService.getLeaderboard).toHaveBeenCalledWith(validId, 50, 0);
+      expect(auctionsService.getLeaderboard).toHaveBeenCalledWith(
+        validId,
+        50,
+        0,
+      );
       expect(result.leaderboard).toHaveLength(2);
       expect(result.totalCount).toBe(2);
     });
@@ -706,7 +741,11 @@ describe("AuctionsController", () => {
 
       await controller.getLeaderboard(validId, { limit: 10, offset: 20 });
 
-      expect(auctionsService.getLeaderboard).toHaveBeenCalledWith(validId, 10, 20);
+      expect(auctionsService.getLeaderboard).toHaveBeenCalledWith(
+        validId,
+        10,
+        20,
+      );
     });
 
     it("should include past winners", async () => {
@@ -794,16 +833,25 @@ describe("AuctionsController", () => {
     it("should return user's bids for auction", async () => {
       auctionsService.getUserBids.mockResolvedValue(mockBids as any);
 
-      const result = await controller.getMyBids(validId, mockAuthenticatedRequest);
+      const result = await controller.getMyBids(
+        validId,
+        mockAuthenticatedRequest,
+      );
 
-      expect(auctionsService.getUserBids).toHaveBeenCalledWith(validId, "user123");
+      expect(auctionsService.getUserBids).toHaveBeenCalledWith(
+        validId,
+        "user123",
+      );
       expect(result).toHaveLength(2);
     });
 
     it("should include bid status and amounts", async () => {
       auctionsService.getUserBids.mockResolvedValue(mockBids as any);
 
-      const result = await controller.getMyBids(validId, mockAuthenticatedRequest);
+      const result = await controller.getMyBids(
+        validId,
+        mockAuthenticatedRequest,
+      );
 
       expect(result[0]!.amount).toBe(1000);
       expect(result[0]!.status).toBe("active");
@@ -813,7 +861,10 @@ describe("AuctionsController", () => {
     it("should include won round and item number for winning bids", async () => {
       auctionsService.getUserBids.mockResolvedValue(mockBids as any);
 
-      const result = await controller.getMyBids(validId, mockAuthenticatedRequest);
+      const result = await controller.getMyBids(
+        validId,
+        mockAuthenticatedRequest,
+      );
 
       expect(result[1]!.wonRound).toBe(1);
       expect(result[1]!.itemNumber).toBe(1);
@@ -822,7 +873,10 @@ describe("AuctionsController", () => {
     it("should return empty array if user has no bids", async () => {
       auctionsService.getUserBids.mockResolvedValue([]);
 
-      const result = await controller.getMyBids(validId, mockAuthenticatedRequest);
+      const result = await controller.getMyBids(
+        validId,
+        mockAuthenticatedRequest,
+      );
 
       expect(result).toEqual([]);
     });
@@ -894,7 +948,11 @@ describe("AuctionsController", () => {
 
       const mockRequest = createMockRequest() as any;
 
-      const result = await controller.placeBid(validId, validBidDto, mockRequest);
+      const result = await controller.placeBid(
+        validId,
+        validBidDto,
+        mockRequest,
+      );
 
       expect(result.bid.amount).toBe(500);
       expect(result.auction.id).toBeDefined();

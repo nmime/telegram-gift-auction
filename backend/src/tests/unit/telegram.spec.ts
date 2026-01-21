@@ -108,8 +108,14 @@ describe("TelegramBotService", () => {
 
     it("should setup middleware and handlers on construction", () => {
       expect(mockBot.use).toHaveBeenCalled();
-      expect(mockBot.command).toHaveBeenCalledWith("start", expect.any(Function));
-      expect(mockBot.command).toHaveBeenCalledWith("help", expect.any(Function));
+      expect(mockBot.command).toHaveBeenCalledWith(
+        "start",
+        expect.any(Function),
+      );
+      expect(mockBot.command).toHaveBeenCalledWith(
+        "help",
+        expect.any(Function),
+      );
       expect(mockBot.command).toHaveBeenCalledWith(
         "language",
         expect.any(Function),
@@ -303,7 +309,9 @@ describe("TelegramBotService", () => {
 
       beforeEach(() => {
         const commandCalls = mockBot.command.mock.calls;
-        const startCall = commandCalls.find((call: any[]) => call[0] === "start");
+        const startCall = commandCalls.find(
+          (call: any[]) => call[0] === "start",
+        );
         startHandler = startCall?.[1];
       });
 
@@ -328,7 +336,9 @@ describe("TelegramBotService", () => {
 
       it("should send welcome message for /start command", async () => {
         const commandCalls = mockBot.command.mock.calls;
-        const startCall = commandCalls.find((call: any[]) => call[0] === "start");
+        const startCall = commandCalls.find(
+          (call: any[]) => call[0] === "start",
+        );
         const handler = startCall?.[1];
 
         const ctx = {
@@ -395,7 +405,9 @@ describe("TelegramBotService", () => {
 
       beforeEach(() => {
         const commandCalls = mockBot.command.mock.calls;
-        const langCall = commandCalls.find((call: any[]) => call[0] === "language");
+        const langCall = commandCalls.find(
+          (call: any[]) => call[0] === "language",
+        );
         languageHandler = langCall?.[1];
       });
 
@@ -537,8 +549,7 @@ describe("TelegramBotService", () => {
         ],
       }).compile();
 
-      const newService =
-        newModule.get<TelegramBotService>(TelegramBotService);
+      const newService = newModule.get<TelegramBotService>(TelegramBotService);
 
       mockBot.api.getMe.mockResolvedValue({ username: "test_bot" });
       mockBot.api.setWebhook.mockResolvedValue(true);
@@ -577,8 +588,7 @@ describe("TelegramBotService", () => {
         ],
       }).compile();
 
-      const newService =
-        newModule.get<TelegramBotService>(TelegramBotService);
+      const newService = newModule.get<TelegramBotService>(TelegramBotService);
 
       mockBot.api.getMe.mockResolvedValue({ username: "test_bot" });
       mockBot.api.deleteWebhook.mockResolvedValue(true);
@@ -601,7 +611,7 @@ describe("TelegramBotService", () => {
 
   describe("Webhook Callback", () => {
     it("should create webhook callback with secret token", () => {
-      const webhookCallbackModule = require("grammy");
+      const webhookCallbackModule = jest.requireMock("grammy");
 
       service.getWebhookCallback();
 
@@ -617,7 +627,7 @@ describe("TelegramBotService", () => {
       const mockReply = {} as any;
       const mockCallback = jest.fn();
 
-      const webhookCallbackModule = require("grammy");
+      const webhookCallbackModule = jest.requireMock("grammy");
       webhookCallbackModule.webhookCallback.mockReturnValue(mockCallback);
 
       await service.handleWebhook(mockRequest, mockReply);

@@ -96,7 +96,9 @@ describe("EventsGateway", () => {
       const connCall = mockServer.on.mock.calls.find(
         (call) => call[0] === "connection",
       );
-      const connectionHandler = connCall ? (connCall[1] as (socket: any) => void) : undefined;
+      const connectionHandler = connCall
+        ? (connCall[1] as (socket: any) => void)
+        : undefined;
 
       connectionHandler?.(mockSocket);
 
@@ -128,13 +130,17 @@ describe("EventsGateway", () => {
       const connCall = mockServer.on.mock.calls.find(
         (call) => call[0] === "connection",
       );
-      const connectionHandler = connCall ? (connCall[1] as (socket: any) => void) : undefined;
+      const connectionHandler = connCall
+        ? (connCall[1] as (socket: any) => void)
+        : undefined;
       connectionHandler?.(mockSocket);
 
       const authCall = mockSocket.on.mock.calls.find(
         (call) => call[0] === "auth",
       );
-      authHandler = authCall ? (authCall[1] as (token: string) => void) : (() => {});
+      authHandler = authCall
+        ? (authCall[1] as (token: string) => void)
+        : () => {};
     });
 
     it("should authenticate socket with valid JWT", () => {
@@ -192,21 +198,29 @@ describe("EventsGateway", () => {
       const connCall = mockServer.on.mock.calls.find(
         (call) => call[0] === "connection",
       );
-      const connectionHandler = connCall ? (connCall[1] as (socket: any) => void) : undefined;
+      const connectionHandler = connCall
+        ? (connCall[1] as (socket: any) => void)
+        : undefined;
       connectionHandler?.(mockSocket);
 
       const joinCall = mockSocket.on.mock.calls.find(
         (call) => call[0] === "join-auction",
       );
-      joinHandler = joinCall ? (joinCall[1] as (auctionId: string) => void) : (() => {});
+      joinHandler = joinCall
+        ? (joinCall[1] as (auctionId: string) => void)
+        : () => {};
       const leaveCall = mockSocket.on.mock.calls.find(
         (call) => call[0] === "leave-auction",
       );
-      leaveHandler = leaveCall ? (leaveCall[1] as (auctionId: string) => void) : (() => {});
+      leaveHandler = leaveCall
+        ? (leaveCall[1] as (auctionId: string) => void)
+        : () => {};
       const disconnectCall = mockSocket.on.mock.calls.find(
         (call) => call[0] === "disconnect",
       );
-      disconnectHandler = disconnectCall ? (disconnectCall[1] as () => void) : (() => {});
+      disconnectHandler = disconnectCall
+        ? (disconnectCall[1] as () => void)
+        : () => {};
     });
 
     it("should join auction room", () => {
@@ -252,13 +266,17 @@ describe("EventsGateway", () => {
       const connCall = mockServer.on.mock.calls.find(
         (call) => call[0] === "connection",
       );
-      const connectionHandler = connCall ? (connCall[1] as (socket: any) => void) : undefined;
+      const connectionHandler = connCall
+        ? (connCall[1] as (socket: any) => void)
+        : undefined;
       connectionHandler?.(mockSocket2);
 
       const joinCall2 = mockSocket2.on.mock.calls.find(
         (call) => call[0] === "join-auction",
       );
-      const joinHandler2 = joinCall2 ? (joinCall2[1] as (auctionId: string) => void) : (() => {});
+      const joinHandler2 = joinCall2
+        ? (joinCall2[1] as (auctionId: string) => void)
+        : () => {};
 
       joinHandler("auction123");
       joinHandler2("auction123");
@@ -276,13 +294,17 @@ describe("EventsGateway", () => {
       const connCall = mockServer.on.mock.calls.find(
         (call) => call[0] === "connection",
       );
-      const connectionHandler = connCall ? (connCall[1] as (socket: any) => void) : undefined;
+      const connectionHandler = connCall
+        ? (connCall[1] as (socket: any) => void)
+        : undefined;
       connectionHandler?.(mockSocket);
 
       const placeBidCall = mockSocket.on.mock.calls.find(
         (call) => call[0] === "place-bid",
       );
-      placeBidHandler = placeBidCall ? (placeBidCall[1] as (payload: any) => Promise<void>) : (async () => {});
+      placeBidHandler = placeBidCall
+        ? (placeBidCall[1] as (payload: any) => Promise<void>)
+        : async () => {};
     });
 
     it("should reject bid without authentication", async () => {
@@ -609,8 +631,8 @@ describe("EventsGateway", () => {
 
   describe("Edge Cases", () => {
     let placeBidHandler: (payload: any) => Promise<void>;
-    let joinHandler: (auctionId: string) => void;
-    let connectionHandler: ((socket: any) => void) | undefined;
+    let _joinHandler: (auctionId: string) => void;
+    let _connectionHandler: ((socket: any) => void) | undefined;
 
     beforeEach(() => {
       gateway.setServer(mockServer);
@@ -620,13 +642,17 @@ describe("EventsGateway", () => {
       const connCall = mockServer.on.mock.calls.find(
         (call) => call[0] === "connection",
       );
-      const connectionHandler = connCall ? (connCall[1] as (socket: any) => void) : undefined;
+      const connectionHandler = connCall
+        ? (connCall[1] as (socket: any) => void)
+        : undefined;
       connectionHandler?.(mockSocket);
 
       const placeBidCall = mockSocket.on.mock.calls.find(
         (call) => call[0] === "place-bid",
       );
-      placeBidHandler = placeBidCall ? (placeBidCall[1] as (payload: any) => Promise<void>) : (async () => {});
+      placeBidHandler = placeBidCall
+        ? (placeBidCall[1] as (payload: any) => Promise<void>)
+        : async () => {};
 
       (mockSocket as any).userId = "user123";
 
@@ -638,6 +664,10 @@ describe("EventsGateway", () => {
         isNewBid: false,
         roundEndTime: Date.now() + 60000,
       });
+
+      // Define handlers that will be used later
+      const _joinHandler = jest.fn(); // Placeholder for join handler
+      const _connectionHandler = jest.fn(); // Placeholder for connection handler
 
       // Place multiple bids rapidly
       await Promise.all([
@@ -653,13 +683,17 @@ describe("EventsGateway", () => {
       const connCall = mockServer.on.mock.calls.find(
         (call) => call[0] === "connection",
       );
-      const connectionHandler = connCall ? (connCall[1] as (socket: any) => void) : undefined;
+      const connectionHandler = connCall
+        ? (connCall[1] as (socket: any) => void)
+        : undefined;
       connectionHandler?.(mockSocket);
 
       const placeBidCall = mockSocket.on.mock.calls.find(
         (call) => call[0] === "place-bid",
       );
-      placeBidHandler = placeBidCall ? (placeBidCall[1] as (payload: any) => Promise<void>) : (async () => {});
+      placeBidHandler = placeBidCall
+        ? (placeBidCall[1] as (payload: any) => Promise<void>)
+        : async () => {};
 
       (mockSocket as any).userId = "user123";
 

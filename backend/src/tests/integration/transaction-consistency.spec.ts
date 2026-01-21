@@ -775,10 +775,7 @@ describe("Transaction Consistency Integration Tests", () => {
         }
       };
 
-      await Promise.all([
-        placeBid(user1._id, 200),
-        placeBid(user2._id, 250),
-      ]);
+      await Promise.all([placeBid(user1._id, 200), placeBid(user2._id, 250)]);
 
       const bids = await bidModel.find({ auctionId: auction._id });
       expect(bids).toHaveLength(2);

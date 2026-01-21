@@ -75,7 +75,9 @@ describe("Authentication Integration Tests", () => {
     transactionsService =
       moduleFixture.get<TransactionsService>(TransactionsService);
     bidsService = moduleFixture.get<BidsService>(BidsService);
-    userModel = moduleFixture.get<Model<UserDocument>>(getModelToken(User.name));
+    userModel = moduleFixture.get<Model<UserDocument>>(
+      getModelToken(User.name),
+    );
     transactionModel = moduleFixture.get<Model<TransactionDocument>>(
       getModelToken(Transaction.name),
     );
@@ -628,7 +630,7 @@ describe("Authentication Integration Tests", () => {
 
   describe("Service Access After Auth", () => {
     let authenticatedUser: any;
-    let authToken: string;
+    let authToken: string; // Reserved for future request authentication tests
 
     beforeEach(async () => {
       const telegramUser = {
@@ -645,7 +647,7 @@ describe("Authentication Integration Tests", () => {
 
       const login = await authService.loginWithTelegramWidget(telegramUser);
       authenticatedUser = login.user;
-      authToken = login.accessToken;
+      authToken = login.accessToken; // For future HTTP request authentication
 
       // Add initial balance
       await usersService.deposit(authenticatedUser.id, 5000);
@@ -668,14 +670,18 @@ describe("Authentication Integration Tests", () => {
 
     it("should login → check balance → deposit → verify balance updated", async () => {
       // Check initial balance
-      const initialBalance = await usersService.getBalance(authenticatedUser.id);
+      const initialBalance = await usersService.getBalance(
+        authenticatedUser.id,
+      );
       expect(initialBalance.balance).toBe(5000);
 
       // Deposit
       await usersService.deposit(authenticatedUser.id, 2500);
 
       // Verify updated balance
-      const updatedBalance = await usersService.getBalance(authenticatedUser.id);
+      const updatedBalance = await usersService.getBalance(
+        authenticatedUser.id,
+      );
       expect(updatedBalance.balance).toBe(7500);
     });
 
@@ -687,7 +693,7 @@ describe("Authentication Integration Tests", () => {
       const mockAuctionId = "507f1f77bcf86cd799439012";
 
       // Create bid directly (normally done through auctions service)
-      const bid = await bidModel.create({
+      await bidModel.create({
         userId: authenticatedUser.id,
         auctionId: mockAuctionId,
         amount: 1000,
@@ -760,8 +766,14 @@ describe("Authentication Integration Tests", () => {
         login2.user.id,
       );
 
-      expect(user1Transactions.every((t) => t.userId.toString() === authenticatedUser.id)).toBe(true);
-      expect(user2Transactions.every((t) => t.userId.toString() === login2.user.id)).toBe(true);
+      expect(
+        user1Transactions.every(
+          (t) => t.userId.toString() === authenticatedUser.id,
+        ),
+      ).toBe(true);
+      expect(
+        user2Transactions.every((t) => t.userId.toString() === login2.user.id),
+      ).toBe(true);
     });
 
     it("should allow admin login → access admin endpoints", async () => {
@@ -878,7 +890,9 @@ describe("Authentication Integration Tests", () => {
         .mockReturnValue(telegramUser);
 
       // Simulate service down by throwing error
-      jest.spyOn(userModel, "create").mockRejectedValueOnce(new Error("Service unavailable"));
+      jest
+        .spyOn(userModel, "create")
+        .mockRejectedValueOnce(new Error("Service unavailable"));
 
       await expect(
         authService.loginWithTelegramWidget(telegramUser),
@@ -1094,9 +1108,9 @@ describe("Authentication Integration Tests", () => {
       };
 
       // Guard should throw UnauthorizedException
-      await expect(
-        authGuard.canActivate(mockExecutionContext),
-      ).rejects.toThrow("Invalid token");
+      await expect(authGuard.canActivate(mockExecutionContext)).rejects.toThrow(
+        "Invalid token",
+      );
     });
 
     it("should chain multiple guards correctly", async () => {
@@ -1142,7 +1156,6 @@ describe("Authentication Integration Tests", () => {
 
   describe("Integration with Real Services", () => {
     let authenticatedUser: any;
-    let authToken: string;
 
     beforeEach(async () => {
       const telegramUser = {
@@ -1159,7 +1172,7 @@ describe("Authentication Integration Tests", () => {
 
       const login = await authService.loginWithTelegramWidget(telegramUser);
       authenticatedUser = login.user;
-      authToken = login.accessToken;
+      // authToken could be used for future HTTP request authentication tests
     });
 
     it("should login → interact with Users service → verify state persists", async () => {

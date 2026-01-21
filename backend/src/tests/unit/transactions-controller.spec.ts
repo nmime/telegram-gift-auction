@@ -4,7 +4,6 @@ import { TransactionsController } from "@/modules/transactions/transactions.cont
 import { TransactionsService } from "@/modules/transactions/transactions.service";
 import { AuthGuard, AuthenticatedRequest } from "@/common";
 import { TransactionType, TransactionDocument } from "@/schemas";
-import { ITransactionResponse } from "@/modules/transactions/dto";
 
 describe("TransactionsController", () => {
   let controller: TransactionsController;
@@ -76,10 +75,7 @@ describe("TransactionsController", () => {
     });
 
     it("should be protected by AuthGuard", () => {
-      const guards = Reflect.getMetadata(
-        "__guards__",
-        TransactionsController,
-      );
+      const guards = Reflect.getMetadata("__guards__", TransactionsController);
       expect(guards).toBeDefined();
     });
   });

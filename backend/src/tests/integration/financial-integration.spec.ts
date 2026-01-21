@@ -17,11 +17,7 @@ import {
   AuditLogSchema,
   AuditLogDocument,
 } from "@/schemas";
-import {
-  BadRequestException,
-  NotFoundException,
-  ConflictException,
-} from "@nestjs/common";
+import { BadRequestException } from "@nestjs/common";
 
 describe("Financial Transaction Integration Tests", () => {
   let mongoServer: MongoMemoryServer;
@@ -85,10 +81,7 @@ describe("Financial Transaction Integration Tests", () => {
         version: 0,
       });
 
-      const updatedUser = await usersService.deposit(
-        user._id.toString(),
-        100,
-      );
+      const updatedUser = await usersService.deposit(user._id.toString(), 100);
 
       expect(updatedUser.balance).toBe(100);
       expect(updatedUser.version).toBe(1);
@@ -217,14 +210,8 @@ describe("Financial Transaction Integration Tests", () => {
         version: 0,
       });
 
-      // Assuming there's a maximum deposit limit (e.g., 1 billion)
-      const excessiveAmount = 10000000000;
-
       // This tests that the system can handle large numbers
-      const result = await usersService.deposit(
-        user._id.toString(),
-        1000000,
-      );
+      const result = await usersService.deposit(user._id.toString(), 1000000);
       expect(result.balance).toBe(1000000);
     });
 
@@ -259,10 +246,7 @@ describe("Financial Transaction Integration Tests", () => {
         version: 0,
       });
 
-      const updatedUser = await usersService.withdraw(
-        user._id.toString(),
-        100,
-      );
+      const updatedUser = await usersService.withdraw(user._id.toString(), 100);
 
       expect(updatedUser.balance).toBe(100);
       expect(updatedUser.version).toBe(1);
@@ -453,8 +437,18 @@ describe("Financial Transaction Integration Tests", () => {
       const bid1 = new Types.ObjectId();
       const bid2 = new Types.ObjectId();
 
-      await usersService.freezeBalance(user._id.toString(), 100, auction1, bid1);
-      await usersService.freezeBalance(user._id.toString(), 200, auction2, bid2);
+      await usersService.freezeBalance(
+        user._id.toString(),
+        100,
+        auction1,
+        bid1,
+      );
+      await usersService.freezeBalance(
+        user._id.toString(),
+        200,
+        auction2,
+        bid2,
+      );
 
       const balance = await usersService.getBalance(user._id.toString());
       expect(balance.balance).toBe(700);
@@ -572,7 +566,12 @@ describe("Financial Transaction Integration Tests", () => {
       const auctionId = new Types.ObjectId();
       const bidId = new Types.ObjectId();
 
-      await usersService.freezeBalance(user._id.toString(), 150, auctionId, bidId);
+      await usersService.freezeBalance(
+        user._id.toString(),
+        150,
+        auctionId,
+        bidId,
+      );
 
       const balance = await usersService.getBalance(user._id.toString());
       expect(balance.balance).toBe(150);
@@ -641,7 +640,12 @@ describe("Financial Transaction Integration Tests", () => {
       const auctionId = new Types.ObjectId();
       const bidId = new Types.ObjectId();
 
-      await usersService.freezeBalance(user._id.toString(), 200, auctionId, bidId);
+      await usersService.freezeBalance(
+        user._id.toString(),
+        200,
+        auctionId,
+        bidId,
+      );
 
       const balance = await usersService.getBalance(user._id.toString());
       const totalBalance = balance.balance + balance.frozenBalance;
@@ -687,7 +691,12 @@ describe("Financial Transaction Integration Tests", () => {
       // Attempt concurrent freeze operations
       try {
         await Promise.all([
-          usersService.freezeBalance(user._id.toString(), 200, auctionId, bidId),
+          usersService.freezeBalance(
+            user._id.toString(),
+            200,
+            auctionId,
+            bidId,
+          ),
           usersService.freezeBalance(
             user._id.toString(),
             250,
@@ -695,7 +704,7 @@ describe("Financial Transaction Integration Tests", () => {
             new Types.ObjectId(),
           ),
         ]);
-      } catch (error) {
+      } catch (_error) {
         // One should fail due to version conflict
       }
 
@@ -723,9 +732,9 @@ describe("Financial Transaction Integration Tests", () => {
       );
 
       expect(transactions).toHaveLength(2);
-      expect(transactions.every((t) => t.type === TransactionType.DEPOSIT)).toBe(
-        true,
-      );
+      expect(
+        transactions.every((t) => t.type === TransactionType.DEPOSIT),
+      ).toBe(true);
     });
 
     it("should record every withdrawal with WITHDRAW type", async () => {
@@ -762,7 +771,12 @@ describe("Financial Transaction Integration Tests", () => {
       const auctionId = new Types.ObjectId();
       const bidId = new Types.ObjectId();
 
-      await usersService.freezeBalance(user._id.toString(), 100, auctionId, bidId);
+      await usersService.freezeBalance(
+        user._id.toString(),
+        100,
+        auctionId,
+        bidId,
+      );
 
       const transactions = await transactionsService.getByUser(
         user._id.toString(),
@@ -932,14 +946,24 @@ describe("Financial Transaction Integration Tests", () => {
       const bidId = new Types.ObjectId();
 
       // Place bid - freeze balance
-      await usersService.freezeBalance(user._id.toString(), 200, auctionId, bidId);
+      await usersService.freezeBalance(
+        user._id.toString(),
+        200,
+        auctionId,
+        bidId,
+      );
 
       let balance = await usersService.getBalance(user._id.toString());
       expect(balance.balance).toBe(300);
       expect(balance.frozenBalance).toBe(200);
 
       // Win bid - confirm payment
-      await usersService.confirmBidWin(user._id.toString(), 200, auctionId, bidId);
+      await usersService.confirmBidWin(
+        user._id.toString(),
+        200,
+        auctionId,
+        bidId,
+      );
 
       balance = await usersService.getBalance(user._id.toString());
       expect(balance.balance).toBe(300);
@@ -950,8 +974,12 @@ describe("Financial Transaction Integration Tests", () => {
         user._id.toString(),
       );
       expect(transactions).toHaveLength(2);
-      expect(transactions.map((t) => t.type)).toContain(TransactionType.BID_FREEZE);
-      expect(transactions.map((t) => t.type)).toContain(TransactionType.BID_WIN);
+      expect(transactions.map((t) => t.type)).toContain(
+        TransactionType.BID_FREEZE,
+      );
+      expect(transactions.map((t) => t.type)).toContain(
+        TransactionType.BID_WIN,
+      );
     });
 
     it("should handle bid refund correctly", async () => {
@@ -992,13 +1020,23 @@ describe("Financial Transaction Integration Tests", () => {
 
       const auction1 = new Types.ObjectId();
       const bid1 = new Types.ObjectId();
-      await usersService.freezeBalance(user._id.toString(), 300, auction1, bid1);
+      await usersService.freezeBalance(
+        user._id.toString(),
+        300,
+        auction1,
+        bid1,
+      );
 
       await usersService.withdraw(user._id.toString(), 200);
 
       const auction2 = new Types.ObjectId();
       const bid2 = new Types.ObjectId();
-      await usersService.freezeBalance(user._id.toString(), 400, auction2, bid2);
+      await usersService.freezeBalance(
+        user._id.toString(),
+        400,
+        auction2,
+        bid2,
+      );
 
       const balance = await usersService.getBalance(user._id.toString());
 

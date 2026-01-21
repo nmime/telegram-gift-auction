@@ -37,7 +37,8 @@ export class AuditMiddleware implements NestMiddleware {
       const resource = this.extractResource(url);
 
       // Determine result based on status code
-      const result = statusCode >= 200 && statusCode < 300 ? "success" : "failure";
+      const result =
+        statusCode >= 200 && statusCode < 300 ? "success" : "failure";
 
       // Extract error message from response if failure
       let errorMessage: string | undefined;
@@ -51,8 +52,12 @@ export class AuditMiddleware implements NestMiddleware {
           action,
           resource,
           resourceId: this.extractResourceId(url),
-          oldValues: method === "PUT" || method === "PATCH" ? requestBody : undefined,
-          newValues: method === "POST" || method === "PUT" || method === "PATCH" ? requestBody : undefined,
+          oldValues:
+            method === "PUT" || method === "PATCH" ? requestBody : undefined,
+          newValues:
+            method === "POST" || method === "PUT" || method === "PATCH"
+              ? requestBody
+              : undefined,
           result,
           errorMessage,
           ipAddress,
@@ -93,7 +98,8 @@ export class AuditMiddleware implements NestMiddleware {
   private extractResource(url: string): string {
     const pathSegments = url.split("/").filter(Boolean);
     // Remove 'api' prefix if exists
-    const relevantSegments = pathSegments[0] === "api" ? pathSegments.slice(1) : pathSegments;
+    const relevantSegments =
+      pathSegments[0] === "api" ? pathSegments.slice(1) : pathSegments;
     return relevantSegments[0] || "unknown";
   }
 

@@ -1,6 +1,5 @@
 import { Test, TestingModule } from "@nestjs/testing";
 import { getModelToken } from "@nestjs/mongoose";
-import { BadRequestException } from "@nestjs/common";
 import { Types } from "mongoose";
 import { TransactionsService } from "@/modules/transactions/transactions.service";
 import { Transaction, TransactionType } from "@/schemas";
@@ -462,9 +461,7 @@ describe("TransactionsService", () => {
 
       mockTransactionModel.exec.mockResolvedValue([mockTransaction]);
 
-      const result = await service.getByUser(
-        mockTransaction.userId.toString(),
-      );
+      const result = await service.getByUser(mockTransaction.userId.toString());
 
       expect(result[0]?.amount).toBe(1);
     });
@@ -482,9 +479,7 @@ describe("TransactionsService", () => {
 
       mockTransactionModel.exec.mockResolvedValue([mockTransaction]);
 
-      const result = await service.getByUser(
-        mockTransaction.userId.toString(),
-      );
+      const result = await service.getByUser(mockTransaction.userId.toString());
 
       expect(result[0]?.amount).toBe(1000000);
     });
@@ -503,9 +498,7 @@ describe("TransactionsService", () => {
 
       mockTransactionModel.exec.mockResolvedValue([mockTransaction]);
 
-      const result = await service.getByUser(
-        mockTransaction.userId.toString(),
-      );
+      const result = await service.getByUser(mockTransaction.userId.toString());
 
       expect(result[0]?.description).toBe("Test deposit");
     });
@@ -523,9 +516,7 @@ describe("TransactionsService", () => {
 
       mockTransactionModel.exec.mockResolvedValue([mockTransaction]);
 
-      const result = await service.getByUser(
-        mockTransaction.userId.toString(),
-      );
+      const result = await service.getByUser(mockTransaction.userId.toString());
 
       expect(result[0]?.description).toBeUndefined();
     });
@@ -547,9 +538,7 @@ describe("TransactionsService", () => {
 
       mockTransactionModel.exec.mockResolvedValue([mockTransaction]);
 
-      const result = await service.getByUser(
-        mockTransaction.userId.toString(),
-      );
+      const result = await service.getByUser(mockTransaction.userId.toString());
 
       expect(result[0]?.auctionId).toEqual(auctionId);
     });
@@ -567,9 +556,7 @@ describe("TransactionsService", () => {
 
       mockTransactionModel.exec.mockResolvedValue([mockTransaction]);
 
-      const result = await service.getByUser(
-        mockTransaction.userId.toString(),
-      );
+      const result = await service.getByUser(mockTransaction.userId.toString());
 
       expect(result[0]?.auctionId).toBeUndefined();
     });
@@ -591,9 +578,7 @@ describe("TransactionsService", () => {
 
       mockTransactionModel.exec.mockResolvedValue([mockTransaction]);
 
-      const result = await service.getByUser(
-        mockTransaction.userId.toString(),
-      );
+      const result = await service.getByUser(mockTransaction.userId.toString());
 
       expect(result[0]?.bidId).toEqual(bidId);
     });
@@ -613,9 +598,7 @@ describe("TransactionsService", () => {
 
       mockTransactionModel.exec.mockResolvedValue([mockTransaction]);
 
-      const result = await service.getByUser(
-        mockTransaction.userId.toString(),
-      );
+      const result = await service.getByUser(mockTransaction.userId.toString());
 
       expect(result[0]?.frozenBefore).toBe(0);
       expect(result[0]?.frozenAfter).toBe(100);
@@ -634,9 +617,7 @@ describe("TransactionsService", () => {
 
       mockTransactionModel.exec.mockResolvedValue([mockTransaction]);
 
-      const result = await service.getByUser(
-        mockTransaction.userId.toString(),
-      );
+      const result = await service.getByUser(mockTransaction.userId.toString());
 
       expect(result[0]?.frozenBefore).toBeUndefined();
       expect(result[0]?.frozenAfter).toBeUndefined();

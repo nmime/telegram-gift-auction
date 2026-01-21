@@ -73,7 +73,8 @@ describe("TelegramController", () => {
         ],
       }).compile();
 
-      const newController = newModule.get<TelegramController>(TelegramController);
+      const newController =
+        newModule.get<TelegramController>(TelegramController);
       expect(newController).toBeDefined();
     });
   });
@@ -776,7 +777,7 @@ describe("TelegramController", () => {
 
       // Mock successful webhook processing
       mockTelegramBotService.handleWebhook.mockImplementation(
-        async (req, reply) => {
+        async (req, _reply) => {
           // Simulate bot processing the message
           const update = (req as any).body;
           expect(update.message.text).toBe("/start");
@@ -825,7 +826,8 @@ describe("TelegramController", () => {
         ],
       }).compile();
 
-      const newController = newModule.get<TelegramController>(TelegramController);
+      const newController =
+        newModule.get<TelegramController>(TelegramController);
 
       const mockRequest = {
         body: { update_id: 123 },
@@ -870,7 +872,8 @@ describe("TelegramController", () => {
         ],
       }).compile();
 
-      const newController = newModule.get<TelegramController>(TelegramController);
+      const newController =
+        newModule.get<TelegramController>(TelegramController);
 
       const mockRequest = {
         body: { update_id: 123 },

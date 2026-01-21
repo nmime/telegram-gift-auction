@@ -184,10 +184,7 @@ export class AuditLogService {
     return this.auditLogModel.aggregate(pipeline).exec();
   }
 
-  async getSummaryByUser(
-    startDate?: Date,
-    endDate?: Date,
-  ): Promise<any[]> {
+  async getSummaryByUser(startDate?: Date, endDate?: Date): Promise<any[]> {
     const matchStage: any = { userId: { $exists: true, $ne: null } };
     if (startDate || endDate) {
       matchStage.createdAt = {};

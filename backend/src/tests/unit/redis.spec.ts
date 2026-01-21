@@ -55,11 +55,16 @@ describe("Redis Services", () => {
         await service.onModuleInit();
 
         expect(mockRedis.script).toHaveBeenCalledTimes(4);
-        expect(mockRedis.script).toHaveBeenCalledWith("LOAD", expect.any(String));
+        expect(mockRedis.script).toHaveBeenCalledWith(
+          "LOAD",
+          expect.any(String),
+        );
       });
 
       it("should throw error if Lua script loading fails", async () => {
-        mockRedis.script.mockRejectedValue(new Error("Redis connection failed"));
+        mockRedis.script.mockRejectedValue(
+          new Error("Redis connection failed"),
+        );
 
         await expect(service.onModuleInit()).rejects.toThrow(
           "Redis connection failed",
@@ -538,16 +543,21 @@ describe("Redis Services", () => {
 
         const mockBalancePipeline = {
           hgetall: jest.fn().mockReturnThis(),
-          exec: jest.fn().mockResolvedValue([
-            [null, { available: "5000", frozen: "1500" }],
-          ]),
+          exec: jest
+            .fn()
+            .mockResolvedValue([[null, { available: "5000", frozen: "1500" }]]),
         };
 
         const mockBidPipeline = {
           hgetall: jest.fn().mockReturnThis(),
-          exec: jest.fn().mockResolvedValue([
-            [null, { amount: "1500", createdAt: "1704067200000", version: "1" }],
-          ]),
+          exec: jest
+            .fn()
+            .mockResolvedValue([
+              [
+                null,
+                { amount: "1500", createdAt: "1704067200000", version: "1" },
+              ],
+            ]),
         };
 
         mockRedis.pipeline
@@ -720,12 +730,7 @@ describe("Redis Services", () => {
       it("should add bid to leaderboard", async () => {
         mockRedis.zadd.mockResolvedValue(1 as any);
 
-        await service.addBid(
-          "auction1",
-          "user1",
-          1000,
-          new Date("2024-01-01"),
-        );
+        await service.addBid("auction1", "user1", 1000, new Date("2024-01-01"));
 
         expect(mockRedis.zadd).toHaveBeenCalledWith(
           "leaderboard:auction1",
@@ -818,10 +823,7 @@ describe("Redis Services", () => {
       });
 
       it("should support offset for pagination", async () => {
-        mockRedis.zrevrange.mockResolvedValue([
-          "user3",
-          "8000009999999997999",
-        ]);
+        mockRedis.zrevrange.mockResolvedValue(["user3", "8000009999999997999"]);
 
         const result = await service.getTopN("auction1", 1, 2);
 
@@ -990,8 +992,8 @@ describe("Redis Services", () => {
         const secondCall = calls[1];
 
         if (firstCall && secondCall) {
-          const score1 = (firstCall[1] as unknown) as number;
-          const score2 = (secondCall[1] as unknown) as number;
+          const score1 = firstCall[1] as unknown as number;
+          const score2 = secondCall[1] as unknown as number;
           expect(score2).toBeGreaterThan(score1);
         }
       });
@@ -1009,8 +1011,8 @@ describe("Redis Services", () => {
         const secondCall = calls[1];
 
         if (firstCall && secondCall) {
-          const score1 = (firstCall[1] as unknown) as number;
-          const score2 = (secondCall[1] as unknown) as number;
+          const score1 = firstCall[1] as unknown as number;
+          const score2 = secondCall[1] as unknown as number;
           expect(score1).toBeGreaterThan(score2);
         }
       });
