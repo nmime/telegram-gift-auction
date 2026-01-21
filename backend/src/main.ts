@@ -8,7 +8,10 @@ import {
 import { Logger } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { SwaggerModule, OpenAPIObject } from "@nestjs/swagger";
-import { AsyncApiModule, AsyncApiDocumentBuilder } from "@nmime/nestjs-asyncapi";
+import {
+  AsyncApiModule,
+  AsyncApiDocumentBuilder,
+} from "@nmime/nestjs-asyncapi";
 import { getAllSchemas } from "./modules/events/asyncapi.schemas";
 import { Server } from "socket.io";
 import helmet from "@fastify/helmet";
@@ -88,18 +91,36 @@ async function bootstrap() {
     const yamlContent = fs.readFileSync(asyncApiYamlPath, "utf-8");
     const json = JSON.stringify(yaml.load(yamlContent));
 
-    httpAdapter.get("/api/async-docs", (_req: unknown, res: { type: (t: string) => void; send: (b: string) => void }) => {
-      res.type("text/html");
-      res.send(html);
-    });
-    httpAdapter.get("/api/async-docs-yaml", (_req: unknown, res: { type: (t: string) => void; send: (b: string) => void }) => {
-      res.type("text/yaml");
-      res.send(yamlContent);
-    });
-    httpAdapter.get("/api/async-docs-json", (_req: unknown, res: { type: (t: string) => void; send: (b: string) => void }) => {
-      res.type("application/json");
-      res.send(json);
-    });
+    httpAdapter.get(
+      "/api/async-docs",
+      (
+        _req: unknown,
+        res: { type: (t: string) => void; send: (b: string) => void },
+      ) => {
+        res.type("text/html");
+        res.send(html);
+      },
+    );
+    httpAdapter.get(
+      "/api/async-docs-yaml",
+      (
+        _req: unknown,
+        res: { type: (t: string) => void; send: (b: string) => void },
+      ) => {
+        res.type("text/yaml");
+        res.send(yamlContent);
+      },
+    );
+    httpAdapter.get(
+      "/api/async-docs-json",
+      (
+        _req: unknown,
+        res: { type: (t: string) => void; send: (b: string) => void },
+      ) => {
+        res.type("application/json");
+        res.send(json);
+      },
+    );
     logger.log("AsyncAPI docs loaded from pre-generated asyncapi.html");
   } else {
     // Development: generate dynamically
@@ -220,7 +241,9 @@ function startCluster() {
 
     // Handle worker exit
     cluster.on("exit", (worker, code, signal) => {
-      logger.warn(`Worker ${worker.process.pid} died (${signal || code}). Restarting...`);
+      logger.warn(
+        `Worker ${worker.process.pid} died (${signal || code}). Restarting...`,
+      );
       cluster.fork();
     });
 

@@ -176,7 +176,10 @@ export class TelegramBotService implements OnModuleInit, OnModuleDestroy {
     const getCommands = (lang: string) => [
       { command: "start", description: this.t("bot.commands.start", lang) },
       { command: "help", description: this.t("bot.commands.help", lang) },
-      { command: "language", description: this.t("bot.commands.language", lang) },
+      {
+        command: "language",
+        description: this.t("bot.commands.language", lang),
+      },
     ];
 
     const privateScope = { type: "all_private_chats" as const };

@@ -83,7 +83,8 @@ export class EventsGateway {
   @AsyncApiSub({
     channel: "auth",
     summary: "Authenticate WebSocket connection",
-    description: "Send JWT token to authenticate the socket connection. Must be called before place-bid.",
+    description:
+      "Send JWT token to authenticate the socket connection. Must be called before place-bid.",
     message: { payload: AuthPayload },
   })
   @AsyncApiPub({
@@ -102,7 +103,7 @@ export class EventsGateway {
         clientId: client.id,
         userId: client.userId,
       });
-    } catch (error) {
+    } catch (_error) {
       client.emit("auth-response", {
         success: false,
         error: "Invalid or expired token",
@@ -118,13 +119,15 @@ export class EventsGateway {
   @AsyncApiSub({
     channel: "place-bid",
     summary: "Place a bid via WebSocket",
-    description: "Ultra-fast bid placement. Requires prior authentication via 'auth' event.",
+    description:
+      "Ultra-fast bid placement. Requires prior authentication via 'auth' event.",
     message: { payload: PlaceBidPayloadStub },
   })
   @AsyncApiPub({
     channel: "bid-response",
     summary: "Bid placement result",
-    description: "Response to place-bid event with success status and bid details",
+    description:
+      "Response to place-bid event with success status and bid details",
     message: { payload: BidResponse },
   })
   private async handlePlaceBid(
@@ -146,7 +149,8 @@ export class EventsGateway {
     if (!auctionId || typeof amount !== "number" || amount <= 0) {
       client.emit("bid-response", {
         success: false,
-        error: "Invalid payload. Required: { auctionId: string, amount: number }",
+        error:
+          "Invalid payload. Required: { auctionId: string, amount: number }",
       });
       return;
     }
@@ -301,7 +305,8 @@ export class EventsGateway {
   @AsyncApiPub({
     channel: "auction-update",
     summary: "Auction state changed",
-    description: "Broadcast when auction status, current round, or rounds configuration changes",
+    description:
+      "Broadcast when auction status, current round, or rounds configuration changes",
     message: { payload: AuctionUpdateEvent },
   })
   emitAuctionUpdate(auction: AuctionDocument) {
@@ -343,7 +348,8 @@ export class EventsGateway {
   @AsyncApiPub({
     channel: "anti-sniping",
     summary: "Anti-sniping extension",
-    description: "Broadcast when round end time is extended due to late bid (anti-sniping protection)",
+    description:
+      "Broadcast when round end time is extended due to late bid (anti-sniping protection)",
     message: { payload: AntiSnipingEvent },
   })
   emitAntiSnipingExtension(auction: AuctionDocument, extensionCount: number) {
@@ -423,7 +429,8 @@ export class EventsGateway {
   @AsyncApiPub({
     channel: "countdown",
     summary: "Countdown tick",
-    description: "Broadcast every second with remaining time and server clock for synchronization",
+    description:
+      "Broadcast every second with remaining time and server clock for synchronization",
     message: { payload: CountdownEvent },
   })
   emitCountdown(

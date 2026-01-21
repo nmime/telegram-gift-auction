@@ -1431,7 +1431,9 @@ export class AuctionsService {
    * Called lazily when a user tries to bid but isn't in cache
    */
   async ensureUserInCache(auctionId: string, userId: string): Promise<void> {
-    const user = await this.userModel.findById(userId).select("balance frozenBalance");
+    const user = await this.userModel
+      .findById(userId)
+      .select("balance frozenBalance");
     if (!user) {
       throw new NotFoundException("User not found");
     }
@@ -1484,7 +1486,9 @@ export class AuctionsService {
 
     // If cache not warmed or user not in cache, fall back to standard bid
     if (result.needsWarmup) {
-      this.logger.debug(`Ultra-fast path unavailable for ${auctionId}/${userId}, using standard bid`);
+      this.logger.debug(
+        `Ultra-fast path unavailable for ${auctionId}/${userId}, using standard bid`,
+      );
       try {
         const standardResult = await this.placeBid(auctionId, userId, dto);
         return {
@@ -1530,8 +1534,13 @@ export class AuctionsService {
       );
 
       // Check outbid notifications (async, don't block response)
-      this.checkOutbidNotificationsUltraFast(auctionId, auctionMeta, userId, result.newAmount!).catch(
-        (err) => this.logger.error("Outbid notification check failed", err),
+      this.checkOutbidNotificationsUltraFast(
+        auctionId,
+        auctionMeta,
+        userId,
+        result.newAmount!,
+      ).catch((err) =>
+        this.logger.error("Outbid notification check failed", err),
       );
     }
 
@@ -1574,13 +1583,16 @@ export class AuctionsService {
     }
 
     // Apply extension
-    const newEndTime = new Date(meta.roundEndTime + meta.antiSnipingExtensionMs);
+    const newEndTime = new Date(
+      meta.roundEndTime + meta.antiSnipingExtensionMs,
+    );
 
     const updated = await this.auctionModel.findOneAndUpdate(
       {
         _id: new Types.ObjectId(auctionId),
         status: AuctionStatus.ACTIVE,
-        [`rounds.${auction.currentRound - 1}.extensionsCount`]: currentRound.extensionsCount,
+        [`rounds.${auction.currentRound - 1}.extensionsCount`]:
+          currentRound.extensionsCount,
       },
       {
         $set: { [`rounds.${auction.currentRound - 1}.endTime`]: newEndTime },
@@ -1591,10 +1603,16 @@ export class AuctionsService {
 
     if (updated) {
       // Update cache with new end time
-      await this.bidCacheService.updateRoundEndTime(auctionId, newEndTime.getTime());
+      await this.bidCacheService.updateRoundEndTime(
+        auctionId,
+        newEndTime.getTime(),
+      );
 
       // Emit anti-sniping event
-      this.eventsGateway.emitAntiSnipingExtension(updated, currentRound.extensionsCount + 1);
+      this.eventsGateway.emitAntiSnipingExtension(
+        updated,
+        currentRound.extensionsCount + 1,
+      );
 
       // Update timer with new end time
       this.timerService.updateTimer(auctionId, newEndTime);
@@ -1614,25 +1632,34 @@ export class AuctionsService {
     const itemsInRound = meta.itemsInRound || 1;
 
     // Only fetch the user at the cutoff position (who just got pushed out)
-    const topBidders = await this.bidCacheService.getTopBidders(auctionId, itemsInRound + 1);
+    const topBidders = await this.bidCacheService.getTopBidders(
+      auctionId,
+      itemsInRound + 1,
+    );
     const outbidEntry = topBidders[itemsInRound];
 
     // No one pushed out or it's the same bidder
     if (!outbidEntry || outbidEntry.userId === bidderId) return;
 
     // Single query: find bid and mark as notified (only if not already notified)
-    const bid = await this.bidModel.findOneAndUpdate(
-      {
-        auctionId: new Types.ObjectId(auctionId),
-        userId: new Types.ObjectId(outbidEntry.userId),
-        status: BidStatus.ACTIVE,
-        outbidNotifiedAt: null,
-      },
-      { outbidNotifiedAt: new Date() },
-      { new: true },
-    ).populate<{ userId: UserDocument }>("userId", "telegramId isBot languageCode");
+    const bid = await this.bidModel
+      .findOneAndUpdate(
+        {
+          auctionId: new Types.ObjectId(auctionId),
+          userId: new Types.ObjectId(outbidEntry.userId),
+          status: BidStatus.ACTIVE,
+          outbidNotifiedAt: null,
+        },
+        { outbidNotifiedAt: new Date() },
+        { new: true },
+      )
+      .populate<{ userId: UserDocument }>(
+        "userId",
+        "telegramId isBot languageCode",
+      );
 
-    if (!bid || !bid.userId || bid.userId.isBot || !bid.userId.telegramId) return;
+    if (!bid || !bid.userId || bid.userId.isBot || !bid.userId.telegramId)
+      return;
 
     // Fetch auction info and send notification in parallel
     const auction = await this.auctionModel
@@ -1642,14 +1669,18 @@ export class AuctionsService {
     if (!auction) return;
 
     // Fire-and-forget notification (don't await)
-    this.notificationsService.notifyOutbid(outbidEntry.userId, {
-      auctionId,
-      auctionTitle: auction.title,
-      yourBid: outbidEntry.amount,
-      newLeaderBid: newAmount,
-      roundNumber: auction.currentRound,
-      minBidToWin: newAmount + auction.minBidIncrement,
-    }).catch(err => this.logger.warn("Failed to send outbid notification", err));
+    this.notificationsService
+      .notifyOutbid(outbidEntry.userId, {
+        auctionId,
+        auctionTitle: auction.title,
+        yourBid: outbidEntry.amount,
+        newLeaderBid: newAmount,
+        roundNumber: auction.currentRound,
+        minBidToWin: newAmount + auction.minBidIncrement,
+      })
+      .catch((err) =>
+        this.logger.warn("Failed to send outbid notification", err),
+      );
   }
 
   /**
@@ -1721,35 +1752,45 @@ export class AuctionsService {
     const itemsInRound = currentRound.itemsCount;
 
     // Only fetch the user at the cutoff position (who just got pushed out)
-    const topBidders = await this.bidCacheService.getTopBidders(auctionId, itemsInRound + 1);
+    const topBidders = await this.bidCacheService.getTopBidders(
+      auctionId,
+      itemsInRound + 1,
+    );
     const outbidEntry = topBidders[itemsInRound];
 
     // No one pushed out or it's the same bidder
     if (!outbidEntry || outbidEntry.userId === bidderId) return;
 
     // Single query: find bid and mark as notified
-    const bid = await this.bidModel.findOneAndUpdate(
-      {
-        auctionId: new Types.ObjectId(auctionId),
-        userId: new Types.ObjectId(outbidEntry.userId),
-        status: BidStatus.ACTIVE,
-        outbidNotifiedAt: null,
-      },
-      { outbidNotifiedAt: new Date() },
-      { new: true },
-    ).populate<{ userId: UserDocument }>("userId", "telegramId isBot");
+    const bid = await this.bidModel
+      .findOneAndUpdate(
+        {
+          auctionId: new Types.ObjectId(auctionId),
+          userId: new Types.ObjectId(outbidEntry.userId),
+          status: BidStatus.ACTIVE,
+          outbidNotifiedAt: null,
+        },
+        { outbidNotifiedAt: new Date() },
+        { new: true },
+      )
+      .populate<{ userId: UserDocument }>("userId", "telegramId isBot");
 
-    if (!bid || !bid.userId || bid.userId.isBot || !bid.userId.telegramId) return;
+    if (!bid || !bid.userId || bid.userId.isBot || !bid.userId.telegramId)
+      return;
 
     // Fire-and-forget notification
-    this.notificationsService.notifyOutbid(outbidEntry.userId, {
-      auctionId,
-      auctionTitle: auction.title,
-      yourBid: outbidEntry.amount,
-      newLeaderBid: bidAmount,
-      roundNumber: auction.currentRound,
-      minBidToWin: bidAmount + auction.minBidIncrement,
-    }).catch(err => this.logger.warn("Failed to send outbid notification", err));
+    this.notificationsService
+      .notifyOutbid(outbidEntry.userId, {
+        auctionId,
+        auctionTitle: auction.title,
+        yourBid: outbidEntry.amount,
+        newLeaderBid: bidAmount,
+        roundNumber: auction.currentRound,
+        minBidToWin: bidAmount + auction.minBidIncrement,
+      })
+      .catch((err) =>
+        this.logger.warn("Failed to send outbid notification", err),
+      );
   }
 
   /**

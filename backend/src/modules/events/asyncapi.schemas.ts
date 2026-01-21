@@ -22,23 +22,24 @@ import type {
 /**
  * All WebSocket event schemas generated via typia
  */
-export const asyncApiSchemas = typia.json.schemas<
-  [
-    AuthPayload,
-    AuthResponse,
-    PlaceBidPayload,
-    BidResponse,
-    AuctionIdPayload,
-    AuctionRoomResponse,
-    NewBidEvent,
-    AuctionUpdateEvent,
-    CountdownEvent,
-    AntiSnipingEvent,
-    RoundStartEvent,
-    RoundCompleteEvent,
-    AuctionCompleteEvent,
-  ]
->();
+export const asyncApiSchemas =
+  typia.json.schemas<
+    [
+      AuthPayload,
+      AuthResponse,
+      PlaceBidPayload,
+      BidResponse,
+      AuctionIdPayload,
+      AuctionRoomResponse,
+      NewBidEvent,
+      AuctionUpdateEvent,
+      CountdownEvent,
+      AntiSnipingEvent,
+      RoundStartEvent,
+      RoundCompleteEvent,
+      AuctionCompleteEvent,
+    ]
+  >();
 
 /**
  * Get all schemas as a map (keyed by type name)

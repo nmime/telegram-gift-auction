@@ -1,6 +1,6 @@
 import { Injectable, Logger, OnModuleDestroy } from "@nestjs/common";
 import { InjectModel, InjectConnection } from "@nestjs/mongoose";
-import { Model, Connection, Types, ClientSession } from "mongoose";
+import { Model, Connection, Types } from "mongoose";
 import { Cron, CronExpression } from "@nestjs/schedule";
 import {
   Auction,
@@ -76,7 +76,10 @@ export class CacheSyncService implements OnModuleDestroy {
 
         // Run sync in background (don't await to allow parallel syncs)
         this.syncAuction(auctionId).catch((error) => {
-          this.logger.error(`Periodic sync failed for auction ${auctionId}`, error);
+          this.logger.error(
+            `Periodic sync failed for auction ${auctionId}`,
+            error,
+          );
         });
       }
     } catch (error) {
@@ -91,7 +94,10 @@ export class CacheSyncService implements OnModuleDestroy {
    * @param force - If true, sync even if another sync is in progress
    * @returns Number of records synced
    */
-  async syncAuction(auctionId: string, force = false): Promise<{ balances: number; bids: number }> {
+  async syncAuction(
+    auctionId: string,
+    force = false,
+  ): Promise<{ balances: number; bids: number }> {
     // Prevent concurrent syncs for the same auction
     if (!force && this.syncInProgress.has(auctionId)) {
       this.logger.debug(`Sync already in progress for auction ${auctionId}`);
@@ -133,7 +139,9 @@ export class CacheSyncService implements OnModuleDestroy {
    * Full sync - ensures all cache data is written to MongoDB
    * Call this before critical operations like round completion
    */
-  async fullSync(auctionId: string): Promise<{ balances: number; bids: number }> {
+  async fullSync(
+    auctionId: string,
+  ): Promise<{ balances: number; bids: number }> {
     this.logger.log(`Starting full sync for auction ${auctionId}`);
 
     // Wait for any in-progress sync to complete
@@ -181,7 +189,9 @@ export class CacheSyncService implements OnModuleDestroy {
           }),
         );
 
-        const balanceResult = await this.userModel.bulkWrite(balanceOps, { session });
+        const balanceResult = await this.userModel.bulkWrite(balanceOps, {
+          session,
+        });
         balanceCount = balanceResult.modifiedCount;
       }
 

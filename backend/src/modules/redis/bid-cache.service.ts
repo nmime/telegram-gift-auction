@@ -389,11 +389,19 @@ export class BidCacheService implements OnModuleInit {
 
     for (const user of users) {
       const key = this.balanceKey(auctionId, user.id);
-      pipeline.hset(key, "available", user.balance, "frozen", user.frozenBalance);
+      pipeline.hset(
+        key,
+        "available",
+        user.balance,
+        "frozen",
+        user.frozenBalance,
+      );
     }
 
     await pipeline.exec();
-    this.logger.debug(`Warmed up ${users.length} user balances for auction ${auctionId}`);
+    this.logger.debug(
+      `Warmed up ${users.length} user balances for auction ${auctionId}`,
+    );
   }
 
   /**
@@ -421,9 +429,12 @@ export class BidCacheService implements OnModuleInit {
 
       pipeline.hset(
         bidKeyStr,
-        "amount", bid.amount,
-        "createdAt", timestamp,
-        "version", 0,
+        "amount",
+        bid.amount,
+        "createdAt",
+        timestamp,
+        "version",
+        0,
       );
 
       // Add to leaderboard with encoded score
@@ -455,15 +466,24 @@ export class BidCacheService implements OnModuleInit {
     const key = this.metaKey(auctionId);
     await this.redis.hset(
       key,
-      "minBidAmount", meta.minBidAmount,
-      "status", meta.status,
-      "currentRound", meta.currentRound,
-      "roundEndTime", meta.roundEndTime || 0,
-      "itemsInRound", meta.itemsInRound || 0,
-      "antiSnipingWindowMs", meta.antiSnipingWindowMs || 0,
-      "antiSnipingExtensionMs", meta.antiSnipingExtensionMs || 0,
-      "maxExtensions", meta.maxExtensions || 0,
-      "warmedAt", Date.now(),
+      "minBidAmount",
+      meta.minBidAmount,
+      "status",
+      meta.status,
+      "currentRound",
+      meta.currentRound,
+      "roundEndTime",
+      meta.roundEndTime || 0,
+      "itemsInRound",
+      meta.itemsInRound || 0,
+      "antiSnipingWindowMs",
+      meta.antiSnipingWindowMs || 0,
+      "antiSnipingExtensionMs",
+      meta.antiSnipingExtensionMs || 0,
+      "maxExtensions",
+      meta.maxExtensions || 0,
+      "warmedAt",
+      Date.now(),
     );
   }
 
@@ -503,7 +523,10 @@ export class BidCacheService implements OnModuleInit {
   /**
    * Update round end time (for anti-sniping extensions)
    */
-  async updateRoundEndTime(auctionId: string, newEndTime: number): Promise<void> {
+  async updateRoundEndTime(
+    auctionId: string,
+    newEndTime: number,
+  ): Promise<void> {
     const key = this.metaKey(auctionId);
     await this.redis.hset(key, "roundEndTime", newEndTime);
   }
@@ -539,7 +562,15 @@ export class BidCacheService implements OnModuleInit {
         minBidAmount,
       )) as number[];
 
-      const [success, errorOrOk, newAmount, previousAmount, frozenDelta, isNewBid, rank] = result;
+      const [
+        success,
+        errorOrOk,
+        newAmount,
+        previousAmount,
+        frozenDelta,
+        isNewBid,
+        rank,
+      ] = result;
       const rankNum = rank ?? -1;
 
       if (success === 1) {
@@ -615,8 +646,19 @@ export class BidCacheService implements OnModuleInit {
       )) as (number | string)[];
 
       const [
-        success, errorOrOk, newAmount, previousAmount, frozenDelta, isNewBid, rank,
-        roundEndTime, antiSnipingWindowMs, antiSnipingExtensionMs, maxExtensions, itemsInRound, currentRound
+        success,
+        errorOrOk,
+        newAmount,
+        previousAmount,
+        frozenDelta,
+        isNewBid,
+        _rank,
+        roundEndTime,
+        antiSnipingWindowMs,
+        antiSnipingExtensionMs,
+        maxExtensions,
+        itemsInRound,
+        currentRound,
       ] = result;
 
       if (success === 1) {
@@ -652,7 +694,8 @@ export class BidCacheService implements OnModuleInit {
         success: false,
         error: errorMessages[errorCode] || `Unknown error: ${errorCode}`,
         previousAmount: previousAmount as number,
-        needsWarmup: errorCode === "NOT_WARMED" || errorCode === "USER_NOT_WARMED",
+        needsWarmup:
+          errorCode === "NOT_WARMED" || errorCode === "USER_NOT_WARMED",
         roundEndTime: roundEndTime as number,
         antiSnipingWindowMs: antiSnipingWindowMs as number,
         antiSnipingExtensionMs: antiSnipingExtensionMs as number,
@@ -833,11 +876,13 @@ export class BidCacheService implements OnModuleInit {
     auctionId: string,
     count: number,
     offset: number = 0,
-  ): Promise<Array<{
-    userId: string;
-    amount: number;
-    createdAt: Date;
-  }>> {
+  ): Promise<
+    Array<{
+      userId: string;
+      amount: number;
+      createdAt: Date;
+    }>
+  > {
     const key = this.leaderboardKey(auctionId);
     const results = await this.redis.zrevrange(
       key,
@@ -846,7 +891,8 @@ export class BidCacheService implements OnModuleInit {
       "WITHSCORES",
     );
 
-    const entries: Array<{ userId: string; amount: number; createdAt: Date }> = [];
+    const entries: Array<{ userId: string; amount: number; createdAt: Date }> =
+      [];
 
     for (let i = 0; i < results.length; i += 2) {
       const userId = results[i];
@@ -878,7 +924,10 @@ export class BidCacheService implements OnModuleInit {
   /**
    * Remove users from leaderboard (e.g., after winning)
    */
-  async removeFromLeaderboard(auctionId: string, userIds: string[]): Promise<void> {
+  async removeFromLeaderboard(
+    auctionId: string,
+    userIds: string[],
+  ): Promise<void> {
     if (userIds.length === 0) return;
     await this.redis.zrem(this.leaderboardKey(auctionId), ...userIds);
   }
@@ -916,7 +965,9 @@ export class BidCacheService implements OnModuleInit {
       }
     }
 
-    this.logger.debug(`Cleared ${keysToDelete.length} keys for auction ${auctionId}`);
+    this.logger.debug(
+      `Cleared ${keysToDelete.length} keys for auction ${auctionId}`,
+    );
   }
 
   /**

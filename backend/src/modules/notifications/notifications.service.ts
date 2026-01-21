@@ -103,13 +103,17 @@ export class NotificationsService implements OnModuleInit {
     );
   }
 
-  private async processNotification(data: TelegramNotificationJob): Promise<void> {
+  private async processNotification(
+    data: TelegramNotificationJob,
+  ): Promise<void> {
     try {
       const bot = this.telegramBotService.getBot();
       await bot.api.sendMessage(data.telegramId, data.message, {
         parse_mode: "HTML",
       });
-      this.logger.debug(`Sent notification to Telegram user ${data.telegramId}`);
+      this.logger.debug(
+        `Sent notification to Telegram user ${data.telegramId}`,
+      );
     } catch (error) {
       this.logger.warn(
         `Failed to send Telegram notification to ${data.telegramId}:`,
