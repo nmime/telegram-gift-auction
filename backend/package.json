@@ -63,7 +63,7 @@
     "@nestia/e2e": "^10.0.1",
     "@nestia/fetcher": "^10.0.1",
     "@nestia/sdk": "^10.0.1",
-    "@nestjs/cli": "^11.0.14",
+    "@nestjs/cli": "~10.4.8",
     "@nestjs/schematics": "^11.0.9",
     "@nestjs/testing": "^11.1.11",
     "@types/jest": "^30.0.0",
