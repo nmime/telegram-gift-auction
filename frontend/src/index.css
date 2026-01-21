@@ -73,6 +73,7 @@
 html {
   font-size: 16px;
   scroll-behavior: smooth;
+  overflow-x: hidden;
 }
 
 body {
@@ -83,6 +84,8 @@ body {
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden;
+  max-width: 100vw;
 }
 
 /* ============================================================================
@@ -93,6 +96,7 @@ body {
   max-width: 1280px;
   margin: 0 auto;
   padding: var(--spacing-lg);
+  overflow-x: hidden;
 }
 
 @media (max-width: 768px) {
@@ -113,6 +117,8 @@ body {
   border: 1px solid var(--border-color);
   margin-bottom: var(--spacing-lg);
   transition: all var(--transition-normal);
+  overflow-x: hidden;
+  word-wrap: break-word;
 }
 
 .card:hover {
@@ -244,6 +250,18 @@ body {
 .input:disabled {
   opacity: 0.6;
   cursor: not-allowed;
+}
+
+/* Hide number input spinners */
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+input[type="number"] {
+  -moz-appearance: textfield;
+  appearance: textfield;
 }
 
 .form-group {
@@ -636,6 +654,7 @@ h4 {
   /* Add padding to main content for bottom nav */
   .main-content {
     padding-bottom: calc(80px + env(safe-area-inset-bottom, 0px));
+    overflow-x: hidden;
   }
 }
 
@@ -653,6 +672,7 @@ h4 {
   border: 1px solid var(--border-color);
   flex-wrap: wrap;
   justify-content: center;
+  overflow-x: hidden;
 }
 
 .round-stat {

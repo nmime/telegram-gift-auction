@@ -321,12 +321,15 @@ export default function AuctionPage() {
             <div className="bid-form">
               <input
                 type="number"
+                inputMode="numeric"
                 className="input"
                 value={bidAmount}
                 onChange={(e) => setBidAmount(e.target.value)}
+                onWheel={(e) => e.currentTarget.blur()}
                 placeholder={t('auction.min', { amount: minWinningBid || auction.minBidAmount })}
                 disabled={bidding}
-                min={1}
+                min={minWinningBid || auction.minBidAmount}
+                step={auction.minBidIncrement}
               />
               <button
                 className="btn btn-primary"

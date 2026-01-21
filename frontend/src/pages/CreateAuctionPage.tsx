@@ -168,9 +168,11 @@ export default function CreateAuctionPage() {
             <label>Total Items</label>
             <input
               type="number"
+              inputMode="numeric"
               className="input"
               value={totalItems}
               onChange={(e) => handleNumberInput(setTotalItems, e.target.value)}
+              onWheel={(e) => e.currentTarget.blur()}
               min={1}
             />
           </div>
@@ -208,9 +210,11 @@ export default function CreateAuctionPage() {
                 <label style={{ fontSize: '12px', color: 'rgba(255,255,255,0.6)' }}>Items</label>
                 <input
                   type="number"
+                  inputMode="numeric"
                   className="input"
                   value={round.itemsCount}
                   onChange={(e) => updateRound(index, 'itemsCount', parseInt(e.target.value, 10) || 1)}
+                  onWheel={(e) => e.currentTarget.blur()}
                   min={1}
                 />
               </div>
@@ -218,9 +222,11 @@ export default function CreateAuctionPage() {
                 <label style={{ fontSize: '12px', color: 'rgba(255,255,255,0.6)' }}>Duration (min)</label>
                 <input
                   type="number"
+                  inputMode="numeric"
                   className="input"
                   value={round.durationMinutes}
                   onChange={(e) => updateRound(index, 'durationMinutes', parseInt(e.target.value, 10) || 1)}
+                  onWheel={(e) => e.currentTarget.blur()}
                   min={1}
                 />
               </div>
@@ -246,9 +252,11 @@ export default function CreateAuctionPage() {
               <label>Min Bid Amount (Stars)</label>
               <input
                 type="number"
+                inputMode="numeric"
                 className="input"
                 value={minBidAmount}
                 onChange={(e) => handleNumberInput(setMinBidAmount, e.target.value)}
+                onWheel={(e) => e.currentTarget.blur()}
                 min={1}
               />
             </div>
@@ -257,9 +265,11 @@ export default function CreateAuctionPage() {
               <label>Min Bid Increment (Stars)</label>
               <input
                 type="number"
+                inputMode="numeric"
                 className="input"
                 value={minBidIncrement}
                 onChange={(e) => handleNumberInput(setMinBidIncrement, e.target.value)}
+                onWheel={(e) => e.currentTarget.blur()}
                 min={1}
               />
             </div>
@@ -274,9 +284,11 @@ export default function CreateAuctionPage() {
               <label>Window (min)</label>
               <input
                 type="number"
+                inputMode="numeric"
                 className="input"
                 value={antiSnipingWindowMinutes}
                 onChange={(e) => handleNumberInput(setAntiSnipingWindowMinutes, e.target.value)}
+                onWheel={(e) => e.currentTarget.blur()}
                 min={1}
               />
             </div>
@@ -285,9 +297,11 @@ export default function CreateAuctionPage() {
               <label>Extension (min)</label>
               <input
                 type="number"
+                inputMode="numeric"
                 className="input"
                 value={antiSnipingExtensionMinutes}
                 onChange={(e) => handleNumberInput(setAntiSnipingExtensionMinutes, e.target.value)}
+                onWheel={(e) => e.currentTarget.blur()}
                 min={1}
               />
             </div>
@@ -296,9 +310,11 @@ export default function CreateAuctionPage() {
               <label>Max Extensions</label>
               <input
                 type="number"
+                inputMode="numeric"
                 className="input"
                 value={maxExtensions}
                 onChange={(e) => handleNumberInput(setMaxExtensions, e.target.value, 0)}
+                onWheel={(e) => e.currentTarget.blur()}
                 min={0}
               />
             </div>
@@ -323,9 +339,11 @@ export default function CreateAuctionPage() {
                 <label>Bot Count</label>
                 <input
                   type="number"
+                  inputMode="numeric"
                   className="input"
                   value={botCount}
                   onChange={(e) => handleNumberInput(setBotCount, e.target.value, 0)}
+                  onWheel={(e) => e.currentTarget.blur()}
                   min={0}
                   max={50}
                   style={{ width: '100px' }}

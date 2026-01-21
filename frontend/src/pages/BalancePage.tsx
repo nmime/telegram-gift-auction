@@ -53,6 +53,14 @@ export default function BalancePage() {
 
   const quickAmounts = [100, 500, 1000, 5000];
 
+  const getStep = (balance: number) => {
+    if (balance < 100) return 10;
+    if (balance < 1000) return 50;
+    if (balance < 10000) return 100;
+    if (balance < 100000) return 500;
+    return 1000;
+  };
+
   return (
     <div>
       <h1>{t('balance.title')}</h1>
@@ -78,10 +86,13 @@ export default function BalancePage() {
           <label>{t('balance.depositAmount')}</label>
           <input
             type="number"
+            inputMode="numeric"
             className="input"
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
+            onWheel={(e) => e.currentTarget.blur()}
             min="1"
+            step={getStep(user?.balance || 0)}
             disabled={loading}
           />
         </div>
