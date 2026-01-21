@@ -72,23 +72,25 @@ export class TelegramBotService implements OnModuleInit, OnModuleDestroy {
 
       const title = this.t("bot.welcome.title", lang);
       const description = this.t("bot.welcome.description", lang);
+      const notifications = this.t("bot.welcome.notifications", lang);
       const openApp = this.t("bot.welcome.openApp", lang);
       const buttonText = this.t("bot.welcome.button", lang);
 
+      const message = `${title}\n\n${description}\n\n${notifications}\n\n${openApp}`;
+
       // Telegram requires HTTPS for all inline button URLs
       if (isHttps) {
-        await ctx.reply(`${title}\n\n${description}\n\n${openApp}`, {
+        await ctx.reply(message, {
+          parse_mode: "HTML",
           reply_markup: {
             inline_keyboard: [
-              [{ text: `🎯 ${buttonText}`, web_app: { url: webAppUrl } }],
+              [{ text: buttonText, web_app: { url: webAppUrl } }],
             ],
           },
         });
       } else {
         // Development mode: send link as text since Telegram doesn't allow HTTP URLs
-        await ctx.reply(
-          `${title}\n\n${description}\n\n${openApp}\n\n${webAppUrl}`,
-        );
+        await ctx.reply(`${message}\n\n${webAppUrl}`, { parse_mode: "HTML" });
       }
     });
 
@@ -105,20 +107,23 @@ export class TelegramBotService implements OnModuleInit, OnModuleDestroy {
       const step2 = this.t("bot.help.step2", lang);
       const step3 = this.t("bot.help.step3", lang);
       const step4 = this.t("bot.help.step4", lang);
+      const notifications = this.t("bot.help.notifications", lang);
       const goodLuck = this.t("bot.help.goodLuck", lang);
 
       await ctx.reply(
-        `🎁 ${title}\n\n` +
+        `${title}\n\n` +
           `${commands}\n` +
           `• ${start}\n` +
           `• ${helpCmd}\n` +
-          `• ${languageCmd}\n\n` +
+          `• ${languageCmd}` +
           `${howItWorks}\n` +
           `${step1}\n` +
           `${step2}\n` +
           `${step3}\n` +
-          `${step4}\n\n` +
-          `${goodLuck} 🍀`,
+          `${step4}` +
+          `${notifications}` +
+          `${goodLuck}`,
+        { parse_mode: "HTML" },
       );
     });
 
@@ -130,12 +135,13 @@ export class TelegramBotService implements OnModuleInit, OnModuleDestroy {
       const english = this.t("bot.language.english", lang);
       const russian = this.t("bot.language.russian", lang);
 
-      await ctx.reply(`🌐 ${title}\n\n${select}`, {
+      await ctx.reply(`${title}\n\n${select}`, {
+        parse_mode: "HTML",
         reply_markup: {
           inline_keyboard: [
             [
-              { text: `🇬🇧 ${english}`, callback_data: "lang_en" },
-              { text: `🇷🇺 ${russian}`, callback_data: "lang_ru" },
+              { text: english, callback_data: "lang_en" },
+              { text: russian, callback_data: "lang_ru" },
             ],
           ],
         },
@@ -166,6 +172,39 @@ export class TelegramBotService implements OnModuleInit, OnModuleDestroy {
     });
   }
 
+  private async setupBotCommands() {
+    const getCommands = (lang: string) => [
+      { command: "start", description: this.t("bot.commands.start", lang) },
+      { command: "help", description: this.t("bot.commands.help", lang) },
+      { command: "language", description: this.t("bot.commands.language", lang) },
+    ];
+
+    const privateScope = { type: "all_private_chats" as const };
+
+    try {
+      // Set English commands as default for all languages
+      await this.bot.api.setMyCommands(getCommands("en"), {
+        scope: privateScope,
+      });
+
+      // Set English commands explicitly
+      await this.bot.api.setMyCommands(getCommands("en"), {
+        scope: privateScope,
+        language_code: "en",
+      });
+
+      // Set Russian commands
+      await this.bot.api.setMyCommands(getCommands("ru"), {
+        scope: privateScope,
+        language_code: "ru",
+      });
+
+      this.logger.log("Bot commands configured for en, ru, and default");
+    } catch (error) {
+      this.logger.error("Failed to set bot commands:", error);
+    }
+  }
+
   async onModuleInit() {
     if (!this.botToken) {
       this.logger.warn("BOT_TOKEN not configured, skipping bot initialization");
@@ -176,6 +215,9 @@ export class TelegramBotService implements OnModuleInit, OnModuleDestroy {
       // Get bot info
       const me = await this.bot.api.getMe();
       this.logger.log(`Bot initialized: @${me.username}`);
+
+      // Set bot commands for private chats
+      await this.setupBotCommands();
 
       if (this.nodeEnv === "production") {
         // In production, auto-set webhook

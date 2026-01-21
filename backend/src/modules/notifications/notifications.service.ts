@@ -1,9 +1,12 @@
-import { Injectable, Logger } from "@nestjs/common";
+import { Injectable, Logger, OnModuleInit, Inject } from "@nestjs/common";
 import { InjectModel } from "@nestjs/mongoose";
 import { Model } from "mongoose";
 import { I18nService } from "nestjs-i18n";
+import { Queue, Worker } from "bullmq";
+import Redis from "ioredis";
 import { TelegramBotService } from "@/modules/telegram";
 import { User, UserDocument } from "@/schemas";
+import { redisClient } from "@/modules/redis/constants";
 
 export interface RoundWinNotificationData {
   auctionId: string;
@@ -29,15 +32,92 @@ export interface AuctionCompleteNotificationData {
   totalSpent: number;
 }
 
+interface TelegramNotificationJob {
+  telegramId: number;
+  message: string;
+}
+
 @Injectable()
-export class NotificationsService {
+export class NotificationsService implements OnModuleInit {
   private readonly logger = new Logger(NotificationsService.name);
+  private notificationQueue!: Queue<TelegramNotificationJob>;
+  private worker!: Worker<TelegramNotificationJob>;
+
+  // Telegram rate limit: ~30 messages/second to different users
+  private static readonly RATE_LIMIT = 25;
+  private static readonly QUEUE_NAME = "telegram-notifications";
 
   constructor(
     @InjectModel(User.name) private userModel: Model<UserDocument>,
+    @Inject(redisClient) private readonly redis: Redis,
     private readonly telegramBotService: TelegramBotService,
     private readonly i18n: I18nService,
   ) {}
+
+  async onModuleInit() {
+    // Create BullMQ queue with rate limiting (use duplicate connection for BullMQ)
+    const connection = this.redis.duplicate();
+
+    this.notificationQueue = new Queue<TelegramNotificationJob>(
+      NotificationsService.QUEUE_NAME,
+      {
+        connection,
+        defaultJobOptions: {
+          removeOnComplete: true,
+          removeOnFail: 100, // Keep last 100 failed jobs for debugging
+          attempts: 3,
+          backoff: {
+            type: "exponential",
+            delay: 1000,
+          },
+        },
+      },
+    );
+
+    // Create worker with rate limiting (25 jobs per second)
+    this.worker = new Worker<TelegramNotificationJob>(
+      NotificationsService.QUEUE_NAME,
+      async (job) => {
+        await this.processNotification(job.data);
+      },
+      {
+        connection: this.redis.duplicate(),
+        concurrency: 1, // Process one at a time for rate limiting
+        limiter: {
+          max: NotificationsService.RATE_LIMIT,
+          duration: 1000, // per second
+        },
+      },
+    );
+
+    this.worker.on("failed", (job, err) => {
+      this.logger.warn(`Notification job ${job?.id} failed:`, err.message);
+    });
+
+    this.worker.on("error", (err) => {
+      this.logger.error("Notification worker error:", err);
+    });
+
+    this.logger.log(
+      `Notification queue initialized (${NotificationsService.RATE_LIMIT}/sec rate limit, Redis-backed)`,
+    );
+  }
+
+  private async processNotification(data: TelegramNotificationJob): Promise<void> {
+    try {
+      const bot = this.telegramBotService.getBot();
+      await bot.api.sendMessage(data.telegramId, data.message, {
+        parse_mode: "HTML",
+      });
+      this.logger.debug(`Sent notification to Telegram user ${data.telegramId}`);
+    } catch (error) {
+      this.logger.warn(
+        `Failed to send Telegram notification to ${data.telegramId}:`,
+        error,
+      );
+      throw error; // Re-throw to trigger retry
+    }
+  }
 
   private getLang(user: UserDocument): string {
     return user.languageCode || "en";
@@ -64,7 +144,7 @@ export class NotificationsService {
       minBidToWin: data.minBidToWin,
     });
 
-    await this.sendTelegramMessage(user.telegramId, `${title}\n\n${message}`);
+    await this.queueTelegramMessage(user.telegramId, `${title}\n\n${message}`);
   }
 
   async notifyRoundWin(
@@ -84,7 +164,7 @@ export class NotificationsService {
       winningBid: data.winningBid,
     });
 
-    await this.sendTelegramMessage(user.telegramId, `${title}\n\n${message}`);
+    await this.queueTelegramMessage(user.telegramId, `${title}\n\n${message}`);
   }
 
   async notifyRoundLost(
@@ -117,7 +197,7 @@ export class NotificationsService {
       fullMessage += `\n${refundText}`;
     }
 
-    await this.sendTelegramMessage(user.telegramId, fullMessage);
+    await this.queueTelegramMessage(user.telegramId, fullMessage);
   }
 
   async notifyAuctionComplete(
@@ -143,7 +223,7 @@ export class NotificationsService {
       });
     }
 
-    await this.sendTelegramMessage(user.telegramId, `${title}\n\n${message}`);
+    await this.queueTelegramMessage(user.telegramId, `${title}\n\n${message}`);
   }
 
   async notifyNewRoundStarted(
@@ -167,7 +247,7 @@ export class NotificationsService {
       itemsCount: data.itemsCount,
     });
 
-    await this.sendTelegramMessage(user.telegramId, `${title}\n\n${message}`);
+    await this.queueTelegramMessage(user.telegramId, `${title}\n\n${message}`);
   }
 
   async notifyAntiSniping(
@@ -191,24 +271,31 @@ export class NotificationsService {
       extensionMinutes: data.extensionMinutes,
     });
 
-    await this.sendTelegramMessage(user.telegramId, `${title}\n\n${message}`);
+    await this.queueTelegramMessage(user.telegramId, `${title}\n\n${message}`);
   }
 
-  private async sendTelegramMessage(
+  private async queueTelegramMessage(
     telegramId: number,
     message: string,
   ): Promise<void> {
-    try {
-      const bot = this.telegramBotService.getBot();
-      await bot.api.sendMessage(telegramId, message, {
-        parse_mode: "HTML",
-      });
-      this.logger.debug(`Sent notification to Telegram user ${telegramId}`);
-    } catch (error) {
-      this.logger.warn(
-        `Failed to send Telegram notification to ${telegramId}:`,
-        error,
-      );
-    }
+    await this.notificationQueue.add(
+      "send",
+      { telegramId, message },
+      { priority: 1 },
+    );
+  }
+
+  /**
+   * Get current queue stats for monitoring
+   */
+  async getQueueStats() {
+    const [waiting, active, completed, failed] = await Promise.all([
+      this.notificationQueue.getWaitingCount(),
+      this.notificationQueue.getActiveCount(),
+      this.notificationQueue.getCompletedCount(),
+      this.notificationQueue.getFailedCount(),
+    ]);
+
+    return { waiting, active, completed, failed };
   }
 }

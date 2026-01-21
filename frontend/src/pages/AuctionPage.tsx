@@ -473,7 +473,7 @@ export default function AuctionPage() {
                           : ''
                       }
                     >
-                      {bid.status === BidStatus.WON ? t('auction.won') : bid.status === BidStatus.REFUNDED ? t('auction.refunded') : bid.status}
+                      {t(`auction.bid${bid.status.charAt(0).toUpperCase() + bid.status.slice(1)}`)}
                       {bid.itemNumber && ` (${t('auction.itemNumber', { number: bid.itemNumber })})`}
                     </span>
                   </div>

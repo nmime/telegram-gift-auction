@@ -1611,48 +1611,45 @@ export class AuctionsService {
     bidderId: string,
     newAmount: number,
   ): Promise<void> {
-    // Fetch auction for title and round info (needed for notifications)
+    const itemsInRound = meta.itemsInRound || 1;
+
+    // Only fetch the user at the cutoff position (who just got pushed out)
+    const topBidders = await this.bidCacheService.getTopBidders(auctionId, itemsInRound + 1);
+    const outbidEntry = topBidders[itemsInRound];
+
+    // No one pushed out or it's the same bidder
+    if (!outbidEntry || outbidEntry.userId === bidderId) return;
+
+    // Single query: find bid and mark as notified (only if not already notified)
+    const bid = await this.bidModel.findOneAndUpdate(
+      {
+        auctionId: new Types.ObjectId(auctionId),
+        userId: new Types.ObjectId(outbidEntry.userId),
+        status: BidStatus.ACTIVE,
+        outbidNotifiedAt: null,
+      },
+      { outbidNotifiedAt: new Date() },
+      { new: true },
+    ).populate<{ userId: UserDocument }>("userId", "telegramId isBot languageCode");
+
+    if (!bid || !bid.userId || bid.userId.isBot || !bid.userId.telegramId) return;
+
+    // Fetch auction info and send notification in parallel
     const auction = await this.auctionModel
       .findById(auctionId)
       .select("title currentRound minBidIncrement")
       .lean();
     if (!auction) return;
 
-    const itemsInRound = meta.itemsInRound || 1;
-    const topBidders = await this.bidCacheService.getTopBidders(auctionId, itemsInRound + 10);
-
-    // Find users who just got pushed out of winning positions
-    for (let i = itemsInRound; i < topBidders.length; i++) {
-      const outbidEntry = topBidders[i];
-      if (!outbidEntry || outbidEntry.userId === bidderId) continue;
-
-      // Get user for notification
-      const user = await this.userModel.findById(outbidEntry.userId);
-      if (user && !user.isBot && user.telegramId) {
-        // Check if already notified
-        const bid = await this.bidModel.findOneAndUpdate(
-          {
-            auctionId: new Types.ObjectId(auctionId),
-            userId: new Types.ObjectId(outbidEntry.userId),
-            status: BidStatus.ACTIVE,
-            outbidNotifiedAt: null,
-          },
-          { outbidNotifiedAt: new Date() },
-          { new: true },
-        );
-
-        if (bid) {
-          await this.notificationsService.notifyOutbid(outbidEntry.userId, {
-            auctionId,
-            auctionTitle: auction.title,
-            yourBid: outbidEntry.amount,
-            newLeaderBid: newAmount,
-            roundNumber: auction.currentRound,
-            minBidToWin: newAmount + auction.minBidIncrement,
-          });
-        }
-      }
-    }
+    // Fire-and-forget notification (don't await)
+    this.notificationsService.notifyOutbid(outbidEntry.userId, {
+      auctionId,
+      auctionTitle: auction.title,
+      yourBid: outbidEntry.amount,
+      newLeaderBid: newAmount,
+      roundNumber: auction.currentRound,
+      minBidToWin: newAmount + auction.minBidIncrement,
+    }).catch(err => this.logger.warn("Failed to send outbid notification", err));
   }
 
   /**
@@ -1723,48 +1720,36 @@ export class AuctionsService {
 
     const itemsInRound = currentRound.itemsCount;
 
-    // Get current leaderboard from cache
-    const topBidders = await this.bidCacheService.getTopBidders(
+    // Only fetch the user at the cutoff position (who just got pushed out)
+    const topBidders = await this.bidCacheService.getTopBidders(auctionId, itemsInRound + 1);
+    const outbidEntry = topBidders[itemsInRound];
+
+    // No one pushed out or it's the same bidder
+    if (!outbidEntry || outbidEntry.userId === bidderId) return;
+
+    // Single query: find bid and mark as notified
+    const bid = await this.bidModel.findOneAndUpdate(
+      {
+        auctionId: new Types.ObjectId(auctionId),
+        userId: new Types.ObjectId(outbidEntry.userId),
+        status: BidStatus.ACTIVE,
+        outbidNotifiedAt: null,
+      },
+      { outbidNotifiedAt: new Date() },
+      { new: true },
+    ).populate<{ userId: UserDocument }>("userId", "telegramId isBot");
+
+    if (!bid || !bid.userId || bid.userId.isBot || !bid.userId.telegramId) return;
+
+    // Fire-and-forget notification
+    this.notificationsService.notifyOutbid(outbidEntry.userId, {
       auctionId,
-      itemsInRound + 10, // Get a few extra to check who got pushed out
-    );
-
-    // Find users who are just outside winning position
-    const winningUserIds = new Set(
-      topBidders.slice(0, itemsInRound).map((b) => b.userId),
-    );
-
-    // Check users just outside winning position
-    for (let i = itemsInRound; i < topBidders.length; i++) {
-      const outbidEntry = topBidders[i];
-      if (!outbidEntry || outbidEntry.userId === bidderId) continue;
-
-      const user = await this.userModel.findById(outbidEntry.userId);
-      if (user && !user.isBot && user.telegramId) {
-        // Check if already notified for this bid
-        const bid = await this.bidModel.findOneAndUpdate(
-          {
-            auctionId: new Types.ObjectId(auctionId),
-            userId: new Types.ObjectId(outbidEntry.userId),
-            status: BidStatus.ACTIVE,
-            outbidNotifiedAt: null,
-          },
-          { outbidNotifiedAt: new Date() },
-          { new: true },
-        );
-
-        if (bid) {
-          await this.notificationsService.notifyOutbid(outbidEntry.userId, {
-            auctionId,
-            auctionTitle: auction.title,
-            yourBid: outbidEntry.amount,
-            newLeaderBid: bidAmount,
-            roundNumber: auction.currentRound,
-            minBidToWin: bidAmount + auction.minBidIncrement,
-          });
-        }
-      }
-    }
+      auctionTitle: auction.title,
+      yourBid: outbidEntry.amount,
+      newLeaderBid: bidAmount,
+      roundNumber: auction.currentRound,
+      minBidToWin: bidAmount + auction.minBidIncrement,
+    }).catch(err => this.logger.warn("Failed to send outbid notification", err));
   }
 
   /**

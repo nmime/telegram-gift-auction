@@ -1,28 +1,35 @@
 {
+  "commands": {
+    "start": "Open the auction app",
+    "help": "Show help message",
+    "language": "Change language"
+  },
   "welcome": {
-    "title": "Welcome to Gift Auction!",
+    "title": "🎁 <b>Welcome to Gift Auction!</b>",
     "description": "Participate in multi-round auctions for exclusive digital collectibles.",
+    "notifications": "📬 You will receive notifications here when you get outbid, win rounds, or when auctions end.",
     "openApp": "Click the button below to open the auction app:",
-    "button": "Open Auction App"
+    "button": "🚀 Open Auction App"
   },
   "help": {
-    "title": "Gift Auction Help",
-    "commands": "Commands:",
+    "title": "📖 <b>Gift Auction Help</b>",
+    "commands": "<b>Commands:</b>",
     "start": "/start - Open the auction app",
     "helpCmd": "/help - Show this help message",
     "languageCmd": "/language - Change language",
-    "howItWorks": "How it works:",
-    "step1": "1. Open the auction app",
-    "step2": "2. Browse active auctions",
-    "step3": "3. Place bids to win exclusive gifts",
-    "step4": "4. Highest bidders at round end win!",
-    "goodLuck": "Good luck!"
+    "howItWorks": "\n<b>How it works:</b>",
+    "step1": "1️⃣ Open the auction app",
+    "step2": "2️⃣ Browse active auctions",
+    "step3": "3️⃣ Place bids to win exclusive gifts",
+    "step4": "4️⃣ Highest bidders at round end win!",
+    "notifications": "\n<b>Notifications:</b>\nYou'll receive messages here when:\n• Someone outbids you\n• You win a round\n• An auction ends",
+    "goodLuck": "\n🍀 <i>Good luck!</i>"
   },
   "language": {
-    "title": "Language Settings",
+    "title": "🌐 <b>Language Settings</b>",
     "select": "Select your preferred language:",
-    "english": "English",
-    "russian": "Russian",
-    "changed": "Language changed to English"
+    "english": "🇬🇧 English",
+    "russian": "🇷🇺 Russian",
+    "changed": "✅ Language changed to English"
   }
 }

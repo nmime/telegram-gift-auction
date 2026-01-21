@@ -1,28 +1,28 @@
 {
   "outbid": {
-    "title": "<b>You've been outbid!</b>",
-    "message": "<b>Auction:</b> {auctionTitle}\n<b>Round:</b> {roundNumber}\n<b>Your bid:</b> {yourBid} Stars\n<b>New leader:</b> {newLeaderBid} Stars\n<b>Min bid to win:</b> {minBidToWin} Stars\n\n<i>Increase your bid to stay in the lead!</i>"
+    "title": "⚠️ <b>You've been outbid!</b>",
+    "message": "<b>Auction:</b> {auctionTitle}\n<b>Round:</b> {roundNumber}\n<b>Your bid:</b> {yourBid} ⭐\n<b>New leader:</b> {newLeaderBid} ⭐\n<b>Min bid to win:</b> {minBidToWin} ⭐\n\n<i>Increase your bid to stay in the lead!</i>"
   },
   "roundWin": {
-    "title": "<b>Congratulations! You won item #{itemNumber}!</b>",
-    "message": "<b>Auction:</b> {auctionTitle}\n<b>Round:</b> {roundNumber}\n<b>Winning bid:</b> {winningBid} Stars"
+    "title": "🎉 <b>Congratulations! You won item #{itemNumber}!</b>",
+    "message": "<b>Auction:</b> {auctionTitle}\n<b>Round:</b> {roundNumber}\n<b>Winning bid:</b> {winningBid} ⭐"
   },
   "roundLost": {
-    "title": "<b>Round {roundNumber} has ended</b>",
+    "title": "📢 <b>Round {roundNumber} has ended</b>",
     "message": "<b>Auction:</b> {auctionTitle}\n\nYour bid didn't win this round.",
-    "refunded": "\n<i>Your bid of {amount} Stars has been refunded.</i>"
+    "refunded": "\n💰 <i>Your bid of {amount} ⭐ has been refunded.</i>"
   },
   "auctionComplete": {
-    "title": "<b>Auction Completed!</b>",
-    "won": "<b>{auctionTitle}</b>\n\nYou won <b>{totalWins} item(s)</b>\nTotal spent: <b>{totalSpent} Stars</b>\n\n<i>Congratulations on your wins!</i>",
+    "title": "🏁 <b>Auction Completed!</b>",
+    "won": "<b>{auctionTitle}</b>\n\n🏆 You won <b>{totalWins} item(s)</b>\n💰 Total spent: <b>{totalSpent} ⭐</b>\n\n<i>Congratulations on your wins!</i>",
     "lost": "<b>{auctionTitle}</b>\n\nUnfortunately, you didn't win any items this time.\n\n<i>Better luck next time!</i>"
   },
   "newRound": {
-    "title": "<b>New Round Started!</b>",
+    "title": "🔔 <b>New Round Started!</b>",
     "message": "<b>Auction:</b> {auctionTitle}\n<b>Round:</b> {roundNumber}\n<b>Items available:</b> {itemsCount}\n\n<i>Place your bids now!</i>"
   },
   "antiSniping": {
-    "title": "<b>Round Extended!</b>",
+    "title": "⏰ <b>Round Extended!</b>",
     "message": "<b>Auction:</b> {auctionTitle}\n\nRound {roundNumber} extended by <b>{extensionMinutes} minute(s)</b> due to late bidding."
   }
 }
