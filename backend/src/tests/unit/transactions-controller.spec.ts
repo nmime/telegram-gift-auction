@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { Test, TestingModule } from "@nestjs/testing";
 import { Types } from "mongoose";
 import { TransactionsController } from "@/modules/transactions/transactions.controller";

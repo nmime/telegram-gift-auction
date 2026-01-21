@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { Injectable, NestMiddleware } from "@nestjs/common";
 import { FastifyRequest, FastifyReply } from "fastify";
 import { AuditLogService } from "@/modules/audit/services";

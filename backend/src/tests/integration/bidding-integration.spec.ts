@@ -178,9 +178,12 @@ describe("Bidding Integration Tests", () => {
         minBidIncrement: 10,
       };
 
+      const createdUser = testUsers?.[0];
+      expect(createdUser).toBeDefined();
+
       const auction = await auctionsService.create(
         createDto,
-        testUsers[0]._id.toString(),
+        createdUser!._id.toString(),
       );
       expect(auction).toBeDefined();
       expect(auction._id).toBeDefined();
@@ -198,12 +201,15 @@ describe("Bidding Integration Tests", () => {
       expect(startedAuction.status).toBe(AuctionStatus.ACTIVE);
       expect(startedAuction.currentRound).toBe(1);
       expect(startedAuction.rounds).toHaveLength(1);
-      expect(startedAuction.rounds[0]?.roundNumber).toBe(1);
-      expect(startedAuction.rounds[0]?.completed).toBe(false);
+      expect(startedAuction.rounds?.[0]?.roundNumber).toBe(1);
+      expect(startedAuction.rounds?.[0]?.completed).toBe(false);
     });
 
     it("should create multiple auctions → list them → verify order", async () => {
       const auctions: AuctionDocument[] = [];
+
+      const creatorUser = testUsers?.[0];
+      expect(creatorUser).toBeDefined();
 
       for (let i = 0; i < 3; i++) {
         const dto: ICreateAuction = {
@@ -212,7 +218,7 @@ describe("Bidding Integration Tests", () => {
           rounds: [{ itemsCount: 5, durationMinutes: 60 }],
         };
         auctions.push(
-          await auctionsService.create(dto, testUsers[0]._id.toString()),
+          await auctionsService.create(dto, creatorUser!._id.toString()),
         );
         await new Promise((resolve) => setTimeout(resolve, 10)); // Small delay to ensure order
       }
@@ -239,7 +245,7 @@ describe("Bidding Integration Tests", () => {
 
       const auction = await auctionsService.create(
         dto,
-        testUsers[0]._id.toString(),
+        testUsers[0]!._id.toString(),
       );
       expect(auction.minBidAmount).toBe(100);
 
@@ -267,7 +273,7 @@ describe("Bidding Integration Tests", () => {
 
       const auction = await auctionsService.create(
         dto,
-        testUsers[0]._id.toString(),
+        testUsers[0]!._id.toString(),
       );
       expect(auction.roundsConfig).toHaveLength(4);
       expect(auction.totalItems).toBe(15);
@@ -290,16 +296,16 @@ describe("Bidding Integration Tests", () => {
 
       const auction = await auctionsService.create(
         dto,
-        testUsers[0]._id.toString(),
+        testUsers[0]!._id.toString(),
       );
       const started = await auctionsService.start(auction._id.toString());
 
       expect(started.status).toBe(AuctionStatus.ACTIVE);
       expect(started.currentRound).toBe(1);
       expect(started.startTime).toBeDefined();
-      expect(started.rounds[0].startTime).toBeDefined();
-      expect(started.rounds[0].endTime).toBeDefined();
-      expect(started.rounds[0].completed).toBe(false);
+      expect(started.rounds?.[0]?.startTime).toBeDefined();
+      expect(started.rounds?.[0]?.endTime).toBeDefined();
+      expect(started.rounds?.[0]?.completed).toBe(false);
     });
 
     it("should create then cancel auction", async () => {
@@ -311,7 +317,7 @@ describe("Bidding Integration Tests", () => {
 
       const auction = await auctionsService.create(
         dto,
-        testUsers[0]._id.toString(),
+        testUsers[0]!._id.toString(),
       );
       expect(auction.status).toBe(AuctionStatus.PENDING);
 
@@ -338,7 +344,7 @@ describe("Bidding Integration Tests", () => {
 
       const auction = await auctionsService.create(
         dto,
-        testUsers[0]._id.toString(),
+        testUsers[0]!._id.toString(),
       );
       expect(auction.totalItems).toBe(100);
       expect(auction.roundsConfig).toHaveLength(3);
@@ -353,7 +359,7 @@ describe("Bidding Integration Tests", () => {
 
       const auction = await auctionsService.create(
         dto,
-        testUsers[0]._id.toString(),
+        testUsers[0]!._id.toString(),
       );
       expect(auction.totalItems).toBe(1);
       expect(auction.minBidAmount).toBe(100); // Default value
@@ -376,7 +382,7 @@ describe("Bidding Integration Tests", () => {
       };
       testAuction = await auctionsService.create(
         dto,
-        testUsers[0]._id.toString(),
+        testUsers[0]!._id.toString(),
       );
       testAuction = await auctionsService.start(testAuction._id.toString());
     });
@@ -385,7 +391,7 @@ describe("Bidding Integration Tests", () => {
       const bidDto: IPlaceBid = { amount: 150 };
       const result = await auctionsService.placeBid(
         testAuction._id.toString(),
-        testUsers[0]._id.toString(),
+        testUsers[0]!._id.toString(),
         bidDto,
         "127.0.0.1",
       );
@@ -393,19 +399,19 @@ describe("Bidding Integration Tests", () => {
       expect(result.bid).toBeDefined();
       expect(result.bid.amount).toBe(150);
       expect(result.bid.status).toBe(BidStatus.ACTIVE);
-      expect(result.bid.userId.toString()).toBe(testUsers[0]._id.toString());
+      expect(result.bid.userId.toString()).toBe(testUsers[0]!._id.toString());
 
       // Verify bid is in database
       const bids = await bidsService.getByAuction(testAuction._id.toString());
       expect(bids).toHaveLength(1);
-      expect(bids[0]._id.toString()).toBe(result.bid._id.toString());
+      expect(bids?.[0]?._id.toString()).toBe(result.bid._id.toString());
     });
 
     it("should create auction → start → place bid → see in leaderboard", async () => {
       const bidDto: IPlaceBid = { amount: 200 };
       await auctionsService.placeBid(
         testAuction._id.toString(),
-        testUsers[0]._id.toString(),
+        testUsers[0]!._id.toString(),
         bidDto,
         "127.0.0.1",
       );
@@ -417,29 +423,31 @@ describe("Bidding Integration Tests", () => {
       );
 
       expect(leaderboard.leaderboard).toHaveLength(1);
-      expect(leaderboard.leaderboard[0].amount).toBe(200);
-      expect(leaderboard.leaderboard[0].username).toBe(testUsers[0].username);
-      expect(leaderboard.leaderboard[0].rank).toBe(1);
-      expect(leaderboard.leaderboard[0].isWinning).toBe(true);
+      expect(leaderboard?.leaderboard?.[0]?.amount).toBe(200);
+      expect(leaderboard?.leaderboard?.[0]?.username).toBe(
+        testUsers[0]!.username,
+      );
+      expect(leaderboard?.leaderboard?.[0]?.rank).toBe(1);
+      expect(leaderboard?.leaderboard?.[0]?.isWinning).toBe(true);
     });
 
     it("should create auction → start → multiple users bid → verify leaderboard order", async () => {
       // Place bids from multiple users with different amounts
       await auctionsService.placeBid(
         testAuction._id.toString(),
-        testUsers[0]._id.toString(),
+        testUsers[0]!._id.toString(),
         { amount: 150 },
         "127.0.0.1",
       );
       await auctionsService.placeBid(
         testAuction._id.toString(),
-        testUsers[1]._id.toString(),
+        testUsers[1]!._id.toString(),
         { amount: 300 },
         "127.0.0.1",
       );
       await auctionsService.placeBid(
         testAuction._id.toString(),
-        testUsers[2]._id.toString(),
+        testUsers[2]!._id.toString(),
         { amount: 200 },
         "127.0.0.1",
       );
@@ -452,19 +460,19 @@ describe("Bidding Integration Tests", () => {
 
       expect(leaderboard.leaderboard).toHaveLength(3);
       // Should be ordered by amount descending
-      expect(leaderboard.leaderboard[0].amount).toBe(300);
-      expect(leaderboard.leaderboard[1].amount).toBe(200);
-      expect(leaderboard.leaderboard[2].amount).toBe(150);
-      expect(leaderboard.leaderboard[0].rank).toBe(1);
-      expect(leaderboard.leaderboard[1].rank).toBe(2);
-      expect(leaderboard.leaderboard[2].rank).toBe(3);
+      expect(leaderboard?.leaderboard?.[0]?.amount).toBe(300);
+      expect(leaderboard?.leaderboard?.[1]?.amount).toBe(200);
+      expect(leaderboard?.leaderboard?.[2]?.amount).toBe(150);
+      expect(leaderboard?.leaderboard?.[0]?.rank).toBe(1);
+      expect(leaderboard?.leaderboard?.[1]?.rank).toBe(2);
+      expect(leaderboard?.leaderboard?.[2]?.rank).toBe(3);
     });
 
     it("should create auction → place bid → increase bid → verify amount updated", async () => {
       // Initial bid
       const firstBid = await auctionsService.placeBid(
         testAuction._id.toString(),
-        testUsers[0]._id.toString(),
+        testUsers[0]!._id.toString(),
         { amount: 150 },
         "127.0.0.1",
       );
@@ -472,7 +480,7 @@ describe("Bidding Integration Tests", () => {
       // Increase bid
       const secondBid = await auctionsService.placeBid(
         testAuction._id.toString(),
-        testUsers[0]._id.toString(),
+        testUsers[0]!._id.toString(),
         { amount: 250 },
         "127.0.0.1",
       );
@@ -485,14 +493,14 @@ describe("Bidding Integration Tests", () => {
         testAuction._id.toString(),
       );
       expect(bids).toHaveLength(1);
-      expect(bids[0].amount).toBe(250);
+      expect(bids?.[0]?.amount).toBe(250);
     });
 
     it("should create auction → bid → another user outbids → verify leaderboard changed", async () => {
       // User 0 places initial bid
       await auctionsService.placeBid(
         testAuction._id.toString(),
-        testUsers[0]._id.toString(),
+        testUsers[0]!._id.toString(),
         { amount: 150 },
         "127.0.0.1",
       );
@@ -502,12 +510,14 @@ describe("Bidding Integration Tests", () => {
         10,
         0,
       );
-      expect(leaderboard.leaderboard[0].username).toBe(testUsers[0].username);
+      expect(leaderboard?.leaderboard?.[0]?.username).toBe(
+        testUsers[0]!.username,
+      );
 
       // User 1 outbids
       await auctionsService.placeBid(
         testAuction._id.toString(),
-        testUsers[1]._id.toString(),
+        testUsers[1]!._id.toString(),
         { amount: 250 },
         "127.0.0.1",
       );
@@ -517,9 +527,13 @@ describe("Bidding Integration Tests", () => {
         10,
         0,
       );
-      expect(leaderboard.leaderboard[0].username).toBe(testUsers[1].username);
-      expect(leaderboard.leaderboard[0].amount).toBe(250);
-      expect(leaderboard.leaderboard[1].username).toBe(testUsers[0].username);
+      expect(leaderboard?.leaderboard?.[0]?.username).toBe(
+        testUsers[1]!.username,
+      );
+      expect(leaderboard?.leaderboard?.[0]?.amount).toBe(250);
+      expect(leaderboard?.leaderboard?.[1]?.username).toBe(
+        testUsers[0]!.username,
+      );
     });
 
     it("should create auction → bid → not enough balance → fail", async () => {
@@ -528,7 +542,7 @@ describe("Bidding Integration Tests", () => {
       await expect(
         auctionsService.placeBid(
           testAuction._id.toString(),
-          testUsers[0]._id.toString(),
+          testUsers[0]!._id.toString(),
           bidDto,
           "127.0.0.1",
         ),
@@ -541,7 +555,7 @@ describe("Bidding Integration Tests", () => {
       await expect(
         auctionsService.placeBid(
           testAuction._id.toString(),
-          testUsers[0]._id.toString(),
+          testUsers[0]!._id.toString(),
           bidDto,
           "127.0.0.1",
         ),
@@ -551,14 +565,14 @@ describe("Bidding Integration Tests", () => {
     it("should create auction → bid from same user twice → only latest counts", async () => {
       await auctionsService.placeBid(
         testAuction._id.toString(),
-        testUsers[0]._id.toString(),
+        testUsers[0]!._id.toString(),
         { amount: 150 },
         "127.0.0.1",
       );
 
       await auctionsService.placeBid(
         testAuction._id.toString(),
-        testUsers[0]._id.toString(),
+        testUsers[0]!._id.toString(),
         { amount: 200 },
         "127.0.0.1",
       );
@@ -568,29 +582,30 @@ describe("Bidding Integration Tests", () => {
       );
       expect(bids).toHaveLength(1);
       expect(bids[0].amount).toBe(200);
-      expect(bids[0].userId.toString()).toBe(testUsers[0]._id.toString());
+      expect(bids?.[0]?.userId.toString()).toBe(testUsers[0]!._id.toString());
     });
 
     it("should create auction → bid → check user's bid list → appears correctly", async () => {
       await auctionsService.placeBid(
         testAuction._id.toString(),
-        testUsers[0]._id.toString(),
+        testUsers[0]!._id.toString(),
         { amount: 150 },
         "127.0.0.1",
       );
 
       const userBids = await auctionsService.getUserBids(
-        testUsers[0]._id.toString(),
+        testAuction._id.toString(),
+        testUsers[0]!._id.toString(),
       );
       expect(userBids).toHaveLength(1);
-      expect(userBids[0].amount).toBe(150);
-      expect(userBids[0].status).toBe(BidStatus.ACTIVE);
+      expect(userBids?.[0]?.amount).toBe(150);
+      expect(userBids?.[0]?.status).toBe(BidStatus.ACTIVE);
     });
 
     it("should create auction → bid → archive bid → verify history", async () => {
       const result = await auctionsService.placeBid(
         testAuction._id.toString(),
-        testUsers[0]._id.toString(),
+        testUsers[0]!._id.toString(),
         { amount: 150 },
         "127.0.0.1",
       );
@@ -600,7 +615,9 @@ describe("Bidding Integration Tests", () => {
         status: BidStatus.LOST,
       });
 
-      const userBids = await bidsService.getByUser(testUsers[0]._id.toString());
+      const userBids = await bidsService.getByUser(
+        testUsers[0]!._id.toString(),
+      );
       expect(userBids).toHaveLength(1);
       expect(userBids[0].status).toBe(BidStatus.LOST);
     });
@@ -623,7 +640,7 @@ describe("Bidding Integration Tests", () => {
       };
       testAuction = await auctionsService.create(
         dto,
-        testUsers[0]._id.toString(),
+        testUsers[0]!._id.toString(),
       );
       testAuction = await auctionsService.start(testAuction._id.toString());
     });
@@ -632,19 +649,19 @@ describe("Bidding Integration Tests", () => {
       // Place bids
       await auctionsService.placeBid(
         testAuction._id.toString(),
-        testUsers[0]._id.toString(),
+        testUsers[0]!._id.toString(),
         { amount: 300 },
         "127.0.0.1",
       );
       await auctionsService.placeBid(
         testAuction._id.toString(),
-        testUsers[1]._id.toString(),
+        testUsers[1]!._id.toString(),
         { amount: 200 },
         "127.0.0.1",
       );
       await auctionsService.placeBid(
         testAuction._id.toString(),
-        testUsers[2]._id.toString(),
+        testUsers[2]!._id.toString(),
         { amount: 250 },
         "127.0.0.1",
       );
@@ -655,12 +672,12 @@ describe("Bidding Integration Tests", () => {
       });
 
       // Complete round
-      const _completed = await auctionsService.completeRound(
+      const completed = await auctionsService.completeRound(
         testAuction._id.toString(),
       );
       expect(completed).toBeDefined();
-      expect(completed!.rounds[0].completed).toBe(true);
-      expect(completed!.rounds[0].winnerBidIds).toHaveLength(3);
+      expect(completed?.rounds?.[0]?.completed).toBe(true);
+      expect(completed?.rounds?.[0]?.winnerBidIds).toHaveLength(3);
 
       // Verify winners
       const winningBids = await bidModel.find({
@@ -675,19 +692,19 @@ describe("Bidding Integration Tests", () => {
       // Place bids for first round
       await auctionsService.placeBid(
         testAuction._id.toString(),
-        testUsers[0]._id.toString(),
+        testUsers[0]!._id.toString(),
         { amount: 300 },
         "127.0.0.1",
       );
       await auctionsService.placeBid(
         testAuction._id.toString(),
-        testUsers[1]._id.toString(),
+        testUsers[1]!._id.toString(),
         { amount: 200 },
         "127.0.0.1",
       );
       await auctionsService.placeBid(
         testAuction._id.toString(),
-        testUsers[2]._id.toString(),
+        testUsers[2]!._id.toString(),
         { amount: 250 },
         "127.0.0.1",
       );
@@ -696,32 +713,32 @@ describe("Bidding Integration Tests", () => {
       await auctionModel.findByIdAndUpdate(testAuction._id, {
         "rounds.0.endTime": new Date(Date.now() - 1000),
       });
-      const _completed = await auctionsService.completeRound(
+      const completed = await auctionsService.completeRound(
         testAuction._id.toString(),
       );
-      expect(completed!.rounds[0].completed).toBe(true);
+      expect(completed?.rounds?.[0]?.completed).toBe(true);
 
       // Start second round would be triggered automatically in timer service
       // For test, verify state
-      expect(completed!.currentRound).toBe(1);
+      expect(completed?.currentRound).toBe(1);
     });
 
     it("should create auction → bid → round ends → winner determined → bids frozen", async () => {
       await auctionsService.placeBid(
         testAuction._id.toString(),
-        testUsers[0]._id.toString(),
+        testUsers[0]!._id.toString(),
         { amount: 300 },
         "127.0.0.1",
       );
       await auctionsService.placeBid(
         testAuction._id.toString(),
-        testUsers[1]._id.toString(),
+        testUsers[1]!._id.toString(),
         { amount: 200 },
         "127.0.0.1",
       );
 
-      const user0Before = await userModel.findById(testUsers[0]._id);
-      const user1Before = await userModel.findById(testUsers[1]._id);
+      const user0Before = await userModel.findById(testUsers[0]!._id);
+      const user1Before = await userModel.findById(testUsers[1]!._id);
       expect(user0Before!.frozenBalance).toBe(300);
       expect(user1Before!.frozenBalance).toBe(200);
 
@@ -732,7 +749,7 @@ describe("Bidding Integration Tests", () => {
       await auctionsService.completeRound(testAuction._id.toString());
 
       // Winners' frozen balance should be unfrozen
-      const user0After = await userModel.findById(testUsers[0]._id);
+      const user0After = await userModel.findById(testUsers[0]!._id);
       expect(user0After!.frozenBalance).toBe(0);
       // Winner's balance should be reduced
       expect(user0After!.balance).toBe(INITIAL_BALANCE - 300);
@@ -745,7 +762,7 @@ describe("Bidding Integration Tests", () => {
 
       await auctionsService.placeBid(
         testAuction._id.toString(),
-        testUsers[0]._id.toString(),
+        testUsers[0]!._id.toString(),
         { amount: 300 },
         "127.0.0.1",
       );
@@ -758,19 +775,19 @@ describe("Bidding Integration Tests", () => {
       // 3 winners, 1 loser
       await auctionsService.placeBid(
         testAuction._id.toString(),
-        testUsers[0]._id.toString(),
+        testUsers[0]!._id.toString(),
         { amount: 400 },
         "127.0.0.1",
       );
       await auctionsService.placeBid(
         testAuction._id.toString(),
-        testUsers[1]._id.toString(),
+        testUsers[1]!._id.toString(),
         { amount: 300 },
         "127.0.0.1",
       );
       await auctionsService.placeBid(
         testAuction._id.toString(),
-        testUsers[2]._id.toString(),
+        testUsers[2]!._id.toString(),
         { amount: 350 },
         "127.0.0.1",
       );
@@ -805,7 +822,7 @@ describe("Bidding Integration Tests", () => {
     it("should create auction → winner bids frozen → cannot bid again", async () => {
       await auctionsService.placeBid(
         testAuction._id.toString(),
-        testUsers[0]._id.toString(),
+        testUsers[0]!._id.toString(),
         { amount: 300 },
         "127.0.0.1",
       );
@@ -820,7 +837,7 @@ describe("Bidding Integration Tests", () => {
       // Winner's bid status is WON, so they can't bid in same auction again with same bid
       const winnerBid = await bidModel.findOne({
         auctionId: testAuction._id,
-        userId: testUsers[0]._id,
+        userId: testUsers[0]!._id,
       });
       expect(winnerBid!.status).toBe(BidStatus.WON);
     });
@@ -829,19 +846,19 @@ describe("Bidding Integration Tests", () => {
       // Place 3 bids for 3 items
       await auctionsService.placeBid(
         testAuction._id.toString(),
-        testUsers[0]._id.toString(),
+        testUsers[0]!._id.toString(),
         { amount: 500 },
         "127.0.0.1",
       );
       await auctionsService.placeBid(
         testAuction._id.toString(),
-        testUsers[1]._id.toString(),
+        testUsers[1]!._id.toString(),
         { amount: 400 },
         "127.0.0.1",
       );
       await auctionsService.placeBid(
         testAuction._id.toString(),
-        testUsers[2]._id.toString(),
+        testUsers[2]!._id.toString(),
         { amount: 300 },
         "127.0.0.1",
       );
@@ -859,9 +876,9 @@ describe("Bidding Integration Tests", () => {
         status: BidStatus.WON,
       });
       expect(winners).toHaveLength(3);
-      expect(winners[0].itemNumber).toBe(1);
-      expect(winners[1].itemNumber).toBe(2);
-      expect(winners[2].itemNumber).toBe(3);
+      expect(winners?.[0]?.itemNumber).toBe(1);
+      expect(winners?.[1]?.itemNumber).toBe(2);
+      expect(winners?.[2]?.itemNumber).toBe(3);
     });
 
     it("should create auction → no bids → no winner → can restart", async () => {
@@ -869,12 +886,12 @@ describe("Bidding Integration Tests", () => {
       await auctionModel.findByIdAndUpdate(testAuction._id, {
         "rounds.0.endTime": new Date(Date.now() - 1000),
       });
-      const _completed = await auctionsService.completeRound(
+      const completed = await auctionsService.completeRound(
         testAuction._id.toString(),
       );
 
-      expect(completed!.rounds[0].completed).toBe(true);
-      expect(completed!.rounds[0].winnerBidIds).toHaveLength(0);
+      expect(completed?.rounds?.[0]?.completed).toBe(true);
+      expect(completed?.rounds?.[0]?.winnerBidIds).toHaveLength(0);
 
       const winners = await bidModel.find({
         auctionId: testAuction._id,
@@ -898,7 +915,7 @@ describe("Bidding Integration Tests", () => {
       };
       testAuction = await auctionsService.create(
         dto,
-        testUsers[0]._id.toString(),
+        testUsers[0]!._id.toString(),
       );
       testAuction = await auctionsService.start(testAuction._id.toString());
     });
@@ -906,19 +923,19 @@ describe("Bidding Integration Tests", () => {
     it("should create auction → place bids → leaderboard shows correct order", async () => {
       await auctionsService.placeBid(
         testAuction._id.toString(),
-        testUsers[0]._id.toString(),
+        testUsers[0]!._id.toString(),
         { amount: 200 },
         "127.0.0.1",
       );
       await auctionsService.placeBid(
         testAuction._id.toString(),
-        testUsers[1]._id.toString(),
+        testUsers[1]!._id.toString(),
         { amount: 500 },
         "127.0.0.1",
       );
       await auctionsService.placeBid(
         testAuction._id.toString(),
-        testUsers[2]._id.toString(),
+        testUsers[2]!._id.toString(),
         { amount: 300 },
         "127.0.0.1",
       );
@@ -930,8 +947,8 @@ describe("Bidding Integration Tests", () => {
       );
 
       expect(leaderboard.leaderboard).toHaveLength(3);
-      expect(leaderboard.leaderboard[0].amount).toBe(500);
-      expect(leaderboard.leaderboard[0].rank).toBe(1);
+      expect(leaderboard?.leaderboard?.[0]?.amount).toBe(500);
+      expect(leaderboard?.leaderboard?.[0]?.rank).toBe(1);
       expect(leaderboard.leaderboard[1].amount).toBe(300);
       expect(leaderboard.leaderboard[1].rank).toBe(2);
       expect(leaderboard.leaderboard[2].amount).toBe(200);
@@ -942,7 +959,7 @@ describe("Bidding Integration Tests", () => {
       const _now = Date.now();
       await auctionsService.placeBid(
         testAuction._id.toString(),
-        testUsers[0]._id.toString(),
+        testUsers[0]!._id.toString(),
         { amount: 200 },
         "127.0.0.1",
       );
@@ -950,7 +967,7 @@ describe("Bidding Integration Tests", () => {
       // Get entry from Redis
       const entry = await leaderboardService.getUserEntry(
         testAuction._id.toString(),
-        testUsers[0]._id.toString(),
+        testUsers[0]!._id.toString(),
       );
 
       expect(entry).toBeDefined();
@@ -963,7 +980,7 @@ describe("Bidding Integration Tests", () => {
     it("should verify leaderboard updates in real-time as bids placed", async () => {
       await auctionsService.placeBid(
         testAuction._id.toString(),
-        testUsers[0]._id.toString(),
+        testUsers[0]!._id.toString(),
         { amount: 200 },
         "127.0.0.1",
       );
@@ -977,7 +994,7 @@ describe("Bidding Integration Tests", () => {
 
       await auctionsService.placeBid(
         testAuction._id.toString(),
-        testUsers[1]._id.toString(),
+        testUsers[1]!._id.toString(),
         { amount: 300 },
         "127.0.0.1",
       );
@@ -988,13 +1005,13 @@ describe("Bidding Integration Tests", () => {
         0,
       );
       expect(leaderboard.leaderboard).toHaveLength(2);
-      expect(leaderboard.leaderboard[0].amount).toBe(300);
+      expect(leaderboard?.leaderboard?.[0]?.amount).toBe(300);
     });
 
     it("should verify leaderboard persists to Redis and database", async () => {
       await auctionsService.placeBid(
         testAuction._id.toString(),
-        testUsers[0]._id.toString(),
+        testUsers[0]!._id.toString(),
         { amount: 200 },
         "127.0.0.1",
       );
@@ -1002,7 +1019,7 @@ describe("Bidding Integration Tests", () => {
       // Check Redis
       const redisEntry = await leaderboardService.getUserEntry(
         testAuction._id.toString(),
-        testUsers[0]._id.toString(),
+        testUsers[0]!._id.toString(),
       );
       expect(redisEntry).toBeDefined();
       expect(redisEntry!.amount).toBe(200);
@@ -1010,7 +1027,7 @@ describe("Bidding Integration Tests", () => {
       // Check database
       const dbBid = await bidModel.findOne({
         auctionId: testAuction._id,
-        userId: testUsers[0]._id,
+        userId: testUsers[0]!._id,
       });
       expect(dbBid).toBeDefined();
       expect(dbBid!.amount).toBe(200);
@@ -1020,7 +1037,7 @@ describe("Bidding Integration Tests", () => {
       // Place two bids with same amount (should fail due to unique constraint)
       await auctionsService.placeBid(
         testAuction._id.toString(),
-        testUsers[0]._id.toString(),
+        testUsers[0]!._id.toString(),
         { amount: 200 },
         "127.0.0.1",
       );
@@ -1028,7 +1045,7 @@ describe("Bidding Integration Tests", () => {
       await expect(
         auctionsService.placeBid(
           testAuction._id.toString(),
-          testUsers[1]._id.toString(),
+          testUsers[1]!._id.toString(),
           { amount: 200 },
           "127.0.0.1",
         ),
@@ -1081,7 +1098,7 @@ describe("Bidding Integration Tests", () => {
       };
       testAuction = await auctionsService.create(
         dto,
-        testUsers[0]._id.toString(),
+        testUsers[0]!._id.toString(),
       );
       testAuction = await auctionsService.start(testAuction._id.toString());
     });
@@ -1089,7 +1106,7 @@ describe("Bidding Integration Tests", () => {
     it("should create auction → bid → Redis cache updated", async () => {
       await auctionsService.placeBid(
         testAuction._id.toString(),
-        testUsers[0]._id.toString(),
+        testUsers[0]!._id.toString(),
         { amount: 200 },
         "127.0.0.1",
       );
@@ -1097,7 +1114,7 @@ describe("Bidding Integration Tests", () => {
       // Check Redis leaderboard
       const entry = await leaderboardService.getUserEntry(
         testAuction._id.toString(),
-        testUsers[0]._id.toString(),
+        testUsers[0]!._id.toString(),
       );
       expect(entry).toBeDefined();
       expect(entry!.amount).toBe(200);
@@ -1109,7 +1126,7 @@ describe("Bidding Integration Tests", () => {
 
       await auctionsService.placeBid(
         testAuction._id.toString(),
-        testUsers[0]._id.toString(),
+        testUsers[0]!._id.toString(),
         { amount: 200 },
         "127.0.0.1",
       );
@@ -1122,7 +1139,7 @@ describe("Bidding Integration Tests", () => {
     it("should create auction → bid → cache and DB in sync", async () => {
       await auctionsService.placeBid(
         testAuction._id.toString(),
-        testUsers[0]._id.toString(),
+        testUsers[0]!._id.toString(),
         { amount: 200 },
         "127.0.0.1",
       );
@@ -1130,27 +1147,27 @@ describe("Bidding Integration Tests", () => {
       // Check Redis
       const redisEntry = await leaderboardService.getUserEntry(
         testAuction._id.toString(),
-        testUsers[0]._id.toString(),
+        testUsers[0]!._id.toString(),
       );
 
       // Check DB
       const dbBid = await bidModel.findOne({
         auctionId: testAuction._id,
-        userId: testUsers[0]._id,
+        userId: testUsers[0]!._id,
         status: BidStatus.ACTIVE,
       });
 
       expect(redisEntry).toBeDefined();
       expect(dbBid).toBeDefined();
       expect(redisEntry!.amount).toBe(dbBid!.amount);
-      expect(redisEntry!.userId).toBe(testUsers[0]._id.toString());
+      expect(redisEntry!.userId).toBe(testUsers[0]!._id.toString());
     });
 
     it("should verify multiple users see same leaderboard in real-time", async () => {
       // User 0 places bid
       await auctionsService.placeBid(
         testAuction._id.toString(),
-        testUsers[0]._id.toString(),
+        testUsers[0]!._id.toString(),
         { amount: 200 },
         "127.0.0.1",
       );
@@ -1158,7 +1175,7 @@ describe("Bidding Integration Tests", () => {
       // User 1 places bid
       await auctionsService.placeBid(
         testAuction._id.toString(),
-        testUsers[1]._id.toString(),
+        testUsers[1]!._id.toString(),
         { amount: 300 },
         "127.0.0.1",
       );
@@ -1194,7 +1211,7 @@ describe("Bidding Integration Tests", () => {
       };
       testAuction = await auctionsService.create(
         dto,
-        testUsers[0]._id.toString(),
+        testUsers[0]!._id.toString(),
       );
       testAuction = await auctionsService.start(testAuction._id.toString());
     });
@@ -1205,7 +1222,7 @@ describe("Bidding Integration Tests", () => {
       await expect(
         auctionsService.placeBid(
           testAuction._id.toString(),
-          testUsers[0]._id.toString(),
+          testUsers[0]!._id.toString(),
           highBid,
           "127.0.0.1",
         ),
@@ -1215,7 +1232,7 @@ describe("Bidding Integration Tests", () => {
       const validBid: IPlaceBid = { amount: 200 };
       const result = await auctionsService.placeBid(
         testAuction._id.toString(),
-        testUsers[0]._id.toString(),
+        testUsers[0]!._id.toString(),
         validBid,
         "127.0.0.1",
       );
@@ -1228,7 +1245,7 @@ describe("Bidding Integration Tests", () => {
       // Place bids
       await auctionsService.placeBid(
         testAuction._id.toString(),
-        testUsers[0]._id.toString(),
+        testUsers[0]!._id.toString(),
         { amount: 200 },
         "127.0.0.1",
       );
@@ -1268,14 +1285,14 @@ describe("Bidding Integration Tests", () => {
 
       let auction = await auctionsService.create(
         dto,
-        testUsers[0]._id.toString(),
+        testUsers[0]!._id.toString(),
       );
       auction = await auctionsService.start(auction._id.toString());
 
       // Round 1 - 3 winners
       await auctionsService.placeBid(
         auction._id.toString(),
-        testUsers[0]._id.toString(),
+        testUsers[0]!._id.toString(),
         {
           amount: 500,
         },
@@ -1283,7 +1300,7 @@ describe("Bidding Integration Tests", () => {
       );
       await auctionsService.placeBid(
         auction._id.toString(),
-        testUsers[1]._id.toString(),
+        testUsers[1]!._id.toString(),
         {
           amount: 400,
         },
@@ -1291,7 +1308,7 @@ describe("Bidding Integration Tests", () => {
       );
       await auctionsService.placeBid(
         auction._id.toString(),
-        testUsers[2]._id.toString(),
+        testUsers[2]!._id.toString(),
         {
           amount: 300,
         },
@@ -1339,38 +1356,38 @@ describe("Bidding Integration Tests", () => {
 
       let auction = await auctionsService.create(
         dto,
-        testUsers[0]._id.toString(),
+        testUsers[0]!._id.toString(),
       );
       auction = await auctionsService.start(auction._id.toString());
 
       // Initial bid - freezes balance
-      const user0Before = await userModel.findById(testUsers[0]._id);
+      const user0Before = await userModel.findById(testUsers[0]!._id);
       expect(user0Before!.frozenBalance).toBe(0);
 
       await auctionsService.placeBid(
         auction._id.toString(),
-        testUsers[0]._id.toString(),
+        testUsers[0]!._id.toString(),
         {
           amount: 200,
         },
         "127.0.0.1",
       );
 
-      const user0After1 = await userModel.findById(testUsers[0]._id);
+      const user0After1 = await userModel.findById(testUsers[0]!._id);
       expect(user0After1!.frozenBalance).toBe(200);
       expect(user0After1!.balance).toBe(INITIAL_BALANCE - 200);
 
       // Update bid - adjusts frozen balance
       await auctionsService.placeBid(
         auction._id.toString(),
-        testUsers[0]._id.toString(),
+        testUsers[0]!._id.toString(),
         {
           amount: 300,
         },
         "127.0.0.1",
       );
 
-      const user0After2 = await userModel.findById(testUsers[0]._id);
+      const user0After2 = await userModel.findById(testUsers[0]!._id);
       expect(user0After2!.frozenBalance).toBe(300);
       expect(user0After2!.balance).toBe(INITIAL_BALANCE - 300);
 
@@ -1380,7 +1397,7 @@ describe("Bidding Integration Tests", () => {
       });
       await auctionsService.completeRound(auction._id.toString());
 
-      const user0Final = await userModel.findById(testUsers[0]._id);
+      const user0Final = await userModel.findById(testUsers[0]!._id);
       expect(user0Final!.frozenBalance).toBe(0);
       expect(user0Final!.balance).toBe(INITIAL_BALANCE - 300); // Paid for winning
     });

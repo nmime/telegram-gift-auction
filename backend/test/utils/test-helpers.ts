@@ -108,7 +108,13 @@ export async function createConnection(username: string): Promise<api.IConnectio
     headers: { Authorization: '' },
   };
 
-  const auth = await api.functional.api.auth.login(connection, { username });
+  const auth = await api.functional.auth.telegram.widget.loginWithTelegramWidget(connection, {
+    id: Math.floor(Math.random() * 1000000),
+    first_name: username,
+    username,
+    auth_date: Math.floor(Date.now() / 1000),
+    hash: 'test_hash',
+  });
   connection.headers = { Authorization: `Bearer ${auth.accessToken}` };
   return connection;
 }
@@ -117,9 +123,15 @@ export async function createConnection(username: string): Promise<api.IConnectio
  * Get auth token for WebSocket connection
  */
 export async function getAuthToken(username: string): Promise<string> {
-  const authRes = await api.functional.api.auth.login(
+  const authRes = await api.functional.auth.telegram.widget.loginWithTelegramWidget(
     { host: HOST, headers: {} },
-    { username }
+    {
+      id: Math.floor(Math.random() * 1000000),
+      first_name: username,
+      username,
+      auth_date: Math.floor(Date.now() / 1000),
+      hash: 'test_hash',
+    }
   );
   return authRes.accessToken;
 }

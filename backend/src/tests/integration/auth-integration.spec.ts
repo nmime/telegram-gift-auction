@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { Test, TestingModule } from "@nestjs/testing";
 import { INestApplication, ValidationPipe } from "@nestjs/common";
 import { JwtService } from "@nestjs/jwt";
@@ -260,9 +261,11 @@ describe("Authentication Integration Tests", () => {
 
       // Verify each token corresponds to correct user
       for (let i = 0; i < logins.length; i++) {
-        const payload = await jwtService.verifyAsync(tokens[i]);
-        expect(payload.username).toBe(users[i].username);
-        expect(payload.telegramId).toBe(users[i].id);
+        const token = tokens?.[i];
+        expect(token).toBeDefined();
+        const payload = await jwtService.verifyAsync(token!);
+        expect(payload.username).toBe(users?.[i]?.username);
+        expect(payload.telegramId).toBe(users?.[i]?.id);
       }
     });
 
@@ -289,7 +292,7 @@ describe("Authentication Integration Tests", () => {
       // Verify transaction was created
       const transactions = await transactionsService.getByUser(login.user.id);
       expect(transactions).toHaveLength(1);
-      expect(transactions[0].amount).toBe(500);
+      expect(transactions?.[0]?.amount).toBe(500);
     });
 
     it("should reject invalid/tampered tokens", async () => {
@@ -663,9 +666,10 @@ describe("Authentication Integration Tests", () => {
       );
       expect(transactions.length).toBeGreaterThanOrEqual(2); // Initial + new
 
-      const latestTransaction = transactions[0]; // Sorted by createdAt desc
-      expect(latestTransaction.amount).toBe(1500);
-      expect(latestTransaction.type).toBe("deposit");
+      const latestTransaction = transactions?.[0];
+      expect(latestTransaction).toBeDefined();
+      expect(latestTransaction!.amount).toBe(1500);
+      expect(latestTransaction!.type).toBe("deposit");
     });
 
     it("should login → check balance → deposit → verify balance updated", async () => {
@@ -703,7 +707,7 @@ describe("Authentication Integration Tests", () => {
       // Get user's bids
       const userBids = await bidsService.getByUser(authenticatedUser.id);
       expect(userBids).toHaveLength(1);
-      expect(userBids[0].amount).toBe(1000);
+      expect(userBids?.[0]?.amount).toBe(1000);
     });
 
     it("should login → access user profile → get complete info", async () => {
@@ -1002,7 +1006,7 @@ describe("Authentication Integration Tests", () => {
       });
 
       // All should reference same user
-      const userId = results[0].user.id;
+      const userId = results?.[0]?.user?.id;
       results.forEach((result) => {
         expect(result.user.id).toBe(userId);
       });
@@ -1056,14 +1060,19 @@ describe("Authentication Integration Tests", () => {
       };
 
       // Step 3: Guard validates token and adds user to request
-      const canActivate = await authGuard.canActivate(mockExecutionContext);
+      const canActivate = await authGuard.canActivate(
+        mockExecutionContext as unknown as any,
+      );
       expect(canActivate).toBe(true);
       expect(mockRequest.user).toBeDefined();
-      expect(mockRequest.user.username).toBe("chainuser");
 
-      // Step 4: Service can now access user from request
-      const user = await authService.getUser(mockRequest.user.sub);
-      expect(user.username).toBe("chainuser");
+      if (mockRequest.user) {
+        expect((mockRequest.user as any).username).toBe("chainuser");
+
+        // Step 4: Service can now access user from request
+        const user = await authService.getUser((mockRequest.user as any).sub);
+        expect(user.username).toBe("chainuser");
+      }
     });
 
     it("should handle middleware modifying request → guard validates → service receives correct data", async () => {
@@ -1086,12 +1095,14 @@ describe("Authentication Integration Tests", () => {
       };
 
       // Guard validates and modifies request
-      await authGuard.canActivate(mockExecutionContext);
+      await authGuard.canActivate(mockExecutionContext as unknown as any);
 
       // Verify user was added to request
       expect(mockRequest.user).toBeDefined();
-      expect(mockRequest.user.sub).toBe("507f1f77bcf86cd799439013");
-      expect(mockRequest.user.username).toBe("modifieduser");
+      if (mockRequest.user) {
+        expect(mockRequest.user.sub).toBe("507f1f77bcf86cd799439013");
+        expect(mockRequest.user.username).toBe("modifieduser");
+      }
     });
 
     it("should propagate errors in middleware chain", async () => {
@@ -1139,14 +1150,18 @@ describe("Authentication Integration Tests", () => {
         }),
       };
 
-      const result1 = await authGuard.canActivate(mockContext1);
+      const result1 = await authGuard.canActivate(
+        mockContext1 as unknown as any,
+      );
       expect(result1).toBe(true);
       expect(mockRequest1.user).toBeDefined();
 
       // If there were additional guards, they would receive the modified request
       // For this test, we verify the request state is correct for downstream guards
-      expect(mockRequest1.user.sub).toBe(user._id.toString());
-      expect(mockRequest1.user.username).toBe("guardchainuser");
+      if (mockRequest1.user) {
+        expect(mockRequest1.user.sub).toBe(user._id.toString());
+        expect(mockRequest1.user.username).toBe("guardchainuser");
+      }
     });
   });
 
@@ -1207,9 +1222,9 @@ describe("Authentication Integration Tests", () => {
       );
 
       expect(transactions).toHaveLength(3);
-      expect(transactions[0].amount).toBe(200); // Latest (withdraw)
-      expect(transactions[1].amount).toBe(300);
-      expect(transactions[2].amount).toBe(500); // Oldest
+      expect(transactions?.[0]?.amount).toBe(200); // Latest (withdraw)
+      expect(transactions?.[1]?.amount).toBe(300);
+      expect(transactions?.[2]?.amount).toBe(500); // Oldest
 
       // Verify transaction integrity
       transactions.forEach((tx) => {
@@ -1237,7 +1252,7 @@ describe("Authentication Integration Tests", () => {
       // Verify user can see their bids
       const userBids = await bidsService.getByUser(authenticatedUser.id);
       expect(userBids).toHaveLength(1);
-      expect(userBids[0]._id.toString()).toBe(bid._id.toString());
+      expect(userBids?.[0]?._id.toString()).toBe(bid._id.toString());
 
       // Create second user
       const telegramUser2 = {
@@ -1276,7 +1291,9 @@ describe("Authentication Integration Tests", () => {
       // Verify chronological order
       const timestamps = auditTrail.map((t) => t.createdAt.getTime());
       for (let i = 0; i < timestamps.length - 1; i++) {
-        expect(timestamps[i]).toBeGreaterThanOrEqual(timestamps[i + 1]);
+        const current = timestamps?.[i] ?? 0;
+        const next = timestamps?.[i + 1] ?? 0;
+        expect(current).toBeGreaterThanOrEqual(next);
       }
 
       // Verify audit data integrity

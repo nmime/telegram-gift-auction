@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { Controller, Get, Query, UseGuards } from "@nestjs/common";
 import { AuditLogService } from "./services";
 import {
