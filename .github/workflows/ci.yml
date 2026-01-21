@@ -128,6 +128,13 @@ jobs:
           SKIP_INTEGRATION_TESTS: 'true'
         timeout-minutes: 20
 
+      - name: Run integration tests
+        run: pnpm test src/tests/integration
+        env:
+          CI: true
+          NODE_OPTIONS: --max-old-space-size=4096
+        timeout-minutes: 30
+
       - name: Generate coverage report
         run: pnpm test -- --coverage
         continue-on-error: true
