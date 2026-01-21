@@ -19,4 +19,6 @@ module.exports = {
   testEnvironment: 'node',
   collectCoverage: false,
   testTimeout: 300000,
+  maxWorkers: process.env.CI ? 2 : '50%',
+  testPathIgnorePatterns: process.env.SKIP_INTEGRATION_TESTS ? ['/integration/'] : [],
 };

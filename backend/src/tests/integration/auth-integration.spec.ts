@@ -6,6 +6,8 @@ import { MongooseModule, getModelToken } from "@nestjs/mongoose";
 import { Model, Connection } from "mongoose";
 import { ConfigModule } from "@nestjs/config";
 import { MongoMemoryServer } from "mongodb-memory-server";
+import { I18nModule, AcceptLanguageResolver, QueryResolver } from "nestjs-i18n";
+import * as path from "path";
 import { AuthModule } from "@/modules/auth/auth.module";
 import { UsersModule } from "@/modules/users/users.module";
 import { TransactionsModule } from "@/modules/transactions/transactions.module";
@@ -24,6 +26,24 @@ import {
   Bid,
   BidDocument,
 } from "@/schemas";
+
+// Mock Redis to avoid connection issues during integration tests
+jest.mock("ioredis", () => ({
+  default: class MockRedis {
+    constructor() {
+      // Mock constructor
+    }
+    ping = jest.fn().mockResolvedValue("PONG");
+    quit = jest.fn().mockResolvedValue(null);
+    on = jest.fn().mockReturnThis();
+    setex = jest.fn().mockResolvedValue("OK");
+    get = jest.fn().mockResolvedValue(null);
+    del = jest.fn().mockResolvedValue(0);
+    exists = jest.fn().mockResolvedValue(0);
+    mget = jest.fn().mockResolvedValue([]);
+    keys = jest.fn().mockResolvedValue([]);
+  },
+}));
 
 // MongoDB Memory Server with replica set requires time to download binary on first run
 jest.setTimeout(180000);
@@ -57,7 +77,20 @@ describe("Authentication Integration Tests", () => {
               JWT_EXPIRES_IN: "24h",
               BOT_TOKEN: "123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11",
               MONGODB_URI: mongoUri,
+              REDIS_URL: "redis://localhost:6379/15",
+              NODE_ENV: "test",
             }),
+          ],
+        }),
+        I18nModule.forRoot({
+          fallbackLanguage: "en",
+          loaderOptions: {
+            path: path.join(__dirname, "../../../i18n/"),
+            watch: true,
+          },
+          resolvers: [
+            { use: QueryResolver, options: ["lang"] },
+            AcceptLanguageResolver,
           ],
         }),
         MongooseModule.forRoot(mongoUri),
@@ -1162,8 +1195,8 @@ describe("Authentication Integration Tests", () => {
       // If there were additional guards, they would receive the modified request
       // For this test, we verify the request state is correct for downstream guards
       if (mockRequest1.user) {
-        expect(mockRequest1.user.sub).toBe(user._id.toString());
-        expect(mockRequest1.user.username).toBe("guardchainuser");
+        expect((mockRequest1.user as any).sub).toBe(user._id.toString());
+        expect((mockRequest1.user as any).username).toBe("guardchainuser");
       }
     });
   });

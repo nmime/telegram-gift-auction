@@ -15,6 +15,8 @@ import { INestApplication } from "@nestjs/common";
 import { getModelToken, MongooseModule } from "@nestjs/mongoose";
 import { Model } from "mongoose";
 import Redis from "ioredis";
+import { I18nModule, AcceptLanguageResolver, QueryResolver } from "nestjs-i18n";
+import * as path from "path";
 import { AuctionsModule } from "@/modules/auctions";
 import { BidsModule } from "@/modules/bids";
 import { UsersModule } from "@/modules/users";
@@ -45,6 +47,24 @@ import { EventsGateway } from "@/modules/events/events.gateway";
 import { redisClient } from "@/modules/redis/constants";
 import { ICreateAuction, IPlaceBid } from "@/modules/auctions/dto";
 import { ConfigModule } from "@nestjs/config";
+
+// Mock Redis to avoid connection issues during integration tests
+jest.mock("ioredis", () => ({
+  default: class MockRedis {
+    constructor() {
+      // Mock constructor
+    }
+    ping = jest.fn().mockResolvedValue("PONG");
+    quit = jest.fn().mockResolvedValue(null);
+    on = jest.fn().mockReturnThis();
+    setex = jest.fn().mockResolvedValue("OK");
+    get = jest.fn().mockResolvedValue(null);
+    del = jest.fn().mockResolvedValue(0);
+    exists = jest.fn().mockResolvedValue(0);
+    mget = jest.fn().mockResolvedValue([]);
+    keys = jest.fn().mockResolvedValue([]);
+  },
+}));
 
 // MongoDB Memory Server with replica set requires time to download binary on first run
 jest.setTimeout(180000);
@@ -82,6 +102,17 @@ describe("Bidding Integration Tests", () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [
         ConfigModule.forRoot({ isGlobal: true }),
+        I18nModule.forRoot({
+          fallbackLanguage: "en",
+          loaderOptions: {
+            path: path.join(__dirname, "../../../i18n/"),
+            watch: true,
+          },
+          resolvers: [
+            { use: QueryResolver, options: ["lang"] },
+            AcceptLanguageResolver,
+          ],
+        }),
         MongooseModule.forRoot(
           process.env.MONGODB_URI || "mongodb://localhost:27017/cryptobot-test",
         ),
@@ -688,7 +719,7 @@ describe("Bidding Integration Tests", () => {
         status: BidStatus.WON,
       });
       expect(winningBids).toHaveLength(3);
-      expect(winningBids[0].wonRound).toBe(1);
+      expect(winningBids?.[0]?.wonRound).toBe(1);
     });
 
     it("should create auction → multiple rounds → complete first round → start second", async () => {
@@ -796,12 +827,12 @@ describe("Bidding Integration Tests", () => {
       );
       await auctionsService.placeBid(
         testAuction._id.toString(),
-        testUsers[3]._id.toString(),
+        testUsers[3]!._id.toString(),
         { amount: 100 },
         "127.0.0.1",
       );
 
-      const user3Before = await userModel.findById(testUsers[3]._id);
+      const user3Before = await userModel.findById(testUsers[3]!._id);
       expect(user3Before!.frozenBalance).toBe(100);
 
       // Complete round (3 winners, so user3 loses)
@@ -813,11 +844,11 @@ describe("Bidding Integration Tests", () => {
       // Loser's bid should be refunded
       const loserBid = await bidModel.findOne({
         auctionId: testAuction._id,
-        userId: testUsers[3]._id,
+        userId: testUsers[3]!._id,
       });
       expect(loserBid!.status).toBe(BidStatus.REFUNDED);
 
-      const user3After = await userModel.findById(testUsers[3]._id);
+      const user3After = await userModel.findById(testUsers[3]!._id);
       expect(user3After!.frozenBalance).toBe(0);
       expect(user3After!.balance).toBe(INITIAL_BALANCE); // Fully refunded
     });
@@ -952,10 +983,10 @@ describe("Bidding Integration Tests", () => {
       expect(leaderboard.leaderboard).toHaveLength(3);
       expect(leaderboard?.leaderboard?.[0]?.amount).toBe(500);
       expect(leaderboard?.leaderboard?.[0]?.rank).toBe(1);
-      expect(leaderboard.leaderboard[1].amount).toBe(300);
-      expect(leaderboard.leaderboard[1].rank).toBe(2);
-      expect(leaderboard.leaderboard[2].amount).toBe(200);
-      expect(leaderboard.leaderboard[2].rank).toBe(3);
+      expect(leaderboard?.leaderboard?.[1]?.amount).toBe(300);
+      expect(leaderboard?.leaderboard?.[1]?.rank).toBe(2);
+      expect(leaderboard?.leaderboard?.[2]?.amount).toBe(200);
+      expect(leaderboard?.leaderboard?.[2]?.rank).toBe(3);
     });
 
     it("should verify leaderboard score calculation correct (amount * 10^13 + (max_ts - bid_ts))", async () => {
@@ -1060,7 +1091,7 @@ describe("Bidding Integration Tests", () => {
       for (let i = 0; i < 7; i++) {
         await auctionsService.placeBid(
           testAuction._id.toString(),
-          testUsers[i]._id.toString(),
+          testUsers[i]!._id.toString(),
           { amount: 100 + i * 50 },
           "127.0.0.1",
         );
@@ -1074,7 +1105,7 @@ describe("Bidding Integration Tests", () => {
       );
       expect(page1.leaderboard).toHaveLength(5);
       expect(page1.totalCount).toBe(7);
-      expect(page1.leaderboard[0].rank).toBe(1);
+      expect(page1.leaderboard?.[0]?.rank).toBe(1);
 
       // Get second page
       const page2 = await auctionsService.getLeaderboard(
@@ -1083,7 +1114,7 @@ describe("Bidding Integration Tests", () => {
         5,
       );
       expect(page2.leaderboard).toHaveLength(2);
-      expect(page2.leaderboard[0].rank).toBe(6);
+      expect(page2.leaderboard?.[0]?.rank).toBe(6);
     });
   });
 
@@ -1267,7 +1298,7 @@ describe("Bidding Integration Tests", () => {
       // Retry - should succeed
       result = await auctionsService.completeRound(testAuction._id.toString());
       expect(result).toBeDefined();
-      expect(result!.rounds[0].completed).toBe(true);
+      expect(result!.rounds?.[0]?.completed).toBe(true);
     });
   });
 
@@ -1319,7 +1350,7 @@ describe("Bidding Integration Tests", () => {
       );
       await auctionsService.placeBid(
         auction._id.toString(),
-        testUsers[3]._id.toString(),
+        testUsers[3]!._id.toString(),
         {
           amount: 200,
         },
@@ -1337,14 +1368,14 @@ describe("Bidding Integration Tests", () => {
         status: BidStatus.WON,
       });
       expect(round1Winners).toHaveLength(3);
-      expect(round1Winners[0].itemNumber).toBe(1);
-      expect(round1Winners[1].itemNumber).toBe(2);
-      expect(round1Winners[2].itemNumber).toBe(3);
+      expect(round1Winners?.[0]?.itemNumber).toBe(1);
+      expect(round1Winners?.[1]?.itemNumber).toBe(2);
+      expect(round1Winners?.[2]?.itemNumber).toBe(3);
 
       // Verify refunded bid
       const refundedBid = await bidModel.findOne({
         auctionId: auction._id,
-        userId: testUsers[3]._id,
+        userId: testUsers[3]!._id,
       });
       expect(refundedBid!.status).toBe(BidStatus.REFUNDED);
     });
