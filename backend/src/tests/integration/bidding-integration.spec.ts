@@ -15,7 +15,7 @@ import { INestApplication } from "@nestjs/common";
 import { getModelToken, MongooseModule } from "@nestjs/mongoose";
 import { Model } from "mongoose";
 import Redis from "ioredis";
-import { I18nModule, AcceptLanguageResolver, QueryResolver } from "nestjs-i18n";
+import { I18nModule } from "nestjs-i18n";
 import * as path from "path";
 import { AuctionsModule } from "@/modules/auctions";
 import { BidsModule } from "@/modules/bids";

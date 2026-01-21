@@ -6,7 +6,7 @@ import { MongooseModule, getModelToken } from "@nestjs/mongoose";
 import { Model, Connection } from "mongoose";
 import { ConfigModule } from "@nestjs/config";
 import { MongoMemoryServer } from "mongodb-memory-server";
-import { I18nModule, AcceptLanguageResolver, QueryResolver } from "nestjs-i18n";
+import { I18nModule } from "nestjs-i18n";
 import * as path from "path";
 import { AuthModule } from "@/modules/auth/auth.module";
 import { UsersModule } from "@/modules/users/users.module";
