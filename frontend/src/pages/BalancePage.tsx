@@ -112,7 +112,7 @@ export default function BalancePage() {
           <button
             className="btn btn-danger btn-lg"
             onClick={handleWithdraw}
-            disabled={loading || !user || parseInt(amount) <= 0 || parseInt(amount) > user.balance}
+            disabled={loading || !user || parseInt(amount) <= 0}
           >
             {t('balance.withdraw')}
           </button>
