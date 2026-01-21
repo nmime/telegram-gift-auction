@@ -45,8 +45,12 @@ describe("Authentication Integration Tests", () => {
   let mongoConnection: Connection;
 
   beforeAll(async () => {
-    // Start in-memory MongoDB
-    mongoServer = await MongoMemoryServer.create();
+    // Start in-memory MongoDB with replica set enabled for transaction support
+    mongoServer = await MongoMemoryServer.create({
+      instance: {
+        replSet: "rs0",
+      },
+    });
     const mongoUri = mongoServer.getUri();
 
     const moduleFixture: TestingModule = await Test.createTestingModule({

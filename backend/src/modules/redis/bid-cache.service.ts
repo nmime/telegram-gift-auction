@@ -325,16 +325,8 @@ export class BidCacheService implements OnModuleInit {
       )) as string;
       this.logger.log("Lua scripts loaded successfully (4 scripts)");
     } catch (error) {
-      // In test environments with mocked Redis (ioredis-mock), script() may not be supported
-      // This is expected and not an error - tests won't use evalsha
-      if (error instanceof Error && error.message?.includes("Unsupported command")) {
-        this.logger.warn(
-          "Redis script() command not supported (likely using mocked Redis in tests)",
-        );
-      } else {
-        this.logger.error("Failed to load Lua scripts", error);
-        throw error;
-      }
+      this.logger.error("Failed to load Lua scripts", error);
+      throw error;
     }
   }
 

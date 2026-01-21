@@ -15,6 +15,7 @@ import { INestApplication } from "@nestjs/common";
 import { getModelToken, MongooseModule } from "@nestjs/mongoose";
 import { Model } from "mongoose";
 import Redis from "ioredis";
+import { MongoMemoryServer } from "mongodb-memory-server";
 import { I18nModule, AcceptLanguageResolver, QueryResolver } from "nestjs-i18n";
 import * as path from "path";
 import { AuctionsModule } from "@/modules/auctions";
@@ -65,6 +66,7 @@ describe("Bidding Integration Tests", () => {
   let bidModel: Model<BidDocument>;
   let transactionModel: Model<TransactionDocument>;
   let _redis: Redis;
+  let mongoServer: MongoMemoryServer;
 
   // Test data
   let testUsers: UserDocument[] = [];
@@ -81,6 +83,14 @@ describe("Bidding Integration Tests", () => {
   };
 
   beforeAll(async () => {
+    // Start in-memory MongoDB with replica set enabled for transaction support
+    mongoServer = await MongoMemoryServer.create({
+      instance: {
+        replSet: "rs0",
+      },
+    });
+    const mongoUri = mongoServer.getUri();
+
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [
         ConfigModule.forRoot({ isGlobal: true }),
@@ -95,9 +105,7 @@ describe("Bidding Integration Tests", () => {
             AcceptLanguageResolver,
           ],
         }),
-        MongooseModule.forRoot(
-          process.env.MONGODB_URI || "mongodb://localhost:27017/cryptobot-test",
-        ),
+        MongooseModule.forRoot(mongoUri),
         AuctionsModule,
         BidsModule,
         UsersModule,
@@ -155,6 +163,11 @@ describe("Bidding Integration Tests", () => {
 
     // Close connections
     await app.close();
+
+    // Stop MongoDB Memory Server
+    if (mongoServer) {
+      await mongoServer.stop();
+    }
   });
 
   afterEach(async () => {
