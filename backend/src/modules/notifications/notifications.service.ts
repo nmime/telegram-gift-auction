@@ -55,16 +55,20 @@ export class NotificationsService implements OnModuleInit {
   ) {}
 
   async onModuleInit() {
-    // Create BullMQ queue with rate limiting (use duplicate connection for BullMQ)
-    const connection = this.redis.duplicate();
+    const queueConnection = this.redis.duplicate({
+      maxRetriesPerRequest: null,
+    });
+    const workerConnection = this.redis.duplicate({
+      maxRetriesPerRequest: null,
+    });
 
     this.notificationQueue = new Queue<TelegramNotificationJob>(
       NotificationsService.QUEUE_NAME,
       {
-        connection,
+        connection: queueConnection,
         defaultJobOptions: {
           removeOnComplete: true,
-          removeOnFail: 100, // Keep last 100 failed jobs for debugging
+          removeOnFail: 100,
           attempts: 3,
           backoff: {
             type: "exponential",
@@ -74,18 +78,18 @@ export class NotificationsService implements OnModuleInit {
       },
     );
 
-    // Create worker with rate limiting (25 jobs per second)
+    // Create worker with rate limiting (25 jobs per second, 10 concurrent)
     this.worker = new Worker<TelegramNotificationJob>(
       NotificationsService.QUEUE_NAME,
       async (job) => {
         await this.processNotification(job.data);
       },
       {
-        connection: this.redis.duplicate(),
-        concurrency: 1, // Process one at a time for rate limiting
+        connection: workerConnection,
+        concurrency: 10,
         limiter: {
           max: NotificationsService.RATE_LIMIT,
-          duration: 1000, // per second
+          duration: 1000,
         },
       },
     );
@@ -287,19 +291,5 @@ export class NotificationsService implements OnModuleInit {
       { telegramId, message },
       { priority: 1 },
     );
-  }
-
-  /**
-   * Get current queue stats for monitoring
-   */
-  async getQueueStats() {
-    const [waiting, active, completed, failed] = await Promise.all([
-      this.notificationQueue.getWaitingCount(),
-      this.notificationQueue.getActiveCount(),
-      this.notificationQueue.getCompletedCount(),
-      this.notificationQueue.getFailedCount(),
-    ]);
-
-    return { waiting, active, completed, failed };
   }
 }
