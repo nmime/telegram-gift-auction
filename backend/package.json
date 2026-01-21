@@ -14,6 +14,7 @@
     "test": "jest",
     "test:watch": "jest --watch",
     "test:cov": "jest --coverage",
+    "test:coverage-check": "jest --coverage --collectCoverage=true && node scripts/check-coverage.js",
     "test:e2e": "pnpm build:test && node dist-test/test/index.js",
     "benchmark": "pnpm build:test && node dist-test/test/benchmark.js",
     "load-test": "pnpm exec ts-node test/load-test.ts",
@@ -75,6 +76,7 @@
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-prettier": "^5.5.4",
     "jest": "^30.2.0",
+    "mongodb-memory-server": "^11.0.1",
     "nestia": "^10.0.1",
     "prettier": "^3.7.4",
     "socket.io-client": "^4.8.3",
@@ -86,25 +88,5 @@
     "tsconfig-paths": "^4.2.0",
     "typescript": "~5.6.3",
     "typescript-transform-paths": "^3.5.6"
-  },
-  "jest": {
-    "moduleFileExtensions": [
-      "js",
-      "json",
-      "ts"
-    ],
-    "rootDir": "src",
-    "testRegex": ".*\\.spec\\.ts$",
-    "transform": {
-      "^.+\\.(t|j)s$": "ts-jest"
-    },
-    "collectCoverageFrom": [
-      "**/*.(t|j)s"
-    ],
-    "coverageDirectory": "../coverage",
-    "testEnvironment": "node",
-    "moduleNameMapper": {
-      "^@/(.*)$": "<rootDir>/$1"
-    }
   }
 }

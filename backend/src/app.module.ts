@@ -17,6 +17,7 @@ import { EventsModule } from "./modules/events";
 import { RedisModule } from "./modules/redis";
 import { TelegramModule } from "./modules/telegram";
 import { NotificationsModule } from "./modules/notifications";
+import { AuditModule } from "./modules/audit";
 
 @Module({
   imports: [
@@ -78,6 +79,7 @@ import { NotificationsModule } from "./modules/notifications";
     EventsModule,
     TelegramModule,
     NotificationsModule,
+    AuditModule,
   ],
   providers: [
     {

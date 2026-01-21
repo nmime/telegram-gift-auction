@@ -1,0 +1,8 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "strict": false,
+    "strictNullChecks": false
+  },
+  "include": ["src/**/*.spec.ts", "src/**/*.e2e.ts"]
+}
