@@ -6,7 +6,7 @@ import { MongooseModule, getModelToken } from "@nestjs/mongoose";
 import { Model, Connection } from "mongoose";
 import { ConfigModule } from "@nestjs/config";
 import { MongoMemoryServer } from "mongodb-memory-server";
-import { I18nModule } from "nestjs-i18n";
+import { I18nModule, AcceptLanguageResolver, QueryResolver } from "nestjs-i18n";
 import * as path from "path";
 import { AuthModule } from "@/modules/auth/auth.module";
 import { UsersModule } from "@/modules/users/users.module";
@@ -64,14 +64,16 @@ describe("Authentication Integration Tests", () => {
             }),
           ],
         }),
-        // Use minimal I18nModule config for testing
-        // The full config requires I18nTranslations provider which is not needed for unit tests
         I18nModule.forRoot({
           fallbackLanguage: "en",
           loaderOptions: {
             path: path.join(__dirname, "../../../i18n/"),
-            watch: false, // Disable file watching in tests
+            watch: false,
           },
+          resolvers: [
+            { use: QueryResolver, options: ["lang"] },
+            AcceptLanguageResolver,
+          ],
         }),
         MongooseModule.forRoot(mongoUri),
         AuthModule,
