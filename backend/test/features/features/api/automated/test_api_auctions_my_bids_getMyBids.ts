@@ -7,7 +7,7 @@ import api from "../../../../../src/api";
 export const test_api_auctions_my_bids_getMyBids = async (
   connection: api.IConnection,
 ) => {
-  const output: Primitive<Array<IUserBidResponse>> =
+  const output: Primitive<IUserBidResponse[]> =
     await api.functional.auctions.my_bids.getMyBids(
       connection,
       typia.random<string>(),

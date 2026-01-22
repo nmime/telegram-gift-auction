@@ -8,35 +8,39 @@ export class AuctionSchedulerService implements OnModuleInit {
 
   constructor(private readonly auctionsService: AuctionsService) {}
 
-  async onModuleInit() {
+  async onModuleInit(): Promise<void> {
     await this.checkExpiredRounds();
   }
 
   @Cron(CronExpression.EVERY_5_SECONDS)
-  async checkExpiredRounds() {
+  async checkExpiredRounds(): Promise<void> {
     try {
       const activeAuctions = await this.auctionsService.getActiveAuctions();
 
       for (const auction of activeAuctions) {
         const currentRound = auction.rounds[auction.currentRound - 1];
-        if (currentRound && !currentRound.completed && currentRound.endTime) {
+        if (
+          currentRound !== undefined &&
+          !currentRound.completed &&
+          currentRound.endTime !== undefined
+        ) {
           const now = new Date();
           if (now >= currentRound.endTime) {
             try {
               await this.auctionsService.completeRound(auction._id.toString());
               this.logger.log("Round completed", {
                 roundNumber: currentRound.roundNumber,
-                auctionId: auction._id,
+                auctionId: String(auction._id),
               });
-            } catch (error) {
+            } catch (error: unknown) {
               this.logger.error("Error completing round", error, {
-                auctionId: auction._id,
+                auctionId: String(auction._id),
               });
             }
           }
         }
       }
-    } catch (error) {
+    } catch (error: unknown) {
       this.logger.error("Error in checkExpiredRounds", error);
     }
   }

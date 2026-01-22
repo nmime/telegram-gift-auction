@@ -5,21 +5,23 @@
  * Target: ~3,000 rps × number of CPUs
  */
 
-import { Test, TestingModule } from "@nestjs/testing";
-import { INestApplication } from "@nestjs/common";
-import { FastifyAdapter, NestFastifyApplication } from "@nestjs/platform-fastify";
+import { Test, type TestingModule } from "@nestjs/testing";
+import {
+  FastifyAdapter,
+  type NestFastifyApplication,
+} from "@nestjs/platform-fastify";
 import { getModelToken } from "@nestjs/mongoose";
-import { Model, Types } from "mongoose";
-import Redis from "ioredis";
+import { type Model } from "mongoose";
+import type Redis from "ioredis";
 import { AppModule } from "../src/app.module";
 import {
   User,
-  UserDocument,
+  type UserDocument,
   Auction,
-  AuctionDocument,
+  type AuctionDocument,
   AuctionStatus,
   Bid,
-  BidDocument,
+  type BidDocument,
   BidStatus,
 } from "../src/schemas";
 import { AuctionsService } from "../src/modules/auctions/auctions.service";
@@ -35,7 +37,7 @@ describe("Fast Bid Performance Test", () => {
   let userModel: Model<UserDocument>;
   let auctionModel: Model<AuctionDocument>;
   let bidModel: Model<BidDocument>;
-  let redis: Redis;
+  let _redis: Redis;
 
   let testAuction: AuctionDocument;
   let testUsers: UserDocument[] = [];
@@ -60,7 +62,7 @@ describe("Fast Bid Performance Test", () => {
     userModel = app.get(getModelToken(User.name));
     auctionModel = app.get(getModelToken(Auction.name));
     bidModel = app.get(getModelToken(Bid.name));
-    redis = app.get(redisClient);
+    _redis = app.get(redisClient);
 
     // Clean up any existing test data
     await userModel.deleteMany({ username: /^fastbid_test_/ });
@@ -372,7 +374,7 @@ describe("Lua Script Performance Benchmark", () => {
     await app.getHttpAdapter().getInstance().ready();
 
     bidCacheService = app.get(BidCacheService);
-    redis = app.get(redisClient);
+    _redis = app.get(redisClient);
   });
 
   afterAll(async () => {

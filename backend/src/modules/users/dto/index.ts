@@ -1,3 +1,3 @@
-export * from "./balance.dto";
-export * from "./user-response.dto";
-export * from "./language.dto";
+export type * from "./balance.dto";
+export type * from "./user-response.dto";
+export type * from "./language.dto";

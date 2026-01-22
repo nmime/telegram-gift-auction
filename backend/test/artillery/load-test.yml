@@ -1,0 +1,332 @@
+# Artillery Load Test Suite for Auction System
+# Version: 2.0.27
+# Run: npx artillery run test/artillery/load-test.yml
+
+config:
+  target: "http://localhost:4000"
+  phases:
+    # Warmup phase
+    - name: "Warmup"
+      duration: 10
+      arrivalRate: 2
+    # Ramp-up phase
+    - name: "Ramp up load"
+      duration: 30
+      arrivalRate: 5
+      rampTo: 20
+    # Sustained load phase
+    - name: "Sustained load"
+      duration: 60
+      arrivalRate: 20
+    # Peak load phase
+    - name: "Peak load"
+      duration: 30
+      arrivalRate: 50
+    # Cool down
+    - name: "Cool down"
+      duration: 10
+      arrivalRate: 5
+
+  variables:
+    depositAmount: 50000
+    minBidAmount: 100
+    bidIncrement: 10
+
+  processor: "./functions.js"
+
+  plugins:
+    expect: {}
+    metrics-by-endpoint: {}
+
+  defaults:
+    headers:
+      Content-Type: "application/json"
+
+  # HTTP engine settings
+  http:
+    timeout: 10
+    pool: 100
+
+  # Ensure graceful handling
+  ensure:
+    p99: 2000
+    maxErrorRate: 10
+
+  environments:
+    # Quick smoke test
+    smoke:
+      phases:
+        - duration: 10
+          arrivalRate: 1
+
+    # Standard load test
+    load:
+      phases:
+        - name: "Warmup"
+          duration: 10
+          arrivalRate: 2
+        - name: "Ramp up"
+          duration: 30
+          arrivalRate: 5
+          rampTo: 20
+        - name: "Sustained"
+          duration: 60
+          arrivalRate: 20
+        - name: "Cool down"
+          duration: 10
+          arrivalRate: 5
+
+    # Stress test
+    stress:
+      phases:
+        - name: "Ramp to stress"
+          duration: 30
+          arrivalRate: 10
+          rampTo: 100
+        - name: "Sustained stress"
+          duration: 60
+          arrivalRate: 100
+        - name: "Peak stress"
+          duration: 30
+          arrivalRate: 200
+
+    # Soak test for stability
+    soak:
+      phases:
+        - name: "Sustained load"
+          duration: 300
+          arrivalRate: 30
+
+    # Quick functional test
+    functional:
+      phases:
+        - duration: 5
+          arrivalRate: 1
+
+# Before all scenarios - setup auction
+before:
+  flow:
+    - function: "createTestAuction"
+    - log: "Test auction created: {{ auctionId }}"
+
+scenarios:
+  # ============================================================
+  # SCENARIO 1: Complete User Journey
+  # Login -> Deposit -> Browse Auctions -> Place Bids
+  # ============================================================
+  - name: "Complete User Journey"
+    weight: 40
+    flow:
+      # Generate username and login via direct DB/JWT
+      - function: "generateUsername"
+      - function: "loginUser"
+
+      # Deposit funds
+      - post:
+          url: "/api/users/deposit"
+          headers:
+            Authorization: "Bearer {{ token }}"
+          json:
+            amount: "{{ depositAmount }}"
+          expect:
+            - statusCode:
+                - 200
+                - 201
+
+      # Get balance
+      - get:
+          url: "/api/users/balance"
+          headers:
+            Authorization: "Bearer {{ token }}"
+          capture:
+            - json: "$.balance"
+              as: "balance"
+          expect:
+            - statusCode: 200
+
+      # List auctions
+      - get:
+          url: "/api/auctions"
+          headers:
+            Authorization: "Bearer {{ token }}"
+          capture:
+            - json: "$[0].id"
+              as: "targetAuctionId"
+          expect:
+            - statusCode: 200
+
+      # Get auction details
+      - get:
+          url: "/api/auctions/{{ targetAuctionId }}"
+          headers:
+            Authorization: "Bearer {{ token }}"
+          expect:
+            - statusCode: 200
+
+      # Get leaderboard
+      - get:
+          url: "/api/auctions/{{ targetAuctionId }}/leaderboard"
+          headers:
+            Authorization: "Bearer {{ token }}"
+          capture:
+            - json: "$[0].amount"
+              as: "highestBid"
+              default: 0
+          expect:
+            - statusCode: 200
+
+      # Calculate bid amount
+      - function: "calculateBidAmount"
+
+      # Place bid
+      - post:
+          url: "/api/auctions/{{ targetAuctionId }}/bid"
+          headers:
+            Authorization: "Bearer {{ token }}"
+          json:
+            amount: "{{ bidAmount }}"
+          expect:
+            - statusCode:
+                - 200
+                - 201
+                - 400  # May fail if outbid
+
+      - think: 1
+
+      # Get my bids
+      - get:
+          url: "/api/auctions/{{ targetAuctionId }}/my-bids"
+          headers:
+            Authorization: "Bearer {{ token }}"
+          expect:
+            - statusCode: 200
+
+  # ============================================================
+  # SCENARIO 2: High-Frequency Bidding
+  # Rapid sequential bids from authenticated users
+  # ============================================================
+  - name: "High-Frequency Bidding"
+    weight: 30
+    flow:
+      - function: "generateUsername"
+      - function: "loginUser"
+
+      - post:
+          url: "/api/users/deposit"
+          headers:
+            Authorization: "Bearer {{ token }}"
+          json:
+            amount: 100000
+          expect:
+            - statusCode:
+                - 200
+                - 201
+
+      # Get auction for bidding
+      - get:
+          url: "/api/auctions"
+          headers:
+            Authorization: "Bearer {{ token }}"
+          capture:
+            - json: "$[0].id"
+              as: "auctionId"
+          expect:
+            - statusCode: 200
+
+      # Rapid bid loop
+      - loop:
+          - function: "generateBidAmount"
+          - post:
+              url: "/api/auctions/{{ auctionId }}/bid"
+              headers:
+                Authorization: "Bearer {{ token }}"
+              json:
+                amount: "{{ bidAmount }}"
+          - think: 0.1
+        count: 10
+
+  # ============================================================
+  # SCENARIO 3: Fast Bid Endpoint (Redis-based)
+  # Tests the optimized fast-bid endpoint
+  # ============================================================
+  - name: "Fast Bid Load Test"
+    weight: 20
+    flow:
+      - function: "generateUsername"
+      - function: "loginUser"
+
+      - post:
+          url: "/api/users/deposit"
+          headers:
+            Authorization: "Bearer {{ token }}"
+          json:
+            amount: 200000
+          expect:
+            - statusCode:
+                - 200
+                - 201
+
+      - get:
+          url: "/api/auctions"
+          headers:
+            Authorization: "Bearer {{ token }}"
+          capture:
+            - json: "$[0].id"
+              as: "auctionId"
+          expect:
+            - statusCode: 200
+
+      # Fast bid loop - higher frequency
+      - loop:
+          - function: "generateBidAmount"
+          - post:
+              url: "/api/auctions/{{ auctionId }}/fast-bid"
+              headers:
+                Authorization: "Bearer {{ token }}"
+              json:
+                amount: "{{ bidAmount }}"
+          - think: 0.05
+        count: 20
+
+  # ============================================================
+  # SCENARIO 4: Read-Heavy Operations
+  # Leaderboard and auction status checks
+  # ============================================================
+  - name: "Read-Heavy Operations"
+    weight: 10
+    flow:
+      - function: "generateUsername"
+      - function: "loginUser"
+
+      - get:
+          url: "/api/auctions"
+          headers:
+            Authorization: "Bearer {{ token }}"
+          capture:
+            - json: "$[0].id"
+              as: "auctionId"
+          expect:
+            - statusCode: 200
+
+      # Rapid read loop
+      - loop:
+          - get:
+              url: "/api/auctions/{{ auctionId }}/leaderboard"
+              headers:
+                Authorization: "Bearer {{ token }}"
+              expect:
+                - statusCode: 200
+          - think: 0.2
+          - get:
+              url: "/api/auctions/{{ auctionId }}"
+              headers:
+                Authorization: "Bearer {{ token }}"
+              expect:
+                - statusCode: 200
+          - think: 0.2
+          - get:
+              url: "/api/auctions/{{ auctionId }}/min-winning-bid"
+              headers:
+                Authorization: "Bearer {{ token }}"
+          - think: 0.3
+        count: 15

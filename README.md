@@ -1,614 +1,168 @@
 # Telegram Gift Auction System
 
-**A production-grade multi-round auction platform for digital collectibles, built for the Telegram ecosystem.**
+**Production-grade multi-round auction platform for Telegram.**
 
-[![Live Demo](https://img.shields.io/badge/Live%20Demo-funfiesta.games-blue?style=for-the-badge)](https://telegram-gift-auction.funfiesta.games)
-[![Telegram Bot](https://img.shields.io/badge/Telegram-@tggiftauctionbot-0088cc?style=for-the-badge&logo=telegram)](https://t.me/tggiftauctionbot)
-[![Mini App](https://img.shields.io/badge/Mini%20App-Open-green?style=for-the-badge)](https://t.me/tggiftauctionbot/app)
-[![API Docs](https://img.shields.io/badge/API-Swagger-orange?style=for-the-badge)](https://telegram-gift-auction.funfiesta.games/api/docs)
-[![AsyncAPI Docs](https://img.shields.io/badge/AsyncAPI-WebSocket-purple?style=for-the-badge)](https://telegram-gift-auction.funfiesta.games/api/async-docs)
+[![Live Demo](https://img.shields.io/badge/Demo-funfiesta.games-blue?style=flat-square)](https://telegram-gift-auction.funfiesta.games)
+[![Telegram Bot](https://img.shields.io/badge/Bot-@tggiftauctionbot-0088cc?style=flat-square&logo=telegram)](https://t.me/tggiftauctionbot)
+[![API Docs](https://img.shields.io/badge/API-Swagger-orange?style=flat-square)](https://telegram-gift-auction.funfiesta.games/api/docs)
 
-[Русская версия (Russian)](./README.ru.md)
+---
+## [Русская версия](./README.ru.md) 
 
 ---
 
-## Why Choose This Project?
-
-This isn't just another auction demo — it's a **battle-tested, production-ready system** designed to handle real-world challenges that most auction implementations ignore.
-
-### Key Differentiators
-
-| Challenge | Our Solution |
-|-----------|--------------|
-| **Race Conditions** | 5-layer concurrency control (Redlock + Redis cooldown + MongoDB transactions + optimistic locking + unique indexes) |
-| **Financial Integrity** | Atomic operations with comprehensive audit system — zero money lost or created |
-| **Last-Second Sniping** | Anti-sniping mechanism with transparent round extensions |
-| **Scalability** | Redis adapter enables horizontal scaling across multiple servers |
-| **High Performance** | Ultra-fast Redis Lua scripts + WebSocket bidding achieve **~3,000 rps × number of CPUs** with sub-5ms p99 latency |
-| **Real-time UX** | WebSocket events ensure no user misses critical auction updates |
-| **Telegram Native** | Full integration: Login Widget, Mini App auth, bot notifications |
-
-### What Makes This Stand Out
-
-- **Multi-round elimination system** — Not a simple highest-bid-wins auction, but a sophisticated round-based competition where partial winners are selected each round
-- **Financial model with frozen balances** — Bid amounts are immediately locked, preventing double-spending and ensuring winners can always pay
-- **Intelligent bot simulation** — Realistic auction environment with bots that adapt their bidding strategy as rounds progress
-- **Comprehensive load testing** — Proven to handle 300+ concurrent requests, 100 simultaneous users, and complex race conditions
-- **Production infrastructure** — Docker Compose setup with MongoDB replica sets, Redis persistence, and health checks
+· [Architecture](./docs/architecture.md) · [API](./docs/api.md) · [Testing](./docs/testing.md) · [Deployment](./docs/deployment.md)
 
 ---
 
-## Major Features
+## Performance (Single Process)
 
-### Auction Engine
-- Multi-round elimination auctions (e.g., 10 items distributed as 3+5+2 across 3 rounds)
-- One bid per user model — bids can only be increased, never lowered
-- Anti-sniping protection with configurable window and extension limits
-- Automatic round progression with winner determination
-- Tie-breaking by earliest timestamp
+```
+WebSocket:  63,000 emit/sec peak, 43,000/sec sustained, 0ms latency
+HTTP:       600 req/s raw, 138 req/s with rate limits, 18ms latency
+Grade:      A+ (production-ready)
+```
 
-### Concurrency & Safety
-- **Distributed locking** via Redlock (fail-fast mode, 10s TTL)
-- **Redis cooldown** prevents rapid-fire bid spam (1s per user per auction)
-- **MongoDB transactions** with snapshot isolation and automatic retry
-- **Optimistic locking** with version checks on all financial operations
-- **Unique indexes** enforce one active bid per user and unique bid amounts
+Full benchmarks: [BENCHMARK_REPORT.md](./backend/test/artillery/BENCHMARK_REPORT.md)
 
-### 🚀 Ultra-Fast Bidding (Redis Path)
-- **Single Lua script** does ALL validation + bid placement atomically (~2ms latency)
-- **Cached auction meta** eliminates MongoDB fetch per bid
-- **Eager user warmup** on auction start loads all users with balance > 0
-- **ZSET leaderboards** with encoded scores for tie-breaking (O(log N) operations)
-- **Background sync** writes dirty data to MongoDB every 5 seconds
-- **Fallback mode** uses standard MongoDB path if cache not ready
+---
 
-### ⚡ WebSocket Bidding (Maximum Performance)
-- **Direct WebSocket bids** bypass HTTP overhead entirely
-- **~3,000 rps × number of CPUs** with p99 latency under 5ms
-- **JWT authentication** via socket events
-- **Real-time bid responses** with instant confirmation
+## Key Features
 
-### 🔥 Cluster Mode (Horizontal Scaling)
-- **Multi-process scaling** via Node.js cluster module
-- **CLUSTER_WORKERS=auto** automatically uses all CPU cores
-- **Auto-restart** of failed workers
-- **Redis adapter** syncs Socket.IO across workers
-
-### Real-time Communication
-- WebSocket events: `new-bid`, `auction-update`, `anti-sniping`, `round-complete`
-- **WebSocket bidding**: `auth` + `place-bid` events for ultra-low latency
-- 2-minute session persistence after disconnect
-- Automatic room rejoin on reconnect
-- Redis adapter for multi-server deployments
-
-### Telegram Integration
-- **Login Widget** authentication with hash validation
-- **Mini App (TWA)** support with initData validation
-- **Bot notifications** via GrammyJS (outbid alerts, round results, anti-sniping notices)
-- Localized messages (English & Russian)
-
-### Financial System
-- Separate `balance` and `frozenBalance` tracking
-- Complete transaction audit trail with before/after snapshots
-- System-wide integrity verification endpoint
-- Deposit/withdrawal functionality
-
-### Developer Experience
-- Auto-generated TypeScript SDK via Nestia
-- Swagger/OpenAPI documentation
-- Comprehensive load test suite (11 scenarios)
-- Docker Compose for instant local setup
+| Feature | Description |
+|---------|-------------|
+| **Multi-round auctions** | Items distributed across rounds (e.g., 3+5+2), partial winners each round |
+| **5-layer concurrency** | Redlock → Redis cooldown → MongoDB transactions → optimistic locking → unique indexes |
+| **Ultra-fast bidding** | Single Redis Lua script (~2ms), WebSocket bids bypass HTTP entirely |
+| **Anti-sniping** | Configurable window with automatic round extensions |
+| **Financial integrity** | Frozen balances, atomic operations, complete audit trail |
+| **Telegram native** | Login Widget, Mini App auth, bot notifications (GrammyJS) |
+| **Horizontal scaling** | Cluster mode + Redis adapter for multi-server deployments |
 
 ---
 
 ## Tech Stack
 
-| Layer | Technology | Why |
-|-------|------------|-----|
-| **Runtime** | Node.js 22+ | Latest LTS with modern async features |
-| **Framework** | NestJS 11 + Fastify | 2-3x throughput vs Express |
-| **Language** | TypeScript (strict) | Type safety for financial operations |
-| **Database** | MongoDB 8.2+ | Transactions, flexible schemas, replica sets |
-| **Cache/Locking** | Redis + Redlock | Distributed locking for concurrency |
-| **Real-time** | Socket.IO + Redis adapter | Scalable WebSocket communication |
-| **Auth** | JWT Bearer tokens | Stateless, distributed-friendly |
-| **Telegram** | GrammyJS | Modern Telegram bot framework |
-| **Frontend** | React 19 + Vite | Fast development, modern tooling |
-| **Validation** | class-validator + Joi | Comprehensive input validation |
-
----
-
-## Architecture
-
-```
-┌─────────────────────────────────────────────────────────────────────┐
-│                         Frontend (React + Vite)                      │
-│  - Auction list & details        - Real-time bid updates            │
-│  - Place/increase bids           - Balance management               │
-└─────────────────────────────────────────────────────────────────────┘
-                                    │
-                                    ▼
-┌─────────────────────────────────────────────────────────────────────┐
-│                      Backend (NestJS + Fastify)                      │
-│                                                                      │
-│  ┌────────────┐  ┌────────────┐  ┌────────────┐  ┌──────────────┐  │
-│  │  REST API  │  │  WebSocket │  │  Scheduler │  │    Guards    │  │
-│  │ (Fastify)  │  │ (Socket.IO)│  │   (Cron)   │  │ (Auth/Rate)  │  │
-│  └─────┬──────┘  └─────┬──────┘  └─────┬──────┘  └──────┬───────┘  │
-│        │               │               │                 │          │
-│        ▼               ▼               ▼                 ▼          │
-│  ┌──────────────────────────────────────────────────────────────┐  │
-│  │                      Service Layer                            │  │
-│  │                                                               │  │
-│  │  AuctionsService          UsersService         BotService    │  │
-│  │  ├─ placeBid()            ├─ deposit()         ├─ simulate() │  │
-│  │  ├─ placeBidFast()        ├─ withdraw()        └─ bid()      │  │
-│  │  ├─ completeRound()       └─ getBalance()                    │  │
-│  │  ├─ antiSniping()                                            │  │
-│  │  └─ getLeaderboard()                                         │  │
-│  │                                                               │  │
-│  │  TransactionsService      EventsGateway                      │  │
-│  │  ├─ recordTransaction()   ├─ emitNewBid()                    │  │
-│  │  └─ getHistory()          ├─ emitRoundComplete()             │  │
-│  │                           └─ emitAntiSniping()               │  │
-│  └──────────────────────────────────────────────────────────────┘  │
-│                                    │                                │
-└────────────────────────────────────┼────────────────────────────────┘
-                                     │
-              ┌──────────────────────┼──────────────────────┐
-              ▼                      ▼                      ▼
-┌─────────────────────┐  ┌─────────────────────┐  ┌─────────────────┐
-│       MongoDB       │  │        Redis        │  │                 │
-│                     │  │                     │  │                 │
-│  users              │  │  Distributed Locks  │  │    WebSocket    │
-│  ├─ balance         │  │  (Redlock)          │  │    Clients      │
-│  └─ frozenBalance   │  │                     │  │                 │
-│                     │  │  Bid Cache (Lua)    │  │                 │
-│  auctions           │  │  ├─ balances        │  │                 │
-│  ├─ roundsConfig[]  │  │  ├─ leaderboard     │  │                 │
-│  └─ rounds[]        │  │  └─ dirty tracking  │  │                 │
-│                     │  │                     │  │                 │
-│  bids               │  │  Bid Cooldowns      │  │                 │
-│  ├─ amount          │  │  (per user/auction) │  │                 │
-│  └─ status          │  │                     │  │                 │
-│                     │  │  Cache Sync (5s)    │  │                 │
-│  transactions       │  │  └─ MongoDB writes  │  │                 │
-│  └─ audit trail     │  └─────────────────────┘  └─────────────────┘
-└─────────────────────┘
-```
-
----
-
-## How It Works
-
-### Auction Lifecycle
-
-```
-PENDING ──[start]──► ACTIVE ──[rounds complete]──► COMPLETED
-                        │
-                        ├── Round 1: Top 3 win items #1-3
-                        ├── Round 2: Top 5 win items #4-8
-                        └── Round 3: Top 2 win items #9-10
-                                     │
-                                     └── Remaining bids refunded
-```
-
-### Bid Flow (5-Layer Protection)
-
-```typescript
-POST /api/auctions/:id/bid { amount: 1000 }
-
-// 1. Distributed Lock (Redlock)
-→ Acquire lock for user+auction (fail-fast, 10s TTL)
-
-// 2. Redis Cooldown
-→ Check 1-second cooldown between bids
-
-// 3. MongoDB Transaction (Snapshot Isolation)
-→ Start transaction with majority write concern
-
-// 4. Optimistic Locking
-→ Verify user.version and bid.__v match expected values
-
-// 5. Unique Index Enforcement
-→ Database rejects duplicate user bids or amounts
-
-// On success:
-→ Commit transaction, set cooldown, release lock, emit WebSocket event
-```
-
-### Ultra-Fast Bid Flow (Single Redis Call)
-
-```typescript
-POST /api/auctions/:id/fast-bid { amount: 1000 }
-
-// 1. Single Lua Script Call (ALL validation + bid placement)
-→ Check auction status from cached meta (ACTIVE, not completed)
-→ Verify current round timing (not expired)
-→ Check user balance from Redis hash
-→ Verify amount >= minBidAmount
-→ Handle existing bid (return frozen funds if increasing)
-→ Freeze new bid amount atomically
-→ Update ZSET leaderboard with encoded score
-→ Mark balance and bid as dirty for sync
-→ Return success with previous/new amounts
-
-// 2. Async Operations (non-blocking)
-→ Emit WebSocket new-bid event
-→ Check anti-sniping window (extend round if needed)
-→ Send outbid notifications to displaced users
-
-// 3. Background Sync (every 5 seconds)
-→ CacheSyncService writes dirty data to MongoDB
-→ Uses bulk operations for efficiency
-
-// Result: ~2ms latency, 2,500+ bids/sec
-```
-
-### Anti-Sniping Protection
-
-```
-Round End: 10:00:00
-Anti-sniping Window: 5 minutes
-Extension: 5 minutes
-Max Extensions: 6
-
-Timeline:
-  09:54:59 - Bid placed → No extension (outside window)
-  09:55:01 - Bid placed → Round extended to 10:05:00 (extension #1)
-  10:04:30 - Bid placed → Round extended to 10:10:00 (extension #2)
-  ... up to 6 extensions maximum
-```
-
-### Financial Model
-
-```
-User Balance:
-  ├── balance (available for bidding)
-  └── frozenBalance (locked in active bids)
-
-Invariant: A user's total value = balance + frozenBalance + spent on wins
-
-Bid Lifecycle:
-  Place:  balance -= amount,  frozenBalance += amount
-  Win:    frozenBalance -= amount  (money spent)
-  Refund: frozenBalance -= amount, balance += amount (money returned)
-```
-
----
-
-## Load Testing Results
-
-The system includes a comprehensive test suite validating behavior under stress.
-
-### Performance Comparison: All Bidding Modes
-
-The system supports three bidding modes:
-- **Standard Bid**: MongoDB transactions with full ACID guarantees
-- **Ultra-Fast Bid**: Single Redis Lua script (HTTP POST to `/api/auctions/:id/fast-bid`)
-- **WebSocket Bid**: Direct socket events (bypasses HTTP entirely)
-
-| Metric | Standard Bid | Fast Bid (HTTP+Redis) | WebSocket Bid | Improvement |
-|--------|-------------|----------------------|---------------|-------------|
-| **Throughput** | ~20 req/s | ~2,500 req/s | **30,579 req/s** | **1,500x faster** |
-| **p99 Latency** | 2-4 seconds | 10-20ms | **3ms** | **1,000x faster** |
-| **Sequential Bids** | avg 16ms | avg 2ms | **<1ms** | **16x faster** |
-
-### 🏆 Maximum Performance Configuration
-
-```bash
-# Enable cluster mode with automatic core detection
-CLUSTER_WORKERS=auto pnpm start
-
-# Or specify exact number of workers
-CLUSTER_WORKERS=4 pnpm start
-
-# Results: ~3,000 rps × number of CPUs with p99 < 5ms
-```
-
-### Running Load Tests
-
-```bash
-# Standard bid mode
-cd backend && pnpm run load-test
-
-# Fast bid mode (HTTP + Redis path)
-cd backend && pnpm run load-test -- --fast
-
-# WebSocket bid mode (maximum throughput)
-cd backend && pnpm run load-test -- -s ws
-
-# Heavy stress test with 100 users
-pnpm run load-test -- --fast --users 100 --deposit 100000 --stress-duration 10000
-```
-
-### WebSocket Bid Test Results (Maximum Throughput)
-
-```
-══════════════════════════════════════════════════
-   AUCTION SYSTEM LOAD TEST SUITE v1.0.0
-══════════════════════════════════════════════════
-WS Bid:    ENABLED (WebSocket path)
-══════════════════════════════════════════════════
-
-✓ WebSocket Bid Throughput: 152,900 bids @ 30,579 req/s, p99=3ms
-✓ WebSocket Connections: 30/30 connected, avg latency=7ms
-✓ Bid Ordering Verification: ordering=correct
-✓ Financial Integrity: VALID (diff=0.00)
-
-══════════════════════════════════════════════════
-  ALL TESTS PASSED
-══════════════════════════════════════════════════
-```
-
-### HTTP Fast Bid Test Results
-
-```
-══════════════════════════════════════════════════
-Fast Bid:  ENABLED (Ultra-fast Redis path)
-══════════════════════════════════════════════════
-
-✓ Concurrent Bid Storm: 50/50 @ 2,452 req/s, p99=19ms
-✓ Rapid Sequential Bids: 20/20, avg=2ms
-✓ Massive Concurrent Stress: 150/150 @ 427 req/s, p99=21ms
-✓ Same-User Race Condition: 0/10 succeeded (expected <10)
-✓ Financial Integrity: VALID (diff=0.00)
-
-══════════════════════════════════════════════════
-  ALL TESTS PASSED
-══════════════════════════════════════════════════
-```
+**Backend:** NestJS 11 + Fastify · MongoDB 8 · Redis + Redlock · Socket.IO · JWT
+**Frontend:** React 19 + Vite · TypeScript · i18n (en/ru)
+**Infra:** Docker Compose · Node.js 22+
 
 ---
 
 ## Quick Start
 
-### Option 1: Docker Compose (Recommended)
-
 ```bash
-# Configure environment
+# Docker (recommended)
 cp backend/.env.example backend/.env
-cp frontend/.env.example frontend/.env
-
-# Start everything
 docker compose up --build
 
-# Access:
-# - Frontend: http://localhost:5173
-# - Backend API: http://localhost:4000/api
-# - Swagger Docs: http://localhost:4000/api/docs
-```
-
-### Option 2: Local Development
-
-```bash
-# Start infrastructure only
+# Local development
 docker compose -f docker-compose.infra.yml up -d
-
-# Install and run
-npm install
-npm run dev
-
-# Or run separately:
-npm run dev:backend   # http://localhost:4000
-npm run dev:frontend  # http://localhost:5173
+npm install && npm run dev
 ```
 
-### Option 3: Manual Setup
+**Access:** Frontend `localhost:5173` · API `localhost:4000/api` · Docs `localhost:4000/api/docs`
 
-**Prerequisites:** Node.js 22+, MongoDB 8.2+ (replica set), Redis 7+
+---
 
-```bash
-# Backend
-cd backend && npm install && npm run start:dev
+## How It Works
 
-# Frontend (another terminal)
-cd frontend && npm install && npm run dev
+### Auction Flow
+```
+PENDING → ACTIVE → COMPLETED
+            ├── Round 1: Top 3 win
+            ├── Round 2: Top 5 win
+            └── Round 3: Top 2 win → Remaining refunded
+```
+
+### Bid Flow (5-Layer Protection)
+```
+1. Redlock        → Acquire distributed lock (fail-fast)
+2. Redis cooldown → 1s between bids per user
+3. MongoDB tx     → Snapshot isolation + retry
+4. Optimistic     → Version check on user/bid
+5. Unique index   → No duplicate amounts
+```
+
+### Financial Model
+```
+balance        = available for bidding
+frozenBalance  = locked in active bids
+
+Place bid:   balance -= X, frozenBalance += X
+Win:         frozenBalance -= X (spent)
+Refund:      frozenBalance -= X, balance += X
 ```
 
 ---
 
-## API Reference
+## API Overview
 
-### Authentication
+### REST Endpoints
 
-All protected endpoints require `Authorization: Bearer <token>` header.
-
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/api/auth/telegram/webapp` | POST | Authenticate via Mini App initData |
-| `/api/auth/telegram/widget` | POST | Authenticate via Login Widget |
-| `/api/auth/me` | GET | Get current user |
-| `/api/auth/refresh` | POST | Refresh JWT token |
-
-### Auctions
-
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/api/auctions` | GET | List all auctions |
-| `/api/auctions` | POST | Create auction |
-| `/api/auctions/:id` | GET | Get auction details |
-| `/api/auctions/:id/start` | POST | Start auction |
-| `/api/auctions/:id/bid` | POST | Place or increase bid (standard path) |
-| `/api/auctions/:id/fast-bid` | POST | Place bid via Redis (high-performance) |
-| `/api/auctions/:id/leaderboard` | GET | Get current rankings |
-| `/api/auctions/:id/min-winning-bid` | GET | Get minimum bid to win |
-
-### Users & Transactions
-
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/api/users/balance` | GET | Get balance (available + frozen) |
-| `/api/users/deposit` | POST | Add funds |
-| `/api/users/withdraw` | POST | Withdraw funds |
-| `/api/transactions` | GET | Get transaction history |
+| Endpoint | Description |
+|----------|-------------|
+| `POST /api/auth/telegram/webapp` | Mini App authentication |
+| `GET /api/auctions` | List auctions |
+| `POST /api/auctions/:id/bid` | Place bid (standard) |
+| `POST /api/auctions/:id/fast-bid` | Place bid (Redis, high-perf) |
+| `GET /api/auctions/:id/leaderboard` | Current rankings |
+| `GET /api/users/balance` | Get balance |
 
 ### WebSocket Events
 
-**Client → Server:**
-- `join-auction` - Subscribe to auction updates
-- `leave-auction` - Unsubscribe
-- `auth` - **Authenticate socket with JWT token** (required for bidding)
-- `place-bid` - **Place bid via WebSocket** `{ auctionId, amount }`
-
-**Server → Client:**
-- `auth-response` - Authentication result `{ success, userId?, error? }`
-- `bid-response` - **Bid result** `{ success, amount?, previousAmount?, error? }`
-- `new-bid` - New bid placed (broadcast to room)
-- `auction-update` - Auction state changed
-- `anti-sniping` - Round extended
-- `round-complete` - Round ended with winners
-- `auction-complete` - Auction finished
-- `round-start` - New round began
-
-### ⚡ WebSocket Bidding Example
-
 ```javascript
-import { io } from 'socket.io-client';
-
-const socket = io('ws://localhost:4000', { transports: ['websocket'] });
-
-// 1. Authenticate
+// Authenticate & join
 socket.emit('auth', jwtToken);
-socket.on('auth-response', ({ success, userId }) => {
-  if (success) console.log('Authenticated:', userId);
-});
-
-// 2. Join auction room
 socket.emit('join-auction', auctionId);
 
-// 3. Place bids (~3,000 rps × number of CPUs possible!)
+// Place bid (63K/sec possible)
 socket.emit('place-bid', { auctionId, amount: 1000 });
-socket.on('bid-response', ({ success, amount, error }) => {
-  if (success) console.log('Bid placed:', amount);
-  else console.error('Bid failed:', error);
-});
 
-// 4. Receive real-time updates
-socket.on('new-bid', (data) => console.log('New bid:', data));
+// Receive updates
+socket.on('new-bid', data => { /* ... */ });
+socket.on('bid-response', ({ success, amount }) => { /* ... */ });
 ```
 
 ---
 
 ## Configuration
 
-### Backend (`backend/.env`)
+| Variable | Description |
+|----------|-------------|
+| `MONGODB_URI` | MongoDB connection (replica set required) |
+| `REDIS_URL` | Redis connection |
+| `JWT_SECRET` | JWT signing secret |
+| `TELEGRAM_BOT_TOKEN` | Bot token for notifications |
+| `CLUSTER_WORKERS` | `0`=single, `auto`=all cores |
 
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `PORT` | Server port | 4000 |
-| `MONGODB_URI` | MongoDB connection string | — |
-| `REDIS_URL` | Redis connection string | — |
-| `JWT_SECRET` | JWT signing secret | (required) |
-| `TELEGRAM_BOT_TOKEN` | Telegram bot token | — |
-| `CORS_ORIGIN` | Allowed CORS origin | http://localhost:5173 |
-| **`CLUSTER_WORKERS`** | **Number of worker processes (`0`=single, `auto`=all cores)** | **0** |
-
-### Frontend (`frontend/.env`)
-
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `VITE_API_URL` | Backend API URL | http://localhost:4000/api |
-| `VITE_SOCKET_URL` | WebSocket server URL | http://localhost:4000 |
-
-### Rate Limiting (Three-Tier)
-
-- **Short**: 20 requests/second
-- **Medium**: 100 requests/10 seconds
-- **Long**: 300 requests/minute
-
-Localhost bypasses rate limiting for development.
+### Rate Limits
+- **Short:** 20/sec · **Medium:** 100/10sec · **Long:** 300/min
 
 ---
 
-## Project Structure
+## Load Testing
 
+```bash
+# HTTP
+pnpm run load-test           # Standard
+pnpm run load-test:stress    # Extreme
+
+# WebSocket
+npx artillery run test/artillery/websocket-extreme.yml  # 63K emit/s
 ```
-.
-├── backend/
-│   ├── src/
-│   │   ├── common/          # Guards, errors, types
-│   │   ├── config/          # Configuration & env validation
-│   │   ├── modules/
-│   │   │   ├── auctions/    # Core auction logic (1000+ lines)
-│   │   │   ├── auth/        # JWT + Telegram auth
-│   │   │   ├── bids/        # Bid queries
-│   │   │   ├── events/      # WebSocket gateway
-│   │   │   ├── redis/       # Redis client + Redlock + Bid Cache
-│   │   │   ├── telegram/    # Bot integration
-│   │   │   ├── transactions/# Financial audit
-│   │   │   └── users/       # User management
-│   │   ├── schemas/         # MongoDB schemas
-│   │   └── scripts/         # Load testing
-│   ├── Dockerfile
-│   └── .env.example
-├── frontend/
-│   ├── src/
-│   │   ├── api/             # API client
-│   │   ├── components/      # UI components
-│   │   ├── context/         # Auth & notifications
-│   │   ├── hooks/           # useSocket, useCountdown
-│   │   ├── i18n/            # Translations (en/ru)
-│   │   ├── pages/           # Route pages
-│   │   └── types/           # TypeScript interfaces
-│   ├── Dockerfile
-│   └── .env.example
-├── docker-compose.yml       # Full stack
-├── docker-compose.infra.yml # Infrastructure only
-└── README.md
-```
-
----
-
-## Edge Cases Handled
-
-| Edge Case | Solution |
-|-----------|----------|
-| Bid at exact round end | 100ms buffer rejects "too close" bids |
-| Bid during round transition | Transaction isolation prevents stale reads |
-| Server crash during bid | MongoDB transaction rolls back; Redis lock expires |
-| 10 concurrent bids from same user | Redlock ensures only 1 proceeds; others fail fast |
-| Same bid amount race | Unique index + first-write-wins semantics |
-| Balance goes negative | Schema validation (`min: 0`) + atomic `$gte` check |
-| Round completes with no bids | Gracefully advances to next round or completes auction |
-| WebSocket disconnect mid-auction | 2-minute session persistence + auto-rejoin |
 
 ---
 
 ## Design Decisions
 
-**Why MongoDB Transactions?**
-Financial operations require atomicity. If balance deduction succeeds but bid creation fails, the system would lose money.
+- **MongoDB transactions** — Atomic financial operations
+- **Redis Lua scripts** — Single call for all validation + bid placement (~0.02ms)
+- **Background sync** — 5s interval balances speed vs durability
+- **WebSocket bidding** — Eliminates HTTP overhead for max throughput
+- **Unique bid amounts** — Deterministic leaderboards, no ties
 
-**Why Redis + Redlock?**
-MongoDB transactions handle database-level concurrency, but don't prevent the same user from submitting 10 concurrent HTTP requests.
-
-**Why Fastify over Express?**
-2-3x better throughput and native TypeScript support — critical for high-concurrency scenarios.
-
-**Why Unique Bid Amounts?**
-Identical amounts create ambiguous rankings. Unique amounts (per auction) ensure deterministic leaderboards.
-
-**Why Scheduled Round Completion?**
-A cron job (every 5s) ensures rounds complete even without connected clients and handles server restarts gracefully.
-
-**Why Redis Lua Scripts for Ultra-Fast Bidding?**
-MongoDB transactions add ~50-100ms latency under concurrent load due to lock contention. Our ultra-fast Lua script performs ALL validation (auction status, round timing, balance check) and bid placement in a single atomic call (~0.02ms), enabling 2,500+ bids/sec while maintaining consistency through periodic sync.
-
-**Why Single Lua Script Instead of Multiple Calls?**
-Each Redis round-trip adds ~1-2ms network latency. By combining auction meta check, balance validation, bid placement, and leaderboard update into one script, we eliminate 3-4 round-trips and achieve 3x better throughput than the multi-call approach.
-
-**Why Background Sync Instead of Write-Through?**
-Real-time MongoDB writes would negate the speed benefits. A 5-second sync interval provides excellent durability (max 5s of data loss in catastrophic failure) while maintaining sub-2ms bid latency.
-
-**Why Eager User Warmup?**
-Lazy cache loading (warming users on first bid) adds 5-10ms latency for the first bidder. Eager warmup on auction start pre-loads all users with positive balance, ensuring consistent sub-2ms latency for everyone.
-
-**Why WebSocket Bidding?**
-HTTP requests add ~5-10ms overhead for headers, connection handling, and response formatting. WebSocket bidding eliminates this entirely — the bid payload goes directly to the server over an established connection. Combined with the Lua script, this achieves **~3,000 rps × number of CPUs** with p99 under 5ms.
-
-**Why Cluster Mode?**
-Node.js is single-threaded. On multi-core servers, a single process can't utilize all CPU cores. Cluster mode spawns multiple worker processes, each handling requests independently. With the Redis adapter, Socket.IO events are synchronized across workers, enabling linear scaling with CPU cores.
+More details: [docs/architecture.md](./docs/architecture.md) · [docs/concurrency.md](./docs/concurrency.md)
 
 ---
 

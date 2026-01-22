@@ -4,7 +4,7 @@ import { useAuth } from '../hooks/useAuth';
 import { useNotification } from '../context/NotificationContext';
 import * as api from '../api';
 
-export default function BalancePage() {
+export default function BalancePage(): React.JSX.Element {
   const { t } = useTranslation();
   const { user, updateBalance } = useAuth();
   const { showNotification } = useNotification();
@@ -12,9 +12,9 @@ export default function BalancePage() {
   const [amount, setAmount] = useState('1000');
 
   const handleDeposit = async () => {
-    if (loading) return;
+    if (loading) {return;}
     const value = parseInt(amount) || 0;
-    if (value <= 0) return;
+    if (value <= 0) {return;}
 
     setLoading(true);
     try {
@@ -30,9 +30,9 @@ export default function BalancePage() {
   };
 
   const handleWithdraw = async () => {
-    if (loading || !user) return;
+    if (loading || !user) {return;}
     const value = parseInt(amount) || 0;
-    if (value <= 0) return;
+    if (value <= 0) {return;}
     if (value > user.balance) {
       showNotification(t('auction.insufficientBalance'), 'error');
       return;
@@ -54,10 +54,10 @@ export default function BalancePage() {
   const quickAmounts = [100, 500, 1000, 5000];
 
   const getStep = (balance: number) => {
-    if (balance < 100) return 10;
-    if (balance < 1000) return 50;
-    if (balance < 10000) return 100;
-    if (balance < 100000) return 500;
+    if (balance < 100) {return 10;}
+    if (balance < 1000) {return 50;}
+    if (balance < 10000) {return 100;}
+    if (balance < 100000) {return 500;}
     return 1000;
   };
 
@@ -69,13 +69,13 @@ export default function BalancePage() {
       <div className="balance-cards">
         <div className="balance-card available">
           <div className="balance-card-label">{t('balance.available')}</div>
-          <div className="balance-card-value">{user?.balance || 0}</div>
+          <div className="balance-card-value">{user?.balance ?? 0}</div>
           <div className="balance-card-currency">{t('balance.currency')}</div>
         </div>
 
         <div className="balance-card frozen">
           <div className="balance-card-label">{t('balance.frozen')}</div>
-          <div className="balance-card-value">{user?.frozenBalance || 0}</div>
+          <div className="balance-card-value">{user?.frozenBalance ?? 0}</div>
           <div className="balance-card-currency">{t('balance.currency')}</div>
         </div>
       </div>
@@ -92,7 +92,7 @@ export default function BalancePage() {
             onChange={(e) => setAmount(e.target.value)}
             onWheel={(e) => e.currentTarget.blur()}
             min="1"
-            step={getStep(user?.balance || 0)}
+            step={getStep(user?.balance ?? 0)}
             disabled={loading}
           />
         </div>

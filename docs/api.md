@@ -1,5 +1,9 @@
 # API Reference
 
+[← Back to README](../README.md) · [Architecture](./architecture.md) · [Concurrency](./concurrency.md) · [Testing](./testing.md) · [Deployment](./deployment.md)
+
+---
+
 Base URL: `/api`
 
 All protected endpoints require `Authorization: Bearer <token>` header.

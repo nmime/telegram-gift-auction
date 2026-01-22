@@ -5,7 +5,10 @@ module.exports = {
   roots: ['<rootDir>/src'],
   testMatch: ['**/*.spec.ts'],
   transform: {
-    '^.+\\.ts$': 'ts-jest',
+    '^.+\\.ts$': ['ts-jest', {
+      tsconfig: '<rootDir>/tsconfig.spec.json',
+      isolatedModules: true,
+    }],
   },
   moduleFileExtensions: ['ts', 'js', 'json'],
   moduleNameMapper: {

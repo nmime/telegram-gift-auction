@@ -8,7 +8,11 @@ import ErrorBoundary from './components/ErrorBoundary'
 import './i18n'
 import './index.css'
 
-ReactDOM.createRoot(document.getElementById('root')!).render(
+const rootElement = document.getElementById('root');
+if (rootElement === null) {
+  throw new Error('Root element not found');
+}
+ReactDOM.createRoot(rootElement).render(
   <React.StrictMode>
     <ErrorBoundary>
       <NotificationProvider>

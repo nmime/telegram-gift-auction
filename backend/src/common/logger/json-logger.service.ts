@@ -1,4 +1,4 @@
-import { LoggerService, LogLevel } from "@nestjs/common";
+import type { LoggerService, LogLevel } from "@nestjs/common";
 
 export class JsonLoggerService implements LoggerService {
   private readonly isProduction: boolean;
@@ -47,23 +47,28 @@ export class JsonLoggerService implements LoggerService {
       const logEntry: Record<string, unknown> = {
         timestamp,
         level,
-        context: context || "Application",
+        context:
+          context !== undefined && context !== "" ? context : "Application",
         message: this.formatMessage(message),
       };
 
-      if (trace) {
+      if (trace !== undefined && trace !== "") {
         logEntry.trace = trace;
       }
 
+      // eslint-disable-next-line no-console
       console.log(JSON.stringify(logEntry));
     } else {
-      const contextStr = context ? `[${context}]` : "";
+      const contextStr =
+        context !== undefined && context !== "" ? `[${context}]` : "";
       const levelColor = this.getLevelColor(level);
       const msg = this.formatMessage(message);
+      // eslint-disable-next-line no-console
       console.log(
         `${timestamp} ${levelColor}${level.toUpperCase()}\x1b[0m ${contextStr} ${msg}`,
       );
-      if (trace) {
+      if (trace !== undefined && trace !== "") {
+        // eslint-disable-next-line no-console
         console.log(trace);
       }
     }
@@ -88,6 +93,6 @@ export class JsonLoggerService implements LoggerService {
       verbose: "\x1b[35m",
       fatal: "\x1b[31m\x1b[1m",
     };
-    return colors[level] || "";
+    return colors[level] ?? "";
   }
 }

@@ -1,33 +1,33 @@
-import { Test, TestingModule } from "@nestjs/testing";
+import { Test, type TestingModule } from "@nestjs/testing";
 import { MongooseModule, getModelToken } from "@nestjs/mongoose";
-import { MongoMemoryServer } from "mongodb-memory-server";
-import { Connection, Model, Types } from "mongoose";
+import { MongoMemoryReplSet } from "mongodb-memory-server";
+import type { Connection, Model, Types } from "mongoose";
 import {
   User,
   UserSchema,
-  UserDocument,
+  type UserDocument,
   Auction,
   AuctionSchema,
-  AuctionDocument,
+  type AuctionDocument,
   AuctionStatus,
   Bid,
   BidSchema,
-  BidDocument,
+  type BidDocument,
   BidStatus,
   Transaction,
   TransactionSchema,
-  TransactionDocument,
+  type TransactionDocument,
   TransactionType,
   AuditLog,
   AuditLogSchema,
-  AuditLogDocument,
+  type AuditLogDocument,
 } from "@/schemas";
 
 // MongoDB Memory Server with replica set requires time to download binary on first run
 jest.setTimeout(180000);
 
 describe("Transaction Consistency Integration Tests", () => {
-  let mongod: MongoMemoryServer;
+  let mongod: MongoMemoryReplSet;
   let connection: Connection;
   let userModel: Model<UserDocument>;
   let auctionModel: Model<AuctionDocument>;
@@ -36,10 +36,8 @@ describe("Transaction Consistency Integration Tests", () => {
   let auditLogModel: Model<AuditLogDocument>;
 
   beforeAll(async () => {
-    mongod = await MongoMemoryServer.create({
-      instance: {
-        replSet: "testReplSet",
-      },
+    mongod = await MongoMemoryReplSet.create({
+      replSet: { count: 1, storageEngine: "wiredTiger" },
     });
     const uri = mongod.getUri();
 
@@ -87,10 +85,6 @@ describe("Transaction Consistency Integration Tests", () => {
     await transactionModel.deleteMany({});
     await auditLogModel.deleteMany({});
   });
-
-  // ========================================
-  // 1. ACID Transaction Properties (8 tests)
-  // ========================================
 
   describe("ACID Properties", () => {
     it("should ensure atomicity - all operations succeed or none do", async () => {
@@ -396,10 +390,6 @@ describe("Transaction Consistency Integration Tests", () => {
       expect(users).toHaveLength(0);
     });
   });
-
-  // ========================================
-  // 2. Bid Transactions (6 tests)
-  // ========================================
 
   describe("Bid Transactions", () => {
     it("should atomically place bid → update balance → update leaderboard", async () => {
@@ -785,10 +775,6 @@ describe("Transaction Consistency Integration Tests", () => {
     });
   });
 
-  // ========================================
-  // 3. Auction Lifecycle Transactions (6 tests)
-  // ========================================
-
   describe("Auction Lifecycle Transactions", () => {
     it("should atomically create auction → initialize round → commit", async () => {
       const user = await userModel.create({
@@ -1107,10 +1093,6 @@ describe("Transaction Consistency Integration Tests", () => {
     });
   });
 
-  // ========================================
-  // 4. Financial Transactions (6 tests)
-  // ========================================
-
   describe("Financial Transactions", () => {
     it("should atomically deposit → update balance → record transaction → create audit", async () => {
       const user = await userModel.create({
@@ -1387,10 +1369,6 @@ describe("Transaction Consistency Integration Tests", () => {
       expect(updatedUser?.balance).toBe(1450);
     });
   });
-
-  // ========================================
-  // 5. Data Integrity Checks (4 tests)
-  // ========================================
 
   describe("Data Integrity Checks", () => {
     it("should verify transaction count matches operations", async () => {

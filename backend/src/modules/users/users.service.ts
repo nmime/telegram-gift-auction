@@ -27,7 +27,7 @@ export class UsersService {
     userId: string,
   ): Promise<{ balance: number; frozenBalance: number }> {
     const user = await this.userModel.findById(userId);
-    if (!user) {
+    if (user === null) {
       throw new NotFoundException("User not found");
     }
     return {
@@ -49,7 +49,7 @@ export class UsersService {
 
     try {
       const user = await this.userModel.findById(userId).session(session);
-      if (!user) {
+      if (user === null) {
         throw new NotFoundException("User not found");
       }
 
@@ -63,7 +63,7 @@ export class UsersService {
         { new: true, session },
       );
 
-      if (!updatedUser) {
+      if (updatedUser === null) {
         throw new ConflictException("Concurrent modification detected");
       }
 
@@ -75,7 +75,7 @@ export class UsersService {
             amount,
             balanceBefore,
             balanceAfter: updatedUser.balance,
-            description: `Deposit of ${amount} Stars`,
+            description: `Deposit of ${String(amount)} Stars`,
           },
         ],
         { session },
@@ -104,7 +104,7 @@ export class UsersService {
 
     try {
       const user = await this.userModel.findById(userId).session(session);
-      if (!user) {
+      if (user === null) {
         throw new NotFoundException("User not found");
       }
 
@@ -126,7 +126,7 @@ export class UsersService {
         { new: true, session },
       );
 
-      if (!updatedUser) {
+      if (updatedUser === null) {
         throw new ConflictException(
           "Concurrent modification or insufficient balance",
         );
@@ -140,7 +140,7 @@ export class UsersService {
             amount,
             balanceBefore,
             balanceAfter: updatedUser.balance,
-            description: `Withdrawal of ${amount} Stars`,
+            description: `Withdrawal of ${String(amount)} Stars`,
           },
         ],
         { session },
@@ -189,36 +189,6 @@ export class UsersService {
     );
   }
 
-  private mapTransactionType(type: string): TransactionType {
-    switch (type) {
-      case "bid_freeze":
-        return TransactionType.BID_FREEZE;
-      case "bid_unfreeze":
-        return TransactionType.BID_UNFREEZE;
-      case "bid_win":
-        return TransactionType.BID_WIN;
-      case "bid_refund":
-        return TransactionType.BID_REFUND;
-      default:
-        return TransactionType.DEPOSIT;
-    }
-  }
-
-  private getTransactionDescription(type: string, amount: number): string {
-    switch (type) {
-      case "bid_freeze":
-        return `Bid placed: ${amount} Stars frozen`;
-      case "bid_unfreeze":
-        return `Bid cancelled: ${amount} Stars unfrozen`;
-      case "bid_win":
-        return `Won auction item for ${amount} Stars`;
-      case "bid_refund":
-        return `Bid refunded: ${amount} Stars returned`;
-      default:
-        return `Transaction of ${amount} Stars`;
-    }
-  }
-
   async freezeBalance(
     userId: string | Types.ObjectId,
     amount: number,
@@ -226,8 +196,8 @@ export class UsersService {
     bidId: Types.ObjectId,
     session?: ClientSession,
   ): Promise<void> {
-    const user = await this.userModel.findById(userId).session(session || null);
-    if (!user) {
+    const user = await this.userModel.findById(userId).session(session ?? null);
+    if (user === null) {
       throw new NotFoundException("User not found");
     }
 
@@ -251,10 +221,10 @@ export class UsersService {
           version: 1,
         },
       },
-      { new: true, session: session || undefined },
+      { new: true, session: session ?? undefined },
     );
 
-    if (!updatedUser) {
+    if (updatedUser === null) {
       throw new ConflictException("Failed to freeze balance");
     }
 
@@ -270,10 +240,10 @@ export class UsersService {
           frozenAfter: updatedUser.frozenBalance,
           auctionId,
           bidId,
-          description: `Bid freeze of ${amount} Stars`,
+          description: `Bid freeze of ${String(amount)} Stars`,
         },
       ],
-      { session: session || undefined },
+      { session: session ?? undefined },
     );
   }
 
@@ -284,8 +254,8 @@ export class UsersService {
     bidId: Types.ObjectId,
     session?: ClientSession,
   ): Promise<void> {
-    const user = await this.userModel.findById(userId).session(session || null);
-    if (!user) {
+    const user = await this.userModel.findById(userId).session(session ?? null);
+    if (user === null) {
       throw new NotFoundException("User not found");
     }
 
@@ -305,10 +275,10 @@ export class UsersService {
           version: 1,
         },
       },
-      { new: true, session: session || undefined },
+      { new: true, session: session ?? undefined },
     );
 
-    if (!updatedUser) {
+    if (updatedUser === null) {
       throw new ConflictException("Failed to unfreeze balance");
     }
 
@@ -324,10 +294,10 @@ export class UsersService {
           frozenAfter: updatedUser.frozenBalance,
           auctionId,
           bidId,
-          description: `Bid unfreeze of ${amount} Stars`,
+          description: `Bid unfreeze of ${String(amount)} Stars`,
         },
       ],
-      { session: session || undefined },
+      { session: session ?? undefined },
     );
   }
 
@@ -338,8 +308,8 @@ export class UsersService {
     bidId: Types.ObjectId,
     session?: ClientSession,
   ): Promise<void> {
-    const user = await this.userModel.findById(userId).session(session || null);
-    if (!user) {
+    const user = await this.userModel.findById(userId).session(session ?? null);
+    if (user === null) {
       throw new NotFoundException("User not found");
     }
 
@@ -357,10 +327,10 @@ export class UsersService {
           version: 1,
         },
       },
-      { new: true, session: session || undefined },
+      { new: true, session: session ?? undefined },
     );
 
-    if (!updatedUser) {
+    if (updatedUser === null) {
       throw new ConflictException("Failed to confirm bid win");
     }
 
@@ -376,10 +346,10 @@ export class UsersService {
           frozenAfter: updatedUser.frozenBalance,
           auctionId,
           bidId,
-          description: `Won auction item for ${amount} Stars`,
+          description: `Won auction item for ${String(amount)} Stars`,
         },
       ],
-      { session: session || undefined },
+      { session: session ?? undefined },
     );
   }
 
@@ -390,8 +360,8 @@ export class UsersService {
     bidId: Types.ObjectId,
     session?: ClientSession,
   ): Promise<void> {
-    const user = await this.userModel.findById(userId).session(session || null);
-    if (!user) {
+    const user = await this.userModel.findById(userId).session(session ?? null);
+    if (user === null) {
       throw new NotFoundException("User not found");
     }
 
@@ -411,10 +381,10 @@ export class UsersService {
           version: 1,
         },
       },
-      { new: true, session: session || undefined },
+      { new: true, session: session ?? undefined },
     );
 
-    if (!updatedUser) {
+    if (updatedUser === null) {
       throw new ConflictException("Failed to refund bid");
     }
 
@@ -430,15 +400,15 @@ export class UsersService {
           frozenAfter: updatedUser.frozenBalance,
           auctionId,
           bidId,
-          description: `Refund of ${amount} Stars`,
+          description: `Refund of ${String(amount)} Stars`,
         },
       ],
-      { session: session || undefined },
+      { session: session ?? undefined },
     );
   }
 
   async createBot(name: string, balance: number): Promise<UserDocument> {
-    return this.userModel.create({
+    return await this.userModel.create({
       username: name,
       balance,
       frozenBalance: 0,
@@ -450,14 +420,14 @@ export class UsersService {
   async findById(
     userId: string | Types.ObjectId,
   ): Promise<UserDocument | null> {
-    return this.userModel.findById(userId);
+    return await this.userModel.findById(userId);
   }
 
   async findByIdForUpdate(
     userId: string | Types.ObjectId,
     session: ClientSession,
   ): Promise<UserDocument | null> {
-    return this.userModel.findById(userId).session(session);
+    return await this.userModel.findById(userId).session(session);
   }
 
   async updateLanguage(userId: string, languageCode: string): Promise<string> {
@@ -470,10 +440,43 @@ export class UsersService {
       { new: true },
     );
 
-    if (!user) {
+    if (user === null) {
       throw new NotFoundException("User not found");
     }
 
-    return user.languageCode || "en";
+    const userLang = user.languageCode;
+    return typeof userLang === "string" && userLang.length > 0
+      ? userLang
+      : "en";
+  }
+
+  private mapTransactionType(type: string): TransactionType {
+    switch (type) {
+      case "bid_freeze":
+        return TransactionType.BID_FREEZE;
+      case "bid_unfreeze":
+        return TransactionType.BID_UNFREEZE;
+      case "bid_win":
+        return TransactionType.BID_WIN;
+      case "bid_refund":
+        return TransactionType.BID_REFUND;
+      default:
+        return TransactionType.DEPOSIT;
+    }
+  }
+
+  private getTransactionDescription(type: string, amount: number): string {
+    switch (type) {
+      case "bid_freeze":
+        return `Bid placed: ${String(amount)} Stars frozen`;
+      case "bid_unfreeze":
+        return `Bid cancelled: ${String(amount)} Stars unfrozen`;
+      case "bid_win":
+        return `Won auction item for ${String(amount)} Stars`;
+      case "bid_refund":
+        return `Bid refunded: ${String(amount)} Stars returned`;
+      default:
+        return `Transaction of ${String(amount)} Stars`;
+    }
   }
 }

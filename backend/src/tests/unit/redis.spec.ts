@@ -1,9 +1,9 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { Test, TestingModule } from "@nestjs/testing";
+import { Test, type TestingModule } from "@nestjs/testing";
 import { BidCacheService } from "@/modules/redis/bid-cache.service";
 import { LeaderboardService } from "@/modules/redis/leaderboard.service";
 import { redisClient } from "@/modules/redis/constants";
-import Redis from "ioredis";
+import type Redis from "ioredis";
 
 describe("Redis Services", () => {
   describe("BidCacheService", () => {

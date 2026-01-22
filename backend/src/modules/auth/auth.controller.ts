@@ -33,7 +33,7 @@ export class AuthController {
     @TypedBody() body: ITelegramWidgetAuth,
   ): Promise<ILoginResponse> {
     const validatedUser = this.telegramService.validateWidgetAuth(body);
-    return this.authService.loginWithTelegramWidget(validatedUser);
+    return await this.authService.loginWithTelegramWidget(validatedUser);
   }
 
   /**
@@ -53,7 +53,7 @@ export class AuthController {
     const validatedData = this.telegramService.validateWebAppInitData(
       body.initData,
     );
-    return this.authService.loginWithTelegramMiniApp(validatedData);
+    return await this.authService.loginWithTelegramMiniApp(validatedData);
   }
 
   /**
@@ -67,7 +67,7 @@ export class AuthController {
    */
   @TypedRoute.Post("logout")
   @UseGuards(AuthGuard)
-  async logout(): Promise<ILogoutResponse> {
+  logout(): ILogoutResponse {
     return { success: true };
   }
 

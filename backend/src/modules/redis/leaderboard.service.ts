@@ -33,41 +33,10 @@ export class LeaderboardService {
   constructor(@Inject(redisClient) private readonly redis: Redis) {}
 
   /**
-   * Generate Redis key for auction leaderboard
-   */
-  private getKey(auctionId: string): string {
-    return `leaderboard:${auctionId}`;
-  }
-
-  /**
-   * Encode amount and timestamp into a single score for ZSET
-   * Higher scores = higher ranking (amount priority, earlier timestamp for ties)
-   */
-  private encodeScore(amount: number, createdAt: Date): number {
-    const timestamp = createdAt.getTime();
-    // Invert timestamp so earlier bids get higher scores for tie-breaking
-    const invertedTimestamp = maxTimestamp - timestamp;
-    return amount * timestampMultiplier + invertedTimestamp;
-  }
-
-  /**
-   * Decode a ZSET score back to amount and timestamp
-   */
-  private decodeScore(score: number): { amount: number; createdAt: Date } {
-    const amount = Math.floor(score / timestampMultiplier);
-    const invertedTimestamp = score % timestampMultiplier;
-    const timestamp = maxTimestamp - invertedTimestamp;
-    return {
-      amount,
-      createdAt: new Date(timestamp),
-    };
-  }
-
-  /**
    * Add or update a bid in the leaderboard
    * O(log N) complexity
    */
-  async addBid(
+  public async addBid(
     auctionId: string,
     userId: string,
     amount: number,
@@ -89,7 +58,7 @@ export class LeaderboardService {
    * Update an existing bid (same as addBid, ZADD handles updates)
    * O(log N) complexity
    */
-  async updateBid(
+  public async updateBid(
     auctionId: string,
     userId: string,
     newAmount: number,
@@ -102,7 +71,7 @@ export class LeaderboardService {
    * Remove a bid from the leaderboard (e.g., when user wins)
    * O(log N) complexity
    */
-  async removeBid(auctionId: string, userId: string): Promise<void> {
+  public async removeBid(auctionId: string, userId: string): Promise<void> {
     const key = this.getKey(auctionId);
     await this.redis.zrem(key, userId);
     this.logger.debug("Removed bid from leaderboard", { auctionId, userId });
@@ -112,7 +81,7 @@ export class LeaderboardService {
    * Remove multiple bids from the leaderboard
    * O(log N * M) where M is number of userIds
    */
-  async removeBids(auctionId: string, userIds: string[]): Promise<void> {
+  public async removeBids(auctionId: string, userIds: string[]): Promise<void> {
     if (userIds.length === 0) return;
 
     const key = this.getKey(auctionId);
@@ -129,10 +98,10 @@ export class LeaderboardService {
    *
    * Returns entries sorted by amount DESC, createdAt ASC (for ties)
    */
-  async getTopN(
+  public async getTopN(
     auctionId: string,
     n: number,
-    offset: number = 0,
+    offset = 0,
   ): Promise<RedisLeaderboardEntry[]> {
     const key = this.getKey(auctionId);
 
@@ -147,9 +116,9 @@ export class LeaderboardService {
     const entries: RedisLeaderboardEntry[] = [];
     for (let i = 0; i < results.length; i += 2) {
       const userId = results[i];
-      const score = parseFloat(results[i + 1] || "0");
+      const score = parseFloat(results[i + 1] ?? "0");
 
-      if (!userId) continue;
+      if (userId === undefined) continue;
 
       const { amount, createdAt } = this.decodeScore(score);
       entries.push({ userId, amount, createdAt });
@@ -164,7 +133,10 @@ export class LeaderboardService {
    *
    * Returns null if user not in leaderboard
    */
-  async getUserRank(auctionId: string, userId: string): Promise<number | null> {
+  public async getUserRank(
+    auctionId: string,
+    userId: string,
+  ): Promise<number | null> {
     const key = this.getKey(auctionId);
 
     // ZREVRANK returns 0-indexed rank (highest score = rank 0)
@@ -176,7 +148,7 @@ export class LeaderboardService {
    * Get user's entry from leaderboard
    * O(log N) complexity
    */
-  async getUserEntry(
+  public async getUserEntry(
     auctionId: string,
     userId: string,
   ): Promise<RedisLeaderboardEntry | null> {
@@ -193,15 +165,15 @@ export class LeaderboardService {
    * Get total count of entries in leaderboard
    * O(1) complexity
    */
-  async getTotalCount(auctionId: string): Promise<number> {
+  public async getTotalCount(auctionId: string): Promise<number> {
     const key = this.getKey(auctionId);
-    return this.redis.zcard(key);
+    return await this.redis.zcard(key);
   }
 
   /**
    * Clear entire leaderboard for an auction
    */
-  async clearLeaderboard(auctionId: string): Promise<void> {
+  public async clearLeaderboard(auctionId: string): Promise<void> {
     const key = this.getKey(auctionId);
     await this.redis.del(key);
     this.logger.debug("Cleared leaderboard", { auctionId });
@@ -211,9 +183,9 @@ export class LeaderboardService {
    * Rebuild leaderboard from an array of bid data
    * Useful for recovery or initial sync
    */
-  async rebuildLeaderboard(
+  public async rebuildLeaderboard(
     auctionId: string,
-    bids: Array<{ userId: string; amount: number; createdAt: Date }>,
+    bids: { userId: string; amount: number; createdAt: Date }[],
   ): Promise<void> {
     const key = this.getKey(auctionId);
 
@@ -243,7 +215,7 @@ export class LeaderboardService {
   /**
    * Check if leaderboard exists and has entries
    */
-  async exists(auctionId: string): Promise<boolean> {
+  public async exists(auctionId: string): Promise<boolean> {
     const count = await this.getTotalCount(auctionId);
     return count > 0;
   }
@@ -252,11 +224,42 @@ export class LeaderboardService {
    * Get entries within a rank range (0-indexed, inclusive)
    * Useful for checking winning positions
    */
-  async getEntriesByRankRange(
+  public async getEntriesByRankRange(
     auctionId: string,
     startRank: number,
     endRank: number,
   ): Promise<RedisLeaderboardEntry[]> {
-    return this.getTopN(auctionId, endRank - startRank + 1, startRank);
+    return await this.getTopN(auctionId, endRank - startRank + 1, startRank);
+  }
+
+  /**
+   * Generate Redis key for auction leaderboard
+   */
+  private getKey(auctionId: string): string {
+    return `leaderboard:${auctionId}`;
+  }
+
+  /**
+   * Encode amount and timestamp into a single score for ZSET
+   * Higher scores = higher ranking (amount priority, earlier timestamp for ties)
+   */
+  private encodeScore(amount: number, createdAt: Date): number {
+    const timestamp = createdAt.getTime();
+    // Invert timestamp so earlier bids get higher scores for tie-breaking
+    const invertedTimestamp = maxTimestamp - timestamp;
+    return amount * timestampMultiplier + invertedTimestamp;
+  }
+
+  /**
+   * Decode a ZSET score back to amount and timestamp
+   */
+  private decodeScore(score: number): { amount: number; createdAt: Date } {
+    const amount = Math.floor(score / timestampMultiplier);
+    const invertedTimestamp = score % timestampMultiplier;
+    const timestamp = maxTimestamp - invertedTimestamp;
+    return {
+      amount,
+      createdAt: new Date(timestamp),
+    };
   }
 }

@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { Controller, Get, Query, UseGuards } from "@nestjs/common";
 import { AuditLogService } from "./services";
 import {
@@ -7,9 +6,10 @@ import {
   AuditLogListResponseDto,
   AuditLogResponseDto,
   AuditSummaryResponseDto,
+  AuditResultStatus,
 } from "./dto";
 import { AuthGuard } from "@/common";
-// Types imported but may not be used directly in all methods
+import type { AuditLogDocument } from "@/schemas";
 
 @Controller("api/audit")
 @UseGuards(AuthGuard)
@@ -25,10 +25,12 @@ export class AuditController {
       action: query.action,
       resource: query.resource,
       result: query.result,
-      startDate: query.startDate ? new Date(query.startDate) : undefined,
-      endDate: query.endDate ? new Date(query.endDate) : undefined,
-      limit: query.limit || 100,
-      skip: query.skip || 0,
+      startDate:
+        query.startDate !== undefined ? new Date(query.startDate) : undefined,
+      endDate:
+        query.endDate !== undefined ? new Date(query.endDate) : undefined,
+      limit: query.limit ?? 100,
+      skip: query.skip ?? 0,
     };
 
     const [logs, total] = await Promise.all([
@@ -48,8 +50,10 @@ export class AuditController {
   async getSummary(
     @Query() query: AuditSummaryQueryDto,
   ): Promise<AuditSummaryResponseDto[]> {
-    const startDate = query.startDate ? new Date(query.startDate) : undefined;
-    const endDate = query.endDate ? new Date(query.endDate) : undefined;
+    const startDate =
+      query.startDate !== undefined ? new Date(query.startDate) : undefined;
+    const endDate =
+      query.endDate !== undefined ? new Date(query.endDate) : undefined;
 
     if (query.groupBy === "user") {
       const summary = await this.auditLogService.getSummaryByUser(
@@ -78,8 +82,8 @@ export class AuditController {
     @Query("skip") skip?: number,
   ): Promise<AuditLogResponseDto[]> {
     const logs = await this.auditLogService.findByUser(userId, {
-      limit: limit || 100,
-      skip: skip || 0,
+      limit: limit ?? 100,
+      skip: skip ?? 0,
     });
     return logs.map((log) => this.mapToResponseDto(log));
   }
@@ -91,13 +95,13 @@ export class AuditController {
     @Query("skip") skip?: number,
   ): Promise<AuditLogResponseDto[]> {
     const logs = await this.auditLogService.findByAction(action, {
-      limit: limit || 100,
-      skip: skip || 0,
+      limit: limit ?? 100,
+      skip: skip ?? 0,
     });
     return logs.map((log) => this.mapToResponseDto(log));
   }
 
-  private mapToResponseDto(log: any): AuditLogResponseDto {
+  private mapToResponseDto(log: AuditLogDocument): AuditLogResponseDto {
     return {
       id: log._id.toString(),
       userId: log.userId?.toString(),
@@ -106,7 +110,10 @@ export class AuditController {
       resourceId: log.resourceId?.toString(),
       oldValues: log.oldValues,
       newValues: log.newValues,
-      result: log.result,
+      result:
+        log.result === "success"
+          ? AuditResultStatus.SUCCESS
+          : AuditResultStatus.FAILURE,
       errorMessage: log.errorMessage,
       ipAddress: log.ipAddress,
       userAgent: log.userAgent,

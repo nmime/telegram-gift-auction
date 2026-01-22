@@ -10,7 +10,7 @@ import type {
 export const test_api_transactions_getTransactions = async (
   connection: api.IConnection,
 ) => {
-  const output: Primitive<Array<ITransactionResponse>> =
+  const output: Primitive<ITransactionResponse[]> =
     await api.functional.transactions.getTransactions(
       connection,
       typia.random<ITransactionQuery>(),

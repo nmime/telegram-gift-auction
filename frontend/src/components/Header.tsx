@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../hooks/useAuth';
 
-export default function Header() {
+export default function Header(): React.JSX.Element {
   const { t } = useTranslation();
   const { user } = useAuth();
 
@@ -28,14 +28,14 @@ export default function Header() {
       {/* Desktop balance & user */}
       <div className="desktop-user-info">
         <Link to="/balance" className="balance-chip">
-          <span className="balance-amount">{user?.balance || 0}</span>
+          <span className="balance-amount">{user?.balance ?? 0}</span>
           <span className="balance-currency">{t('balance.currency')}</span>
         </Link>
         <Link to="/profile" className="user-avatar">
           {user?.photoUrl ? (
             <img src={user.photoUrl} alt="" className="user-avatar-img" />
           ) : (
-            (user?.firstName || user?.username || '?').charAt(0).toUpperCase()
+            (user?.firstName ?? user?.username ?? '?').charAt(0).toUpperCase()
           )}
         </Link>
       </div>
@@ -43,14 +43,14 @@ export default function Header() {
       {/* Mobile: show balance and avatar */}
       <div className="mobile-header-right">
         <Link to="/balance" className="balance-chip">
-          <span className="balance-amount">{user?.balance || 0}</span>
+          <span className="balance-amount">{user?.balance ?? 0}</span>
           <span className="balance-currency">{t('balance.currency')}</span>
         </Link>
         <Link to="/profile" className="user-avatar">
           {user?.photoUrl ? (
             <img src={user.photoUrl} alt="" className="user-avatar-img" />
           ) : (
-            (user?.firstName || user?.username || '?').charAt(0).toUpperCase()
+            (user?.firstName ?? user?.username ?? '?').charAt(0).toUpperCase()
           )}
         </Link>
       </div>

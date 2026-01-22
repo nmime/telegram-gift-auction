@@ -21,11 +21,11 @@ let accessToken: string | null = localStorage.getItem(tokenKey);
 type AuthEventCallback = () => void;
 let onUnauthorizedCallback: AuthEventCallback | null = null;
 
-export function setOnUnauthorized(callback: AuthEventCallback | null) {
+export function setOnUnauthorized(callback: AuthEventCallback | null): void {
   onUnauthorizedCallback = callback;
 }
 
-export function setToken(token: string | null) {
+export function setToken(token: string | null): void {
   accessToken = token;
   if (token) {
     localStorage.setItem(tokenKey, token);
@@ -38,7 +38,7 @@ export function getToken(): string | null {
   return accessToken;
 }
 
-export function clearToken() {
+export function clearToken(): void {
   accessToken = null;
   localStorage.removeItem(tokenKey);
 }
@@ -60,19 +60,19 @@ interface FetchOptions extends RequestInit {
 }
 
 async function fetchApi<T>(url: string, options?: FetchOptions): Promise<T> {
-  const { skipAuthCheck, ...fetchOptions } = options || {};
+  const { skipAuthCheck, ...fetchOptions } = options ?? {};
 
   const headers: Record<string, string> = {
-    ...(fetchOptions?.headers as Record<string, string>),
+    ...(fetchOptions.headers as Record<string, string> | undefined),
   };
 
   // Only set Content-Type for requests with a body
-  if (fetchOptions?.body) {
+  if (fetchOptions.body !== undefined) {
     headers['Content-Type'] = 'application/json';
   }
 
   if (accessToken) {
-    headers['Authorization'] = `Bearer ${accessToken}`;
+    headers.Authorization = `Bearer ${accessToken}`;
   }
 
   const response = await fetch(`${API_BASE}${url}`, {
@@ -81,7 +81,7 @@ async function fetchApi<T>(url: string, options?: FetchOptions): Promise<T> {
   });
 
   if (!response.ok) {
-    const errorData = await response.json().catch((): ApiError => ({
+    const errorData: ApiError = await (response.json() as Promise<ApiError>).catch((): ApiError => ({
       message: 'Request failed',
     }));
 
@@ -92,14 +92,14 @@ async function fetchApi<T>(url: string, options?: FetchOptions): Promise<T> {
       }
     }
 
-    throw new ApiRequestError(errorData as ApiError, response.status);
+    throw new ApiRequestError(errorData, response.status);
   }
 
   if (response.status === 204) {
     return undefined as T;
   }
 
-  return response.json() as Promise<T>;
+  return await (response.json() as Promise<T>);
 }
 
 export async function loginWithTelegramWidget(user: TelegramWidgetUser): Promise<LoginResponse> {
@@ -124,7 +124,7 @@ export async function loginWithTelegramMiniApp(initData: string): Promise<LoginR
 
 export async function logout(): Promise<void> {
   try {
-    await fetchApi<void>('/auth/logout', { method: 'POST' });
+    await fetchApi<undefined>('/auth/logout', { method: 'POST' });
   } finally {
     clearToken();
   }
@@ -146,48 +146,48 @@ export async function getMe(): Promise<User | null> {
 }
 
 export async function getBalance(): Promise<BalanceInfo> {
-  return fetchApi<BalanceInfo>('/users/balance');
+  return await fetchApi<BalanceInfo>('/users/balance');
 }
 
 export async function deposit(amount: number): Promise<BalanceInfo> {
-  return fetchApi<BalanceInfo>('/users/deposit', {
+  return await fetchApi<BalanceInfo>('/users/deposit', {
     method: 'POST',
     body: JSON.stringify({ amount }),
   });
 }
 
 export async function withdraw(amount: number): Promise<BalanceInfo> {
-  return fetchApi<BalanceInfo>('/users/withdraw', {
+  return await fetchApi<BalanceInfo>('/users/withdraw', {
     method: 'POST',
     body: JSON.stringify({ amount }),
   });
 }
 
 export async function getTransactions(
-  limit: number = 50,
-  offset: number = 0
+  limit = 50,
+  offset = 0
 ): Promise<Transaction[]> {
-  return fetchApi<Transaction[]>(`/transactions?limit=${limit}&offset=${offset}`);
+  return await fetchApi<Transaction[]>(`/transactions?limit=${limit}&offset=${offset}`);
 }
 
 export async function getAuctions(status?: string): Promise<Auction[]> {
   const query = status ? `?status=${encodeURIComponent(status)}` : '';
-  return fetchApi<Auction[]>(`/auctions${query}`);
+  return await fetchApi<Auction[]>(`/auctions${query}`);
 }
 
 export async function getAuction(id: string): Promise<Auction> {
-  return fetchApi<Auction>(`/auctions/${encodeURIComponent(id)}`);
+  return await fetchApi<Auction>(`/auctions/${encodeURIComponent(id)}`);
 }
 
 export async function createAuction(data: CreateAuctionData): Promise<Auction> {
-  return fetchApi<Auction>('/auctions', {
+  return await fetchApi<Auction>('/auctions', {
     method: 'POST',
     body: JSON.stringify(data),
   });
 }
 
 export async function startAuction(id: string): Promise<Auction> {
-  return fetchApi<Auction>(`/auctions/${encodeURIComponent(id)}/start`, {
+  return await fetchApi<Auction>(`/auctions/${encodeURIComponent(id)}/start`, {
     method: 'POST',
   });
 }
@@ -196,7 +196,7 @@ export async function placeBid(
   auctionId: string,
   amount: number
 ): Promise<PlaceBidResponse> {
-  return fetchApi<PlaceBidResponse>(
+  return await fetchApi<PlaceBidResponse>(
     `/auctions/${encodeURIComponent(auctionId)}/bid`,
     {
       method: 'POST',
@@ -211,22 +211,22 @@ export async function getLeaderboard(
   offset?: number,
 ): Promise<LeaderboardResponse> {
   const params = new URLSearchParams();
-  if (limit !== undefined) params.set('limit', String(limit));
-  if (offset !== undefined) params.set('offset', String(offset));
+  if (limit !== undefined) {params.set('limit', String(limit));}
+  if (offset !== undefined) {params.set('offset', String(offset));}
   const query = params.toString();
-  return fetchApi<LeaderboardResponse>(
+  return await fetchApi<LeaderboardResponse>(
     `/auctions/${encodeURIComponent(auctionId)}/leaderboard${query ? `?${query}` : ''}`
   );
 }
 
 export async function getMyBids(auctionId: string): Promise<Bid[]> {
-  return fetchApi<Bid[]>(`/auctions/${encodeURIComponent(auctionId)}/my-bids`);
+  return await fetchApi<Bid[]>(`/auctions/${encodeURIComponent(auctionId)}/my-bids`);
 }
 
 export async function getMinWinningBid(
   auctionId: string
 ): Promise<MinWinningBidResponse> {
-  return fetchApi<MinWinningBidResponse>(
+  return await fetchApi<MinWinningBidResponse>(
     `/auctions/${encodeURIComponent(auctionId)}/min-winning-bid`
   );
 }
@@ -241,7 +241,7 @@ export interface FinancialAuditResult {
 }
 
 export async function getFinancialAudit(): Promise<FinancialAuditResult> {
-  return fetchApi<FinancialAuditResult>('/auctions/system/audit');
+  return await fetchApi<FinancialAuditResult>('/auctions/system/audit');
 }
 
 export interface LanguageResponse {
@@ -249,7 +249,7 @@ export interface LanguageResponse {
 }
 
 export async function updateLanguage(language: string): Promise<LanguageResponse> {
-  return fetchApi<LanguageResponse>('/users/language', {
+  return await fetchApi<LanguageResponse>('/users/language', {
     method: 'PUT',
     body: JSON.stringify({ language }),
   });

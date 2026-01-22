@@ -29,19 +29,20 @@ import { BidCacheService, CacheSyncData } from "./bid-cache.service";
 export class CacheSyncService implements OnModuleDestroy {
   private readonly logger = new Logger(CacheSyncService.name);
   private isRunning = false;
-  private syncInProgress = new Set<string>(); // Track auctions being synced
+  private readonly syncInProgress = new Set<string>(); // Track auctions being synced
 
   constructor(
-    @InjectModel(Auction.name) private auctionModel: Model<AuctionDocument>,
-    @InjectModel(Bid.name) private bidModel: Model<BidDocument>,
-    @InjectModel(User.name) private userModel: Model<UserDocument>,
-    @InjectConnection() private connection: Connection,
-    private bidCacheService: BidCacheService,
+    @InjectModel(Auction.name)
+    private readonly auctionModel: Model<AuctionDocument>,
+    @InjectModel(Bid.name) private readonly bidModel: Model<BidDocument>,
+    @InjectModel(User.name) private readonly userModel: Model<UserDocument>,
+    @InjectConnection() private readonly connection: Connection,
+    private readonly bidCacheService: BidCacheService,
   ) {
     this.isRunning = true;
   }
 
-  onModuleDestroy() {
+  public onModuleDestroy(): void {
     this.isRunning = false;
   }
 
@@ -50,7 +51,7 @@ export class CacheSyncService implements OnModuleDestroy {
    * Syncs all dirty data from Redis to MongoDB
    */
   @Cron(CronExpression.EVERY_5_SECONDS)
-  async periodicSync(): Promise<void> {
+  public async periodicSync(): Promise<void> {
     if (!this.isRunning) return;
 
     try {
@@ -75,7 +76,7 @@ export class CacheSyncService implements OnModuleDestroy {
         }
 
         // Run sync in background (don't await to allow parallel syncs)
-        this.syncAuction(auctionId).catch((error) => {
+        this.syncAuction(auctionId).catch((error: unknown) => {
           this.logger.error(
             `Periodic sync failed for auction ${auctionId}`,
             error,
@@ -94,7 +95,7 @@ export class CacheSyncService implements OnModuleDestroy {
    * @param force - If true, sync even if another sync is in progress
    * @returns Number of records synced
    */
-  async syncAuction(
+  public async syncAuction(
     auctionId: string,
     force = false,
   ): Promise<{ balances: number; bids: number }> {
@@ -123,7 +124,7 @@ export class CacheSyncService implements OnModuleDestroy {
 
       const duration = Date.now() - startTime;
       this.logger.debug(
-        `Synced auction ${auctionId}: ${result.balances} balances, ${result.bids} bids in ${duration}ms`,
+        `Synced auction ${auctionId}: ${String(result.balances)} balances, ${String(result.bids)} bids in ${String(duration)}ms`,
       );
 
       return result;
@@ -139,7 +140,7 @@ export class CacheSyncService implements OnModuleDestroy {
    * Full sync - ensures all cache data is written to MongoDB
    * Call this before critical operations like round completion
    */
-  async fullSync(
+  public async fullSync(
     auctionId: string,
   ): Promise<{ balances: number; bids: number }> {
     this.logger.log(`Starting full sync for auction ${auctionId}`);
@@ -152,7 +153,40 @@ export class CacheSyncService implements OnModuleDestroy {
     }
 
     // Force sync
-    return this.syncAuction(auctionId, true);
+    return await this.syncAuction(auctionId, true);
+  }
+
+  /**
+   * Sync and then clear cache for an auction (call at auction end)
+   */
+  public async syncAndClearCache(auctionId: string): Promise<void> {
+    // Full sync first
+    await this.fullSync(auctionId);
+
+    // Clear cache
+    await this.bidCacheService.clearAuctionCache(auctionId);
+    this.logger.log(`Cleared cache for auction ${auctionId}`);
+  }
+
+  /**
+   * Check if sync is in progress for an auction
+   */
+  public isSyncInProgress(auctionId: string): boolean {
+    return this.syncInProgress.has(auctionId);
+  }
+
+  /**
+   * Wait for sync to complete
+   */
+  public async waitForSync(auctionId: string, timeoutMs = 5000): Promise<void> {
+    const startTime = Date.now();
+
+    while (this.syncInProgress.has(auctionId)) {
+      if (Date.now() - startTime > timeoutMs) {
+        throw new Error(`Sync timeout for auction ${auctionId}`);
+      }
+      await this.delay(50);
+    }
   }
 
   /**
@@ -236,40 +270,7 @@ export class CacheSyncService implements OnModuleDestroy {
     }
   }
 
-  /**
-   * Sync and then clear cache for an auction (call at auction end)
-   */
-  async syncAndClearCache(auctionId: string): Promise<void> {
-    // Full sync first
-    await this.fullSync(auctionId);
-
-    // Clear cache
-    await this.bidCacheService.clearAuctionCache(auctionId);
-    this.logger.log(`Cleared cache for auction ${auctionId}`);
-  }
-
-  /**
-   * Check if sync is in progress for an auction
-   */
-  isSyncInProgress(auctionId: string): boolean {
-    return this.syncInProgress.has(auctionId);
-  }
-
-  /**
-   * Wait for sync to complete
-   */
-  async waitForSync(auctionId: string, timeoutMs = 5000): Promise<void> {
-    const startTime = Date.now();
-
-    while (this.syncInProgress.has(auctionId)) {
-      if (Date.now() - startTime > timeoutMs) {
-        throw new Error(`Sync timeout for auction ${auctionId}`);
-      }
-      await this.delay(50);
-    }
-  }
-
-  private delay(ms: number): Promise<void> {
-    return new Promise((resolve) => setTimeout(resolve, ms));
+  private async delay(ms: number): Promise<void> {
+    await new Promise((resolve) => setTimeout(resolve, ms));
   }
 }

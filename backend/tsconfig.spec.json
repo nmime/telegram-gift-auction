@@ -1,8 +1,24 @@
 {
   "extends": "./tsconfig.json",
   "compilerOptions": {
-    "strict": false,
-    "strictNullChecks": false
+    // Relax some options for test code
+    "noUnusedLocals": false,
+    "noUnusedParameters": false,
+    "noPropertyAccessFromIndexSignature": false,
+    "exactOptionalPropertyTypes": false,
+
+    // Disable plugins for isolatedModules mode (used by ts-jest)
+    "plugins": []
   },
-  "include": ["src/**/*.spec.ts", "src/**/*.e2e.ts"]
+  "include": [
+    "src/**/*.ts",
+    "src/**/*.spec.ts",
+    "src/**/*.e2e.ts",
+    "src/tests/**/*.ts",
+    "test/**/*.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist"
+  ]
 }

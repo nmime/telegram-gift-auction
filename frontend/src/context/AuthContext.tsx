@@ -1,4 +1,4 @@
-import { createContext, useState, useEffect, useCallback, ReactNode } from 'react';
+import { createContext, useState, useEffect, useCallback, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { User, TelegramWidgetUser } from '../types';
 import * as api from '../api';
@@ -26,7 +26,7 @@ function checkIsTelegramMiniApp(): boolean {
     !!window.Telegram.WebApp.initData;
 }
 
-export function AuthProvider({ children }: { children: ReactNode }) {
+export function AuthProvider({ children }: { children: ReactNode }): React.JSX.Element {
   const { t } = useTranslation();
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
@@ -66,15 +66,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     if (isTelegramMiniApp) {
       try {
-        const initData = window.Telegram?.WebApp?.initData;
-        if (initData) {
+        const initData = window.Telegram?.WebApp.initData;
+        if (initData !== undefined && initData !== '') {
           const response = await api.loginWithTelegramMiniApp(initData);
           setUser(response.user);
           syncLanguageFromUser(response.user);
-          window.Telegram?.WebApp?.expand();
-          window.Telegram?.WebApp?.ready();
+          window.Telegram?.WebApp.expand();
+          window.Telegram?.WebApp.ready();
         }
       } catch (error) {
+        // eslint-disable-next-line no-console
         console.error('Telegram MiniApp auto-login failed:', error);
       }
     }
@@ -83,14 +84,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [isTelegramMiniApp, syncLanguageFromUser]);
 
   useEffect(() => {
-    checkAuth();
+    void checkAuth();
   }, [checkAuth]);
 
   const loginWithTelegramWidget = async (telegramUser: TelegramWidgetUser) => {
     const response = await api.loginWithTelegramWidget(telegramUser);
     setUser(response.user);
     syncLanguageFromUser(response.user);
-    const displayName = response.user.firstName || response.user.username;
+    const displayName = response.user.firstName ?? response.user.username;
     showNotification(t('auth.welcome', { name: displayName }), 'success');
   };
 
@@ -98,7 +99,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const response = await api.loginWithTelegramMiniApp(initData);
     setUser(response.user);
     syncLanguageFromUser(response.user);
-    const displayName = response.user.firstName || response.user.username;
+    const displayName = response.user.firstName ?? response.user.username;
     showNotification(t('auth.welcome', { name: displayName }), 'success');
   };
 

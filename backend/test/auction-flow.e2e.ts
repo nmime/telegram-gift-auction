@@ -143,7 +143,8 @@ function assertTrue(condition: boolean, message: string): void {
   }
 }
 
-testAuctionFlow().catch((e) => {
-  console.error('\n❌ E2E Test Failed:', e.message);
+testAuctionFlow().catch((e: unknown) => {
+  const message = e instanceof Error ? e.message : String(e);
+  console.error('\n E2E Test Failed:', message);
   process.exit(1);
 });

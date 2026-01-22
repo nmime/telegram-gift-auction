@@ -1,3 +1,3 @@
 export * from "./events.module";
 export * from "./events.gateway";
-export * from "./events.dto";
+export type * from "./events.dto";

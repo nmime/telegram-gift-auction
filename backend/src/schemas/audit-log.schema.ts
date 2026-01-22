@@ -1,6 +1,5 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { Prop, Schema, SchemaFactory } from "@nestjs/mongoose";
-import { Document, Types } from "mongoose";
+import { type Document, Types } from "mongoose";
 
 export type AuditLogDocument = AuditLog & Document;
 
@@ -21,10 +20,10 @@ export class AuditLog {
   resourceId?: Types.ObjectId;
 
   @Prop({ type: Object })
-  oldValues?: Record<string, any>;
+  oldValues?: Record<string, unknown>;
 
   @Prop({ type: Object })
-  newValues?: Record<string, any>;
+  newValues?: Record<string, unknown>;
 
   @Prop({ required: true, index: true })
   result!: "success" | "failure";
@@ -39,7 +38,7 @@ export class AuditLog {
   userAgent?: string;
 
   @Prop({ type: Object })
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 
   createdAt!: Date;
   updatedAt!: Date;

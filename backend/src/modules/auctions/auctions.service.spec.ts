@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { Test, TestingModule } from "@nestjs/testing";
+import { Test, type TestingModule } from "@nestjs/testing";
 import { getModelToken, getConnectionToken } from "@nestjs/mongoose";
 import { BadRequestException, NotFoundException } from "@nestjs/common";
 import { Types } from "mongoose";
@@ -162,8 +162,6 @@ describe("AuctionsService", () => {
     expect(service).toBeDefined();
   });
 
-  // ============ AUCTION CREATION AND INITIALIZATION ============
-
   describe("create", () => {
     const validDto = {
       title: "Test Auction",
@@ -295,8 +293,6 @@ describe("AuctionsService", () => {
     });
   });
 
-  // ============ AUCTION QUERIES AND FILTERING ============
-
   describe("findAll", () => {
     it("should return all auctions when no status filter", async () => {
       const mockAuctions = [
@@ -419,8 +415,6 @@ describe("AuctionsService", () => {
     });
   });
 
-  // ============ AUCTION STATE TRANSITIONS ============
-
   describe("start", () => {
     it("should start a pending auction and transition to ACTIVE status", async () => {
       const auctionId = new Types.ObjectId();
@@ -503,8 +497,6 @@ describe("AuctionsService", () => {
       expect(service).toBeDefined();
     });
   });
-
-  // ============ AUCTION RULES AND CONSTRAINTS ============
 
   describe("placeBid validation", () => {
     const validBidDto = { amount: 150 };
@@ -645,8 +637,6 @@ describe("AuctionsService", () => {
     });
   });
 
-  // ============ AUCTION TIME MANAGEMENT ============
-
   describe("time-based operations", () => {
     it("should check round end time before accepting bid", async () => {
       const mockAuction = {
@@ -734,8 +724,6 @@ describe("AuctionsService", () => {
     });
   });
 
-  // ============ AUCTION LIFECYCLE MANAGEMENT ============
-
   describe("completeRound", () => {
     it("should return null if auction not found", async () => {
       mockAuctionModel.findOneAndUpdate.mockResolvedValue(null);
@@ -768,8 +756,6 @@ describe("AuctionsService", () => {
       expect(typeof service.completeRound).toBe("function");
     });
   });
-
-  // ============ AUCTION QUERIES ============
 
   describe("getLeaderboard", () => {
     it("should validate service provides leaderboard method", async () => {
@@ -858,8 +844,6 @@ describe("AuctionsService", () => {
     });
   });
 
-  // ============ ERROR HANDLING AND EDGE CASES ============
-
   describe("error handling", () => {
     it("should handle transaction conflicts gracefully", async () => {
       // Simulate transaction conflict on first attempt
@@ -904,8 +888,6 @@ describe("AuctionsService", () => {
     });
   });
 
-  // ============ CACHE AND PERFORMANCE ============
-
   describe("cache management", () => {
     it("should warm up auction cache", async () => {
       const auctionId = new Types.ObjectId().toString();
@@ -949,8 +931,6 @@ describe("AuctionsService", () => {
       expect(service).toBeDefined();
     });
   });
-
-  // ============ FINANCIAL INTEGRITY ============
 
   describe("auditFinancialIntegrity", () => {
     it("should validate financial integrity", async () => {

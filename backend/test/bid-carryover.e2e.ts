@@ -51,7 +51,7 @@ async function testMultiRoundAuctionSetup(): Promise<void> {
 
   // Verify total items
   const totalItems = auctionDetails.roundsConfig.reduce(
-    (sum, r) => sum + r.itemsCount,
+    (sum: number, r: { itemsCount: number }) => sum + r.itemsCount,
     0
   );
   if (totalItems === 6) {
@@ -244,7 +244,7 @@ async function testCarryoverSchema(): Promise<void> {
   console.log('✓ Placed bid: 500');
 
   // Verify bid response
-  if (bidResult.bid && bidResult.bid.amount === 500) {
+  if (bidResult.bid?.amount === 500) {
     console.log('✓ Bid response contains bid details');
   } else {
     throw new Error('Bid response missing bid details');

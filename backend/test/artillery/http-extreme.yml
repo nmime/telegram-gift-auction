@@ -1,0 +1,134 @@
+# Artillery HTTP EXTREME Stress Test
+# Find the absolute breaking point for HTTP API
+# Run: npx artillery run test/artillery/http-extreme.yml
+
+config:
+  target: "http://localhost:4000"
+  phases:
+    # Aggressive ramp
+    - name: "Aggressive ramp"
+      duration: 15
+      arrivalRate: 50
+      rampTo: 300
+    # Extreme sustained
+    - name: "Extreme load"
+      duration: 30
+      arrivalRate: 300
+    # Nuclear option
+    - name: "Nuclear burst"
+      duration: 15
+      arrivalRate: 500
+
+  processor: "./functions.js"
+
+  plugins:
+    expect: {}
+    metrics-by-endpoint: {}
+
+  defaults:
+    headers:
+      Content-Type: "application/json"
+
+  http:
+    timeout: 30
+    pool: 500
+
+before:
+  flow:
+    - function: "createTestAuction"
+
+scenarios:
+  # Pure bid throughput test - minimal overhead
+  - name: "Bid Throughput Test"
+    weight: 50
+    flow:
+      - function: "generateUsername"
+      - function: "loginUser"
+
+      # Quick deposit
+      - post:
+          url: "/api/users/deposit"
+          headers:
+            Authorization: "Bearer {{ token }}"
+          json:
+            amount: 1000000
+
+      # Get auction
+      - get:
+          url: "/api/auctions"
+          headers:
+            Authorization: "Bearer {{ token }}"
+          capture:
+            - json: "$[0].id"
+              as: "auctionId"
+
+      # Rapid bid loop - 20 bids per user
+      - loop:
+          - function: "generateBidAmount"
+          - post:
+              url: "/api/auctions/{{ auctionId }}/bid"
+              headers:
+                Authorization: "Bearer {{ token }}"
+              json:
+                amount: "{{ bidAmount }}"
+        count: 20
+
+  # Fast-bid endpoint test
+  - name: "Fast-Bid Throughput"
+    weight: 30
+    flow:
+      - function: "generateUsername"
+      - function: "loginUser"
+
+      - post:
+          url: "/api/users/deposit"
+          headers:
+            Authorization: "Bearer {{ token }}"
+          json:
+            amount: 1000000
+
+      - get:
+          url: "/api/auctions"
+          headers:
+            Authorization: "Bearer {{ token }}"
+          capture:
+            - json: "$[0].id"
+              as: "auctionId"
+
+      # Rapid fast-bid loop
+      - loop:
+          - function: "generateBidAmount"
+          - post:
+              url: "/api/auctions/{{ auctionId }}/fast-bid"
+              headers:
+                Authorization: "Bearer {{ token }}"
+              json:
+                amount: "{{ bidAmount }}"
+        count: 30
+
+  # Read-heavy test
+  - name: "Read Throughput"
+    weight: 20
+    flow:
+      - function: "generateUsername"
+      - function: "loginUser"
+
+      - get:
+          url: "/api/auctions"
+          headers:
+            Authorization: "Bearer {{ token }}"
+          capture:
+            - json: "$[0].id"
+              as: "auctionId"
+
+      # Rapid read loop
+      - loop:
+          - get:
+              url: "/api/auctions/{{ auctionId }}/leaderboard"
+              headers:
+                Authorization: "Bearer {{ token }}"
+          - get:
+              url: "/api/auctions/{{ auctionId }}"
+              headers:
+                Authorization: "Bearer {{ token }}"
+        count: 50

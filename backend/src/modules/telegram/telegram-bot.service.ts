@@ -31,39 +31,129 @@ export class TelegramBotService implements OnModuleInit, OnModuleDestroy {
     private readonly configService: ConfigService,
     private readonly i18n: I18nService,
   ) {
-    this.botToken = this.configService.get<string>("BOT_TOKEN")!;
-    this.webhookSecret = this.configService.get<string>("WEBHOOK_SECRET") || "";
-    this.miniAppUrl = this.configService.get<string>("MINI_APP_URL") || "";
-    this.nodeEnv = this.configService.get<string>("NODE_ENV") || "development";
+    const token = this.configService.get<string>("BOT_TOKEN");
+    if (token === undefined) {
+      throw new Error("BOT_TOKEN is required");
+    }
+    this.botToken = token;
+    this.webhookSecret = this.configService.get<string>("WEBHOOK_SECRET") ?? "";
+    this.miniAppUrl = this.configService.get<string>("MINI_APP_URL") ?? "";
+    this.nodeEnv = this.configService.get<string>("NODE_ENV") ?? "development";
 
     this.bot = new Bot<BotContext>(this.botToken);
     this.setupMiddleware();
     this.setupHandlers();
   }
 
+  // ========== PUBLIC METHODS ==========
+
+  async onModuleInit(): Promise<void> {
+    if (this.botToken === "") {
+      this.logger.warn("BOT_TOKEN not configured, skipping bot initialization");
+      return;
+    }
+
+    try {
+      // Get bot info
+      const me = await this.bot.api.getMe();
+      this.logger.log(`Bot initialized: @${me.username}`);
+
+      // Set bot commands for private chats
+      await this.setupBotCommands();
+
+      if (this.nodeEnv === "production") {
+        // In production, auto-set webhook
+        const webhookUrl = `${this.miniAppUrl}/api/telegram/webhook`;
+        await this.setWebhook(webhookUrl);
+        this.logger.log("Production mode: Webhook configured automatically");
+      } else {
+        // In development, use long polling
+        this.logger.log("Development mode: Starting long polling...");
+        await this.startPolling();
+      }
+    } catch (error) {
+      this.logger.error("Failed to initialize bot:", error);
+    }
+  }
+
+  async onModuleDestroy(): Promise<void> {
+    if (this.isRunning) {
+      await this.stopPolling();
+    }
+  }
+
+  getWebhookCallback(): (
+    request: FastifyRequest,
+    reply: FastifyReply,
+  ) => Promise<void> {
+    return webhookCallback(this.bot, "fastify", {
+      secretToken: this.webhookSecret !== "" ? this.webhookSecret : undefined,
+    }) as (request: FastifyRequest, reply: FastifyReply) => Promise<void>;
+  }
+
+  async handleWebhook(
+    request: FastifyRequest,
+    reply: FastifyReply,
+  ): Promise<void> {
+    const callback = this.getWebhookCallback();
+    await callback(request, reply);
+  }
+
+  async setWebhook(url: string): Promise<void> {
+    try {
+      await this.bot.api.setWebhook(url, {
+        secret_token:
+          this.webhookSecret !== "" ? this.webhookSecret : undefined,
+      });
+      this.logger.log(`Webhook set to: ${url}`);
+    } catch (error) {
+      this.logger.error("Failed to set webhook:", error);
+      throw error;
+    }
+  }
+
+  async deleteWebhook(): Promise<void> {
+    try {
+      await this.bot.api.deleteWebhook();
+      this.logger.log("Webhook deleted");
+    } catch (error) {
+      this.logger.error("Failed to delete webhook:", error);
+      throw error;
+    }
+  }
+
+  getBot(): Bot<BotContext> {
+    return this.bot;
+  }
+
+  // ========== PRIVATE METHODS ==========
+
   private t(key: string, lang: string, args?: Record<string, unknown>): string {
     return this.i18n.t(key, { lang, args });
   }
 
-  private setupMiddleware() {
+  private setupMiddleware(): void {
     this.bot.use(async (ctx, next) => {
-      if (ctx.from?.id) {
+      if (ctx.from?.id !== undefined && ctx.from.id !== 0) {
         const user = await this.userModel.findOne({ telegramId: ctx.from.id });
-        if (user?.languageCode && ["en", "ru"].includes(user.languageCode)) {
+        if (
+          user?.languageCode !== undefined &&
+          ["en", "ru"].includes(user.languageCode)
+        ) {
           ctx.lang = user.languageCode;
           await next();
           return;
         }
       }
 
-      const userLang = ctx.from?.language_code || "en";
+      const userLang = ctx.from?.language_code ?? "en";
       ctx.lang = ["ru", "uk", "be"].includes(userLang) ? "ru" : "en";
       await next();
     });
   }
 
-  private setupHandlers() {
-    const webAppUrl = this.configService.get<string>("MINI_APP_URL") || "";
+  private setupHandlers(): void {
+    const webAppUrl = this.configService.get<string>("MINI_APP_URL") ?? "";
     const isHttps = webAppUrl.startsWith("https://");
 
     // Handle /start command
@@ -120,9 +210,9 @@ export class TelegramBotService implements OnModuleInit, OnModuleDestroy {
           `${step1}\n` +
           `${step2}\n` +
           `${step3}\n` +
-          `${step4}` +
-          `${notifications}` +
-          `${goodLuck}`,
+          step4 +
+          notifications +
+          goodLuck,
         { parse_mode: "HTML" },
       );
     });
@@ -149,10 +239,10 @@ export class TelegramBotService implements OnModuleInit, OnModuleDestroy {
     });
 
     this.bot.callbackQuery(/^lang_(en|ru)$/, async (ctx) => {
-      const match = ctx.callbackQuery.data.match(/^lang_(en|ru)$/);
-      if (!match || !match[1]) return;
+      const match = /^lang_(en|ru)$/.exec(ctx.callbackQuery.data);
+      if (match?.[1] === undefined) return;
 
-      const newLang = match[1] as string;
+      const newLang = match[1];
       const telegramId = ctx.from.id;
 
       await this.userModel.findOneAndUpdate(
@@ -172,8 +262,10 @@ export class TelegramBotService implements OnModuleInit, OnModuleDestroy {
     });
   }
 
-  private async setupBotCommands() {
-    const getCommands = (lang: string) => [
+  private async setupBotCommands(): Promise<void> {
+    const getCommands = (
+      lang: string,
+    ): { command: string; description: string }[] => [
       { command: "start", description: this.t("bot.commands.start", lang) },
       { command: "help", description: this.t("bot.commands.help", lang) },
       {
@@ -208,42 +300,7 @@ export class TelegramBotService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
-  async onModuleInit() {
-    if (!this.botToken) {
-      this.logger.warn("BOT_TOKEN not configured, skipping bot initialization");
-      return;
-    }
-
-    try {
-      // Get bot info
-      const me = await this.bot.api.getMe();
-      this.logger.log(`Bot initialized: @${me.username}`);
-
-      // Set bot commands for private chats
-      await this.setupBotCommands();
-
-      if (this.nodeEnv === "production") {
-        // In production, auto-set webhook
-        const webhookUrl = `${this.miniAppUrl}/api/telegram/webhook`;
-        await this.setWebhook(webhookUrl);
-        this.logger.log("Production mode: Webhook configured automatically");
-      } else {
-        // In development, use long polling
-        this.logger.log("Development mode: Starting long polling...");
-        await this.startPolling();
-      }
-    } catch (error) {
-      this.logger.error("Failed to initialize bot:", error);
-    }
-  }
-
-  async onModuleDestroy() {
-    if (this.isRunning) {
-      await this.stopPolling();
-    }
-  }
-
-  private async startPolling() {
+  private async startPolling(): Promise<void> {
     if (this.isRunning) return;
 
     try {
@@ -251,7 +308,7 @@ export class TelegramBotService implements OnModuleInit, OnModuleDestroy {
       await this.bot.api.deleteWebhook();
 
       // Start polling
-      this.bot.start({
+      void this.bot.start({
         onStart: () => {
           this.isRunning = true;
           this.logger.log("Bot polling started");
@@ -262,7 +319,7 @@ export class TelegramBotService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
-  private async stopPolling() {
+  private async stopPolling(): Promise<void> {
     if (!this.isRunning) return;
 
     try {
@@ -272,42 +329,5 @@ export class TelegramBotService implements OnModuleInit, OnModuleDestroy {
     } catch (error) {
       this.logger.error("Failed to stop polling:", error);
     }
-  }
-
-  getWebhookCallback() {
-    return webhookCallback(this.bot, "fastify", {
-      secretToken: this.webhookSecret || undefined,
-    });
-  }
-
-  async handleWebhook(request: FastifyRequest, reply: FastifyReply) {
-    const callback = this.getWebhookCallback();
-    return callback(request, reply);
-  }
-
-  async setWebhook(url: string) {
-    try {
-      await this.bot.api.setWebhook(url, {
-        secret_token: this.webhookSecret || undefined,
-      });
-      this.logger.log(`Webhook set to: ${url}`);
-    } catch (error) {
-      this.logger.error("Failed to set webhook:", error);
-      throw error;
-    }
-  }
-
-  async deleteWebhook() {
-    try {
-      await this.bot.api.deleteWebhook();
-      this.logger.log("Webhook deleted");
-    } catch (error) {
-      this.logger.error("Failed to delete webhook:", error);
-      throw error;
-    }
-  }
-
-  getBot(): Bot<BotContext> {
-    return this.bot;
   }
 }

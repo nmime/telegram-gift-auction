@@ -1,5 +1,5 @@
 import { useEffect, useRef, useCallback, useState } from 'react';
-import { io, Socket } from 'socket.io-client';
+import { io, type Socket } from 'socket.io-client';
 import type { SocketEventMap, SocketEventName } from '../types';
 import { getToken } from '../api';
 
@@ -48,6 +48,7 @@ export function useSocket(auctionId?: string): UseSocketReturn {
         socketRef.current?.emit('leave-auction', auctionId);
       };
     }
+    return undefined;
   }, [auctionId]);
 
   const subscribe = useCallback(
@@ -57,7 +58,7 @@ export function useSocket(auctionId?: string): UseSocketReturn {
     ): (() => void) => {
       const socket = socketRef.current;
       if (!socket) {
-        return () => {};
+        return (): void => { /* noop */ };
       }
 
       socket.on(event as string, callback as (...args: unknown[]) => void);

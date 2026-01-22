@@ -1,5 +1,9 @@
 # Справочник API
 
+[← К README](../../README.ru.md) · [Архитектура](./architecture.md) · [Конкурентность](./concurrency.md) · [Тестирование](./testing.md) · [Деплой](./deployment.md)
+
+---
+
 Базовый URL: `/api`
 
 Все защищённые эндпоинты требуют заголовок `Authorization: Bearer <token>`.

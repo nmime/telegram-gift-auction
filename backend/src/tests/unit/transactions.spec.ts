@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { Test, TestingModule } from "@nestjs/testing";
+import { Test, type TestingModule } from "@nestjs/testing";
 import { getModelToken } from "@nestjs/mongoose";
 import { Types } from "mongoose";
 import { TransactionsService } from "@/modules/transactions/transactions.service";

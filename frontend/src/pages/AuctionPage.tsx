@@ -1,8 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import type { Auction, LeaderboardEntry, PastWinnerEntry, Bid } from '../types';
-import { AuctionStatus, BidStatus } from '../types';
+import { type Auction, type LeaderboardEntry, type PastWinnerEntry, type Bid, AuctionStatus, BidStatus } from '../types';
 import { useAuth } from '../hooks/useAuth';
 import { useNotification } from '../context/NotificationContext';
 import { useSocket } from '../hooks/useSocket';
@@ -10,7 +9,7 @@ import { useCountdown } from '../hooks/useCountdown';
 import { SkeletonAuctionPage } from '../components/Skeleton';
 import * as api from '../api';
 
-export default function AuctionPage() {
+export default function AuctionPage(): React.JSX.Element {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { t } = useTranslation();
@@ -43,12 +42,12 @@ export default function AuctionPage() {
   }, []);
 
   const loadData = useCallback(async () => {
-    if (!id) return;
+    if (!id) {return;}
 
     const now = Date.now();
-    if (now - lastLoadRef.current < 500) return;
+    if (now - lastLoadRef.current < 500) {return;}
 
-    if (loadingRef.current) return;
+    if (loadingRef.current) {return;}
 
     loadingRef.current = true;
     lastLoadRef.current = now;
@@ -61,7 +60,7 @@ export default function AuctionPage() {
         api.getMinWinningBid(id),
       ]);
 
-      if (!mountedRef.current) return;
+      if (!mountedRef.current) {return;}
 
       setAuction(auctionData);
       setLeaderboard(leaderboardResponse.leaderboard);
@@ -70,7 +69,8 @@ export default function AuctionPage() {
       setMinWinningBid(minBidData.minWinningBid);
       setError('');
     } catch (err) {
-      if (!mountedRef.current) return;
+      if (!mountedRef.current) {return;}
+      // eslint-disable-next-line no-console
       console.error('Failed to load auction:', err);
       setError(t('auction.failedToLoad'));
     } finally {
@@ -82,7 +82,7 @@ export default function AuctionPage() {
   }, [id, t]);
 
   useEffect(() => {
-    loadData();
+    void loadData();
   }, [loadData]);
 
   useEffect(() => {
@@ -91,7 +91,7 @@ export default function AuctionPage() {
     }
 
     const interval = setInterval(() => {
-      loadData();
+      void loadData();
     }, 5000);
 
     return () => clearInterval(interval);
@@ -99,29 +99,29 @@ export default function AuctionPage() {
 
   useEffect(() => {
     const unsubAuction = subscribe('auction-update', (data) => {
-      setAuction((prev) => prev ? { ...prev, ...data } : prev);
-      loadData();
+      setAuction((prev) => prev !== null ? { ...prev, ...data } : prev);
+      void loadData();
     });
 
     const unsubBid = subscribe('new-bid', () => {
-      loadData();
+      void loadData();
     });
 
     const unsubAntiSniping = subscribe('anti-sniping', (data) => {
       showNotification(t('auction.antiSnipingExtension', { count: data.extensionCount }), 'warning');
-      loadData();
+      void loadData();
     });
 
     const unsubRoundComplete = subscribe('round-complete', (data) => {
       showNotification(t('auction.roundComplete', { round: data.roundNumber, count: data.winnersCount }), 'success');
-      loadData();
-      refreshBalance();
+      void loadData();
+      void refreshBalance();
     });
 
     const unsubAuctionComplete = subscribe('auction-complete', () => {
       showNotification(t('auction.auctionComplete'), 'success');
-      loadData();
-      refreshBalance();
+      void loadData();
+      void refreshBalance();
     });
 
     return () => {
@@ -134,7 +134,7 @@ export default function AuctionPage() {
   }, [subscribe, loadData, refreshBalance, showNotification, t]);
 
   const handleStartAuction = async () => {
-    if (!id) return;
+    if (!id) {return;}
 
     try {
       const started = await api.startAuction(id);
@@ -148,7 +148,7 @@ export default function AuctionPage() {
   };
 
   const handlePlaceBid = async () => {
-    if (!id || !bidAmount || !user) return;
+    if (!id || !bidAmount || !user) {return;}
 
     const amount = parseInt(bidAmount, 10);
     if (isNaN(amount) || amount <= 0) {
@@ -156,7 +156,7 @@ export default function AuctionPage() {
       return;
     }
 
-    const minBid = minWinningBid || auction?.minBidAmount || 0;
+    const minBid = minWinningBid ?? auction?.minBidAmount ?? 0;
     if (amount < minBid) {
       setError(t('auction.bidTooLow', { min: minBid }));
       return;
@@ -185,7 +185,7 @@ export default function AuctionPage() {
     setLeaderboard((prev) => {
       const filtered = prev.filter((e) => e.username !== user.username);
       const updated = [...filtered, optimisticEntry].sort((a, b) => b.amount - a.amount);
-      const itemsInRound = auction?.rounds[auction.currentRound - 1]?.itemsCount || 1;
+      const itemsInRound = auction?.rounds[auction.currentRound - 1]?.itemsCount ?? 1;
       return updated.map((e, i) => ({ ...e, rank: i + 1, isWinning: i < itemsInRound }));
     });
 
@@ -217,7 +217,7 @@ export default function AuctionPage() {
 
   const myActiveBid = myBids.find((b) => b.status === BidStatus.ACTIVE);
   const isInAntiSnipingWindow =
-    currentRound && auction && secondsLeft <= auction.antiSnipingWindowMinutes * 60;
+    currentRound !== undefined && auction !== null && secondsLeft <= auction.antiSnipingWindowMinutes * 60;
 
   if (loading) {
     return <SkeletonAuctionPage />;
@@ -227,7 +227,7 @@ export default function AuctionPage() {
     return (
       <div className="card" style={{ textAlign: 'center' }}>
         <p>{t('auction.auctionNotFound')}</p>
-        <button className="btn btn-primary" onClick={() => navigate('/auctions')}>
+        <button className="btn btn-primary" onClick={async () => await navigate('/auctions')}>
           {t('auction.backToAuctions')}
         </button>
       </div>
@@ -299,7 +299,7 @@ export default function AuctionPage() {
               <div className="round-stat-label">{t('auction.extensions')}</div>
             </div>
             <div className="round-stat">
-              <div className="round-stat-value">{minWinningBid || auction.minBidAmount} Stars</div>
+              <div className="round-stat-value">{minWinningBid ?? auction.minBidAmount} Stars</div>
               <div className="round-stat-label">{t('auction.minWinningBid')}</div>
             </div>
           </div>
@@ -326,9 +326,9 @@ export default function AuctionPage() {
                 value={bidAmount}
                 onChange={(e) => setBidAmount(e.target.value)}
                 onWheel={(e) => e.currentTarget.blur()}
-                placeholder={t('auction.min', { amount: minWinningBid || auction.minBidAmount })}
+                placeholder={t('auction.min', { amount: minWinningBid ?? auction.minBidAmount })}
                 disabled={bidding}
-                min={minWinningBid || auction.minBidAmount}
+                min={minWinningBid ?? auction.minBidAmount}
                 step={auction.minBidIncrement}
               />
               <button
@@ -341,7 +341,7 @@ export default function AuctionPage() {
             </div>
 
             <p className="text-muted" style={{ marginTop: '12px', fontSize: '14px' }}>
-              {t('auction.availableBalance', { amount: user?.balance || 0 })}
+              {t('auction.availableBalance', { amount: user?.balance ?? 0 })}
             </p>
           </div>
         </>

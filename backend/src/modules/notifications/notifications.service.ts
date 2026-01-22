@@ -39,13 +39,13 @@ interface TelegramNotificationJob {
 
 @Injectable()
 export class NotificationsService implements OnModuleInit {
-  private readonly logger = new Logger(NotificationsService.name);
-  private notificationQueue!: Queue<TelegramNotificationJob>;
-  private worker!: Worker<TelegramNotificationJob>;
-
   // Telegram rate limit: ~30 messages/second to different users
   private static readonly RATE_LIMIT = 25;
   private static readonly QUEUE_NAME = "telegram-notifications";
+
+  private readonly logger = new Logger(NotificationsService.name);
+  private notificationQueue!: Queue<TelegramNotificationJob>;
+  private worker!: Worker<TelegramNotificationJob>;
 
   constructor(
     @InjectModel(User.name) private userModel: Model<UserDocument>,
@@ -54,7 +54,7 @@ export class NotificationsService implements OnModuleInit {
     private readonly i18n: I18nService,
   ) {}
 
-  async onModuleInit() {
+  onModuleInit(): void {
     const queueConnection = this.redis.duplicate({
       maxRetriesPerRequest: null,
     });
@@ -95,7 +95,10 @@ export class NotificationsService implements OnModuleInit {
     );
 
     this.worker.on("failed", (job, err) => {
-      this.logger.warn(`Notification job ${job?.id} failed:`, err.message);
+      this.logger.warn(
+        `Notification job ${String(job?.id)} failed:`,
+        err.message,
+      );
     });
 
     this.worker.on("error", (err) => {
@@ -103,36 +106,8 @@ export class NotificationsService implements OnModuleInit {
     });
 
     this.logger.log(
-      `Notification queue initialized (${NotificationsService.RATE_LIMIT}/sec rate limit, Redis-backed)`,
+      `Notification queue initialized (${String(NotificationsService.RATE_LIMIT)}/sec rate limit, Redis-backed)`,
     );
-  }
-
-  private async processNotification(
-    data: TelegramNotificationJob,
-  ): Promise<void> {
-    try {
-      const bot = this.telegramBotService.getBot();
-      await bot.api.sendMessage(data.telegramId, data.message, {
-        parse_mode: "HTML",
-      });
-      this.logger.debug(
-        `Sent notification to Telegram user ${data.telegramId}`,
-      );
-    } catch (error) {
-      this.logger.warn(
-        `Failed to send Telegram notification to ${data.telegramId}:`,
-        error,
-      );
-      throw error; // Re-throw to trigger retry
-    }
-  }
-
-  private getLang(user: UserDocument): string {
-    return user.languageCode || "en";
-  }
-
-  private t(key: string, lang: string, args?: Record<string, unknown>): string {
-    return this.i18n.t(key, { lang, args });
   }
 
   async notifyOutbid(
@@ -140,7 +115,7 @@ export class NotificationsService implements OnModuleInit {
     data: OutbidNotificationData,
   ): Promise<void> {
     const user = await this.userModel.findById(userId);
-    if (!user?.telegramId) return;
+    if (user?.telegramId === undefined) return;
 
     const lang = this.getLang(user);
     const title = this.t("notifications.outbid.title", lang);
@@ -160,7 +135,7 @@ export class NotificationsService implements OnModuleInit {
     data: RoundWinNotificationData,
   ): Promise<void> {
     const user = await this.userModel.findById(userId);
-    if (!user?.telegramId) return;
+    if (user?.telegramId === undefined) return;
 
     const lang = this.getLang(user);
     const title = this.t("notifications.roundWin.title", lang, {
@@ -186,7 +161,7 @@ export class NotificationsService implements OnModuleInit {
     },
   ): Promise<void> {
     const user = await this.userModel.findById(userId);
-    if (!user?.telegramId) return;
+    if (user?.telegramId === undefined) return;
 
     const lang = this.getLang(user);
     const title = this.t("notifications.roundLost.title", lang, {
@@ -213,7 +188,7 @@ export class NotificationsService implements OnModuleInit {
     data: AuctionCompleteNotificationData,
   ): Promise<void> {
     const user = await this.userModel.findById(userId);
-    if (!user?.telegramId) return;
+    if (user?.telegramId === undefined) return;
 
     const lang = this.getLang(user);
     const title = this.t("notifications.auctionComplete.title", lang);
@@ -245,7 +220,7 @@ export class NotificationsService implements OnModuleInit {
     },
   ): Promise<void> {
     const user = await this.userModel.findById(userId);
-    if (!user?.telegramId) return;
+    if (user?.telegramId === undefined) return;
 
     const lang = this.getLang(user);
     const title = this.t("notifications.newRound.title", lang);
@@ -269,7 +244,7 @@ export class NotificationsService implements OnModuleInit {
     },
   ): Promise<void> {
     const user = await this.userModel.findById(userId);
-    if (!user?.telegramId) return;
+    if (user?.telegramId === undefined) return;
 
     const lang = this.getLang(user);
     const title = this.t("notifications.antiSniping.title", lang);
@@ -280,6 +255,34 @@ export class NotificationsService implements OnModuleInit {
     });
 
     await this.queueTelegramMessage(user.telegramId, `${title}\n\n${message}`);
+  }
+
+  private async processNotification(
+    data: TelegramNotificationJob,
+  ): Promise<void> {
+    try {
+      const bot = this.telegramBotService.getBot();
+      await bot.api.sendMessage(data.telegramId, data.message, {
+        parse_mode: "HTML",
+      });
+      this.logger.debug(
+        `Sent notification to Telegram user ${String(data.telegramId)}`,
+      );
+    } catch (error) {
+      this.logger.warn(
+        `Failed to send Telegram notification to ${String(data.telegramId)}:`,
+        error,
+      );
+      throw error; // Re-throw to trigger retry
+    }
+  }
+
+  private getLang(user: UserDocument): string {
+    return user.languageCode ?? "en";
+  }
+
+  private t(key: string, lang: string, args?: Record<string, unknown>): string {
+    return this.i18n.t(key, { lang, args });
   }
 
   private async queueTelegramMessage(

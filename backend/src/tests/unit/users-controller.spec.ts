@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { Test, TestingModule } from "@nestjs/testing";
+import { Test, type TestingModule } from "@nestjs/testing";
 import {
   NotFoundException,
   BadRequestException,
@@ -7,13 +7,13 @@ import {
 } from "@nestjs/common";
 import { UsersController } from "@/modules/users/users.controller";
 import { UsersService } from "@/modules/users/users.service";
-import { AuthGuard, AuthenticatedRequest } from "@/common";
-import {
+import { AuthGuard, type AuthenticatedRequest } from "@/common";
+import type {
   IBalance,
   IBalanceResponse,
   ILanguageUpdate,
 } from "@/modules/users/dto";
-import { UserDocument } from "@/schemas";
+import type { UserDocument } from "@/schemas";
 
 describe("UsersController", () => {
   let controller: UsersController;
@@ -64,7 +64,6 @@ describe("UsersController", () => {
     jest.clearAllMocks();
   });
 
-  // ==================== Get Balance Endpoint Tests ====================
   describe("GET /users/balance", () => {
     it("should get user balance with valid JWT", async () => {
       const expectedResponse: IBalanceResponse = {
@@ -151,7 +150,6 @@ describe("UsersController", () => {
     });
   });
 
-  // ==================== Update Language Endpoint Tests ====================
   describe("PUT /users/language", () => {
     it("should update language to English successfully", async () => {
       const body: ILanguageUpdate = { language: "en" };
@@ -216,7 +214,6 @@ describe("UsersController", () => {
     });
   });
 
-  // ==================== Deposit Endpoint Tests ====================
   describe("POST /users/deposit", () => {
     it("should deposit funds successfully with valid amount", async () => {
       const body: IBalance = { amount: 500 };
@@ -291,7 +288,6 @@ describe("UsersController", () => {
     });
   });
 
-  // ==================== Withdraw Endpoint Tests ====================
   describe("POST /users/withdraw", () => {
     it("should withdraw funds successfully with sufficient balance", async () => {
       const body: IBalance = { amount: 300 };
@@ -369,7 +365,6 @@ describe("UsersController", () => {
     });
   });
 
-  // ==================== Balance Operations Tests ====================
   describe("Balance Operations", () => {
     it("should return available balance correctly", async () => {
       const expectedResponse: IBalanceResponse = {
@@ -451,7 +446,6 @@ describe("UsersController", () => {
     });
   });
 
-  // ==================== Error Scenarios Tests ====================
   describe("Error Scenarios", () => {
     it("should handle 400 Bad Request validation errors", async () => {
       const body: IBalance = { amount: -100 };
@@ -495,7 +489,6 @@ describe("UsersController", () => {
     });
   });
 
-  // ==================== Integration Tests ====================
   describe("Integration Scenarios", () => {
     it("should handle full user lifecycle with multiple operations", async () => {
       // Initial balance check
@@ -505,7 +498,7 @@ describe("UsersController", () => {
       };
       mockUsersService.getBalance.mockResolvedValue(initialResponse);
 
-      let result = await controller.getBalance(mockAuthenticatedRequest);
+      const result = await controller.getBalance(mockAuthenticatedRequest);
       expect(result.balance).toBe(1000);
 
       // Deposit
@@ -561,7 +554,6 @@ describe("UsersController", () => {
     });
   });
 
-  // ==================== Request Validation Tests ====================
   describe("Request Validation", () => {
     it("should validate deposit amount is positive integer", async () => {
       const body: IBalance = { amount: -50 };
@@ -613,7 +605,6 @@ describe("UsersController", () => {
     });
   });
 
-  // ==================== Response Structure Tests ====================
   describe("Response Structure", () => {
     it("should return IBalanceResponse with correct structure for getBalance", async () => {
       const expectedResponse: IBalanceResponse = {

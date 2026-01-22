@@ -38,15 +38,19 @@ export class AuthService {
     // Find user by Telegram ID or create new
     let user = await this.userModel.findOne({ telegramId: telegramUser.id });
 
-    if (!user) {
+    if (user === null) {
       // Generate username from Telegram data
-      const username = telegramUser.username || `tg_${telegramUser.id}`;
+      const username =
+        telegramUser.username !== undefined && telegramUser.username !== ""
+          ? telegramUser.username
+          : `tg_${String(telegramUser.id)}`;
 
       // Check if username already exists (for non-Telegram users)
       const existingByUsername = await this.userModel.findOne({ username });
-      const finalUsername = existingByUsername
-        ? `tg_${telegramUser.id}`
-        : username;
+      const finalUsername =
+        existingByUsername !== null
+          ? `tg_${String(telegramUser.id)}`
+          : username;
 
       user = await this.userModel.create({
         username: finalUsername,
@@ -55,7 +59,7 @@ export class AuthService {
         lastName: telegramUser.last_name,
         photoUrl: telegramUser.photo_url,
         languageCode: telegramUser.language_code,
-        isPremium: telegramUser.is_premium || false,
+        isPremium: telegramUser.is_premium ?? false,
       });
     } else {
       // Update all Telegram fields on each login
@@ -63,8 +67,8 @@ export class AuthService {
       user.lastName = telegramUser.last_name;
       user.photoUrl = telegramUser.photo_url;
       user.languageCode = telegramUser.language_code;
-      user.isPremium = telegramUser.is_premium || false;
-      if (telegramUser.username) {
+      user.isPremium = telegramUser.is_premium ?? false;
+      if (telegramUser.username !== undefined && telegramUser.username !== "") {
         user.username = telegramUser.username;
       }
       await user.save();
@@ -112,7 +116,7 @@ export class AuthService {
       hash: initData.hash,
     };
 
-    return this.loginWithTelegramWidget(telegramUser);
+    return await this.loginWithTelegramWidget(telegramUser);
   }
 
   async validateToken(token: string): Promise<JwtPayload> {
@@ -124,7 +128,7 @@ export class AuthService {
   }
 
   async validateUser(userId: string): Promise<UserDocument | null> {
-    return this.userModel.findById(userId);
+    return await this.userModel.findById(userId);
   }
 
   async getUser(userId: string): Promise<UserDocument> {

@@ -1,5 +1,9 @@
 # Развертывание
 
+[← К README](../../README.ru.md) · [Архитектура](./architecture.md) · [API](./api.md) · [Конкурентность](./concurrency.md) · [Тестирование](./testing.md)
+
+---
+
 ## Быстрый старт
 
 ### Вариант 1: Docker Compose (Рекомендуется)

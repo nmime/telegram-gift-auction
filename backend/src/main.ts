@@ -3,11 +3,11 @@ import * as os from "os";
 import { NestFactory } from "@nestjs/core";
 import {
   FastifyAdapter,
-  NestFastifyApplication,
+  type NestFastifyApplication,
 } from "@nestjs/platform-fastify";
 import { Logger } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
-import { SwaggerModule, OpenAPIObject } from "@nestjs/swagger";
+import { SwaggerModule, type OpenAPIObject } from "@nestjs/swagger";
 import {
   AsyncApiModule,
   AsyncApiDocumentBuilder,
@@ -24,7 +24,11 @@ import * as yaml from "js-yaml";
 
 const logger = new Logger("Bootstrap");
 
-async function bootstrap() {
+interface SwaggerDocument extends OpenAPIObject {
+  servers?: { url: string }[];
+}
+
+async function bootstrap(): Promise<void> {
   const isProduction = process.env.NODE_ENV === "production";
   const app = await NestFactory.create<NestFastifyApplication>(
     AppModule,
@@ -40,7 +44,7 @@ async function bootstrap() {
   });
 
   // CORS configuration
-  const corsOrigin = configService.get<string>("CORS_ORIGIN")!;
+  const corsOrigin = configService.get<string>("CORS_ORIGIN") ?? "*";
   app.enableCors({
     origin: corsOrigin,
     credentials: true,
@@ -48,24 +52,26 @@ async function bootstrap() {
 
   app.setGlobalPrefix("api");
 
-  const port = configService.get<number>("PORT")!;
+  const port = configService.get<number>("PORT") ?? 4000;
   const nodeEnv = configService.get<string>("NODE_ENV");
   const miniAppUrl = configService.get<string>("MINI_APP_URL");
 
   // Server URL: use MINI_APP_URL in production, localhost in development
   const serverUrl =
-    nodeEnv === "production" && miniAppUrl
+    nodeEnv === "production" && miniAppUrl !== undefined && miniAppUrl !== ""
       ? miniAppUrl
-      : `http://localhost:${port}`;
+      : `http://localhost:${String(port)}`;
 
   // Load pre-generated swagger.json (generated at build time via npx nestia swagger)
   const swaggerPath = path.join(__dirname, "..", "..", "swagger.json");
   if (fs.existsSync(swaggerPath)) {
-    const document = JSON.parse(fs.readFileSync(swaggerPath, "utf-8"));
+    const document: SwaggerDocument = JSON.parse(
+      fs.readFileSync(swaggerPath, "utf-8"),
+    ) as SwaggerDocument;
     // Update server URL dynamically
     document.servers = [{ url: serverUrl }];
 
-    SwaggerModule.setup("api/docs", app, document as OpenAPIObject, {
+    SwaggerModule.setup("api/docs", app, document, {
       swaggerOptions: {
         persistAuthorization: true,
         tagsSorter: "alpha",
@@ -124,13 +130,13 @@ async function bootstrap() {
     logger.log("AsyncAPI docs loaded from pre-generated asyncapi.html");
   } else {
     // Development: generate dynamically
-    const wsServerUrl = `ws://localhost:${port}`;
+    const wsServerUrl = `ws://localhost:${String(port)}`;
 
     const asyncApiOptions = new AsyncApiDocumentBuilder()
       .setAsyncApiVersion("3.0.0")
       .setTitle("Gift Auction WebSocket API")
       .setDescription(
-        "Real-time WebSocket events for the auction system. Supports bidding (~3,000 rps × number of CPUs), countdown sync, and live auction updates.",
+        "Real-time WebSocket events for the auction system. Supports bidding (~3,000 rps x number of CPUs), countdown sync, and live auction updates.",
       )
       .setVersion("1.0.0")
       .setDefaultContentType("application/json")
@@ -141,7 +147,7 @@ async function bootstrap() {
       })
       .build();
 
-    const asyncApiDocument = await AsyncApiModule.createDocument(
+    const asyncApiDocument = AsyncApiModule.createDocument(
       app,
       asyncApiOptions,
     );
@@ -174,7 +180,7 @@ async function bootstrap() {
   const eventsGateway = app.get(EventsGateway);
   eventsGateway.setServer(io);
 
-  const shutdown = async () => {
+  const shutdown = async (): Promise<void> => {
     logger.log("Shutting down gracefully...");
 
     io.sockets.sockets.forEach((socket) => {
@@ -182,7 +188,7 @@ async function bootstrap() {
     });
 
     await new Promise<void>((resolve) => {
-      io.close(() => {
+      void io.close(() => {
         logger.log("Socket.IO server closed");
         resolve();
       });
@@ -193,15 +199,19 @@ async function bootstrap() {
     process.exit(0);
   };
 
-  process.on("SIGTERM", shutdown);
-  process.on("SIGINT", shutdown);
+  process.on("SIGTERM", () => {
+    void shutdown();
+  });
+  process.on("SIGINT", () => {
+    void shutdown();
+  });
 
   logger.log("Socket.IO server attached to HTTP server");
   const workerId = cluster.isWorker ? cluster.worker?.id : "primary";
   logger.log("Server running", {
     port,
-    docs: `http://localhost:${port}/api/docs`,
-    workerId,
+    docs: `http://localhost:${String(port)}/api/docs`,
+    workerId: String(workerId ?? "primary"),
   });
 }
 
@@ -210,14 +220,16 @@ async function bootstrap() {
  * Each worker runs a full NestJS instance, sharing the same port
  * Socket.IO Redis adapter handles cross-worker message broadcasting
  */
-function startCluster() {
-  const clusterWorkersEnv = process.env.CLUSTER_WORKERS || "0";
+function startCluster(): void {
+  const clusterWorkersEnv = process.env.CLUSTER_WORKERS ?? "0";
 
   // Support "auto" to use all available CPU cores
   let numWorkers: number;
   if (clusterWorkersEnv.toLowerCase() === "auto") {
     numWorkers = os.cpus().length;
-    logger.log(`CLUSTER_WORKERS=auto, detected ${numWorkers} CPU cores`);
+    logger.log(
+      `CLUSTER_WORKERS=auto, detected ${String(numWorkers)} CPU cores`,
+    );
   } else {
     numWorkers = parseInt(clusterWorkersEnv, 10);
   }
@@ -225,14 +237,16 @@ function startCluster() {
   // If CLUSTER_WORKERS=0 or not set, run in single-process mode
   if (numWorkers <= 0) {
     logger.log("Running in single-process mode");
-    bootstrap();
+    void bootstrap();
     return;
   }
 
   const actualWorkers = Math.min(numWorkers, os.cpus().length);
 
   if (cluster.isPrimary) {
-    logger.log(`Primary ${process.pid} starting ${actualWorkers} workers...`);
+    logger.log(
+      `Primary ${String(process.pid)} starting ${String(actualWorkers)} workers...`,
+    );
 
     // Fork workers
     for (let i = 0; i < actualWorkers; i++) {
@@ -241,20 +255,21 @@ function startCluster() {
 
     // Handle worker exit
     cluster.on("exit", (worker, code, signal) => {
+      const reason = signal !== "" ? signal : String(code);
       logger.warn(
-        `Worker ${worker.process.pid} died (${signal || code}). Restarting...`,
+        `Worker ${String(worker.process.pid)} died (${reason}). Restarting...`,
       );
       cluster.fork();
     });
 
     // Handle worker online
     cluster.on("online", (worker) => {
-      logger.log(`Worker ${worker.process.pid} is online`);
+      logger.log(`Worker ${String(worker.process.pid)} is online`);
     });
   } else {
     // Workers run the application
-    logger.log(`Worker ${process.pid} starting...`);
-    bootstrap();
+    logger.log(`Worker ${String(process.pid)} starting...`);
+    void bootstrap();
   }
 }
 

@@ -27,8 +27,8 @@ export async function waitFor(
 /**
  * Wait for an array to reach a certain length
  */
-export async function waitForCount<T>(
-  arr: T[],
+export async function waitForCount(
+  arr: unknown[],
   count: number,
   options: { timeout?: number } = {}
 ): Promise<void> {
@@ -154,13 +154,13 @@ export async function retry<T>(
   options: { maxRetries?: number; initialDelay?: number } = {}
 ): Promise<T> {
   const { maxRetries = 3, initialDelay = 100 } = options;
-  let lastError: Error | undefined;
+  let lastError: Error = new Error('Retry failed');
 
   for (let i = 0; i < maxRetries; i++) {
     try {
       return await fn();
     } catch (e) {
-      lastError = e as Error;
+      lastError = e instanceof Error ? e : new Error(String(e));
       if (i < maxRetries - 1) {
         await new Promise((r) => setTimeout(r, initialDelay * Math.pow(2, i)));
       }
@@ -186,7 +186,7 @@ export async function connectAndJoin(
   });
 
   await new Promise<void>((resolve, reject) => {
-    const timeout = setTimeout(() => reject(new Error('WebSocket connection timeout')), 5000);
+    const timeout = setTimeout(() => { reject(new Error('WebSocket connection timeout')); }, 5000);
 
     socket.on('connect', () => {
       socket.emit('join-auction', auctionId);
@@ -213,7 +213,7 @@ export function createAuctionConfig(
   title: string,
   options: {
     totalItems?: number;
-    rounds?: Array<{ itemsCount: number; durationMinutes: number }>;
+    rounds?: { itemsCount: number; durationMinutes: number }[];
     minBidAmount?: number;
     minBidIncrement?: number;
   } = {}

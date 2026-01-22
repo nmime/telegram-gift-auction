@@ -1,10 +1,10 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { Test, TestingModule } from "@nestjs/testing";
+import { Test, type TestingModule } from "@nestjs/testing";
 import { Types } from "mongoose";
 import { TransactionsController } from "@/modules/transactions/transactions.controller";
 import { TransactionsService } from "@/modules/transactions/transactions.service";
-import { AuthGuard, AuthenticatedRequest } from "@/common";
-import { TransactionType, TransactionDocument } from "@/schemas";
+import { AuthGuard, type AuthenticatedRequest } from "@/common";
+import { TransactionType, type TransactionDocument } from "@/schemas";
 
 describe("TransactionsController", () => {
   let controller: TransactionsController;

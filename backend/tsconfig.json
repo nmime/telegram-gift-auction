@@ -1,28 +1,65 @@
 {
-  "exclude": ["node_modules", "dist", "test", "scripts"],
+  "include": ["src/**/*.ts"],
+  "exclude": ["node_modules", "dist", "test", "scripts", "src/tests/**", "**/*.spec.ts", "**/*.e2e.ts"],
   "compilerOptions": {
+    // Module settings
     "module": "commonjs",
-    "declaration": true,
-    "removeComments": true,
-    "emitDecoratorMetadata": true,
-    "experimentalDecorators": true,
-    "allowSyntheticDefaultImports": true,
+    "moduleResolution": "node",
     "target": "ES2021",
-    "sourceMap": true,
-    "outDir": "./dist",
+    "lib": ["ES2021"],
     "baseUrl": "./",
+    "outDir": "./dist",
+
+    // Emit settings
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true,
+    "removeComments": true,
     "incremental": true,
-    "skipLibCheck": true,
+
+    // Strict type checking (ALL strict options enabled)
     "strict": true,
     "strictNullChecks": true,
-    "noImplicitAny": true,
+    "strictFunctionTypes": true,
     "strictBindCallApply": true,
-    "forceConsistentCasingInFileNames": true,
+    "strictPropertyInitialization": true,
+    "noImplicitAny": true,
+    "noImplicitThis": true,
+    "useUnknownInCatchVariables": true,
+    "alwaysStrict": true,
+
+    // Additional strict checks
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noImplicitReturns": true,
     "noFallthroughCasesInSwitch": true,
     "noUncheckedIndexedAccess": true,
+    "noImplicitOverride": true,
+    "allowUnusedLabels": false,
+    "allowUnreachableCode": false,
+    // Note: exactOptionalPropertyTypes and noPropertyAccessFromIndexSignature
+    // disabled due to incompatibility with Mongoose/NestJS libraries
+
+    // Module interop
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+
+    // Type checking
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+
+    // Decorators (NestJS)
+    "emitDecoratorMetadata": true,
+    "experimentalDecorators": true,
+
+    // Path aliases
     "paths": {
       "@/*": ["src/*"]
     },
+
+    // TypeScript plugins
     "plugins": [
       { "transform": "typia/lib/transform" },
       {

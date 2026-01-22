@@ -1,0 +1,202 @@
+# Artillery Stress Test Suite
+# Designed to find breaking points and test system limits
+# Run: npx artillery run test/artillery/stress-test.yml
+
+config:
+  target: "http://localhost:4000"
+  phases:
+    # Gradual ramp to extreme load
+    - name: "Initial ramp"
+      duration: 20
+      arrivalRate: 10
+      rampTo: 50
+    # Spike test
+    - name: "Spike"
+      duration: 10
+      arrivalRate: 200
+    # Recovery period
+    - name: "Recovery"
+      duration: 20
+      arrivalRate: 50
+    # Sustained high load
+    - name: "Sustained high"
+      duration: 60
+      arrivalRate: 100
+    # Extreme spike
+    - name: "Extreme spike"
+      duration: 10
+      arrivalRate: 500
+    # Final recovery
+    - name: "Final recovery"
+      duration: 20
+      arrivalRate: 20
+
+  variables:
+    depositAmount: 100000
+
+  processor: "./functions.js"
+
+  plugins:
+    expect: {}
+    metrics-by-endpoint: {}
+
+  defaults:
+    headers:
+      Content-Type: "application/json"
+
+  http:
+    timeout: 30
+    pool: 200
+
+  # Stress test thresholds (relaxed)
+  ensure:
+    p99: 5000
+    maxErrorRate: 30
+
+before:
+  flow:
+    - function: "createTestAuction"
+
+scenarios:
+  # ============================================================
+  # SCENARIO 1: Concurrent Bid Storm
+  # Simulates many users bidding simultaneously
+  # ============================================================
+  - name: "Concurrent Bid Storm"
+    weight: 50
+    flow:
+      - function: "generateUsername"
+      - post:
+          url: "/api/auth/login"
+          json:
+            username: "{{ username }}"
+          capture:
+            - json: "$.accessToken"
+              as: "token"
+          expect:
+            - statusCode: 200
+
+      - post:
+          url: "/api/users/deposit"
+          headers:
+            Authorization: "Bearer {{ token }}"
+          json:
+            amount: "{{ depositAmount }}"
+
+      - get:
+          url: "/api/auctions"
+          headers:
+            Authorization: "Bearer {{ token }}"
+          capture:
+            - json: "$[0].id"
+              as: "auctionId"
+
+      # Rapid concurrent bids
+      - loop:
+          - function: "generateBidAmount"
+          - post:
+              url: "/api/auctions/{{ auctionId }}/bid"
+              headers:
+                Authorization: "Bearer {{ token }}"
+              json:
+                amount: "{{ bidAmount }}"
+          - think: 0.05
+        count: 20
+
+  # ============================================================
+  # SCENARIO 2: Rate Limit Stress
+  # Tests rate limiting under extreme pressure
+  # ============================================================
+  - name: "Rate Limit Stress"
+    weight: 30
+    flow:
+      - function: "generateUsername"
+      - post:
+          url: "/api/auth/login"
+          json:
+            username: "{{ username }}"
+          capture:
+            - json: "$.accessToken"
+              as: "token"
+
+      - post:
+          url: "/api/users/deposit"
+          headers:
+            Authorization: "Bearer {{ token }}"
+          json:
+            amount: "{{ depositAmount }}"
+
+      - get:
+          url: "/api/auctions"
+          headers:
+            Authorization: "Bearer {{ token }}"
+          capture:
+            - json: "$[0].id"
+              as: "auctionId"
+
+      # Burst of requests with no delay
+      - loop:
+          - function: "generateBidAmount"
+          - post:
+              url: "/api/auctions/{{ auctionId }}/bid"
+              headers:
+                Authorization: "Bearer {{ token }}"
+              json:
+                amount: "{{ bidAmount }}"
+        count: 50
+
+  # ============================================================
+  # SCENARIO 3: Mixed Operations Under Load
+  # Combination of reads and writes
+  # ============================================================
+  - name: "Mixed Operations Stress"
+    weight: 20
+    flow:
+      - function: "generateUsername"
+      - post:
+          url: "/api/auth/login"
+          json:
+            username: "{{ username }}"
+          capture:
+            - json: "$.accessToken"
+              as: "token"
+
+      - post:
+          url: "/api/users/deposit"
+          headers:
+            Authorization: "Bearer {{ token }}"
+          json:
+            amount: "{{ depositAmount }}"
+
+      - get:
+          url: "/api/auctions"
+          headers:
+            Authorization: "Bearer {{ token }}"
+          capture:
+            - json: "$[0].id"
+              as: "auctionId"
+
+      - loop:
+          # Read operation
+          - get:
+              url: "/api/auctions/{{ auctionId }}/leaderboard"
+              headers:
+                Authorization: "Bearer {{ token }}"
+
+          # Write operation
+          - function: "generateBidAmount"
+          - post:
+              url: "/api/auctions/{{ auctionId }}/bid"
+              headers:
+                Authorization: "Bearer {{ token }}"
+              json:
+                amount: "{{ bidAmount }}"
+
+          # Another read
+          - get:
+              url: "/api/users/balance"
+              headers:
+                Authorization: "Bearer {{ token }}"
+
+          - think: 0.02
+        count: 25

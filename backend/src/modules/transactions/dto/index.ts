@@ -1,1 +1,1 @@
-export * from "./transaction-response.dto";
+export type * from "./transaction-response.dto";

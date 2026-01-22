@@ -1,11 +1,11 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { Test, TestingModule } from "@nestjs/testing";
+import { Test, type TestingModule } from "@nestjs/testing";
 import { JwtService } from "@nestjs/jwt";
 import { EventsGateway } from "@/modules/events/events.gateway";
 import { BidCacheService } from "@/modules/redis/bid-cache.service";
 import { redisClient } from "@/modules/redis/constants";
-import { Server, Socket } from "socket.io";
-import Redis from "ioredis";
+import type { Server, Socket } from "socket.io";
+import type Redis from "ioredis";
 
 describe("EventsGateway", () => {
   let gateway: EventsGateway;
@@ -665,10 +665,6 @@ describe("EventsGateway", () => {
         isNewBid: false,
         roundEndTime: Date.now() + 60000,
       });
-
-      // Define handlers that will be used later
-      const _joinHandler = jest.fn(); // Placeholder for join handler
-      const _connectionHandler = jest.fn(); // Placeholder for connection handler
 
       // Place multiple bids rapidly
       await Promise.all([

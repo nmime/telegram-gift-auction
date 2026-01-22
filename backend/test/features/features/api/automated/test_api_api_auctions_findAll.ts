@@ -8,7 +8,7 @@ import type { IAuctionResponse } from "../../../../../src/modules/auctions/dto";
 export const test_api_api_auctions_findAll = async (
   connection: api.IConnection,
 ) => {
-  const output: Primitive<Array<IAuctionResponse>> =
+  const output: Primitive<IAuctionResponse[]> =
     await api.functional.api.auctions.findAll(
       connection,
       typia.random<IAuctionStatusQuery>(),

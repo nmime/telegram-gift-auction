@@ -1,4 +1,4 @@
-import { defineConfig, loadEnv, PluginOption } from 'vite'
+import { defineConfig, loadEnv, type PluginOption } from 'vite'
 import react from '@vitejs/plugin-react'
 
 export default defineConfig(async ({ mode }) => {

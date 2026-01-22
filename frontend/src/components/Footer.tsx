@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next';
 
-export default function Footer() {
+export default function Footer(): React.JSX.Element {
   const { t } = useTranslation();
 
   return (

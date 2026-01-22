@@ -68,10 +68,10 @@ export class BidCacheService implements OnModuleInit {
   private readonly logger = new Logger(BidCacheService.name);
 
   // Lua script SHA hashes (loaded on init)
-  private placeBidSha: string = "";
-  private placeBidUltraFastSha: string = "";
-  private getBidInfoSha: string = "";
-  private getBalanceSha: string = "";
+  private placeBidSha = "";
+  private placeBidUltraFastSha = "";
+  private getBidInfoSha = "";
+  private getBalanceSha = "";
 
   /**
    * Lua script for atomic bid placement
@@ -304,7 +304,7 @@ export class BidCacheService implements OnModuleInit {
 
   constructor(@Inject(redisClient) private readonly redis: Redis) {}
 
-  async onModuleInit() {
+  public async onModuleInit(): Promise<void> {
     // Pre-load Lua scripts for better performance (production only)
     try {
       this.placeBidSha = (await this.redis.script(
@@ -342,43 +342,11 @@ export class BidCacheService implements OnModuleInit {
     }
   }
 
-  // ==================== Key Generators ====================
-
-  private balanceKey(auctionId: string, userId: string): string {
-    return `auction:${auctionId}:balance:${userId}`;
-  }
-
-  private bidKey(auctionId: string, userId: string): string {
-    return `auction:${auctionId}:bid:${userId}`;
-  }
-
-  private leaderboardKey(auctionId: string): string {
-    return `leaderboard:${auctionId}`;
-  }
-
-  private metaKey(auctionId: string): string {
-    return `auction:${auctionId}:meta`;
-  }
-
-  private dirtyUsersKey(auctionId: string): string {
-    return `auction:${auctionId}:dirty-users`;
-  }
-
-  private dirtyBidsKey(auctionId: string): string {
-    return `auction:${auctionId}:dirty-bids`;
-  }
-
-  private auctionKeysPattern(auctionId: string): string {
-    return `auction:${auctionId}:*`;
-  }
-
-  // ==================== Cache Warmup ====================
-
   /**
    * Initialize cache for an auction with all participant balances
    * Call this when auction starts or when a user joins
    */
-  async warmupUserBalance(
+  public async warmupUserBalance(
     auctionId: string,
     userId: string,
     available: number,
@@ -391,9 +359,9 @@ export class BidCacheService implements OnModuleInit {
   /**
    * Batch warmup for multiple users
    */
-  async warmupBalances(
+  public async warmupBalances(
     auctionId: string,
-    users: Array<{ id: string; balance: number; frozenBalance: number }>,
+    users: { id: string; balance: number; frozenBalance: number }[],
   ): Promise<void> {
     if (users.length === 0) return;
 
@@ -412,28 +380,28 @@ export class BidCacheService implements OnModuleInit {
 
     await pipeline.exec();
     this.logger.debug(
-      `Warmed up ${users.length} user balances for auction ${auctionId}`,
+      `Warmed up ${String(users.length)} user balances for auction ${auctionId}`,
     );
   }
 
   /**
    * Warmup existing bids for an auction
    */
-  async warmupBids(
+  public async warmupBids(
     auctionId: string,
-    bids: Array<{
+    bids: {
       userId: string;
       amount: number;
       createdAt: Date;
-    }>,
+    }[],
   ): Promise<void> {
     if (bids.length === 0) return;
 
     const pipeline = this.redis.pipeline();
-    const leaderboardKey = this.leaderboardKey(auctionId);
+    const leaderboardKeyStr = this.leaderboardKey(auctionId);
 
     // Clear existing leaderboard
-    pipeline.del(leaderboardKey);
+    pipeline.del(leaderboardKeyStr);
 
     for (const bid of bids) {
       const bidKeyStr = this.bidKey(auctionId, bid.userId);
@@ -452,17 +420,19 @@ export class BidCacheService implements OnModuleInit {
       // Add to leaderboard with encoded score
       const invertedTimestamp = maxTimestamp - timestamp;
       const score = bid.amount * timestampMultiplier + invertedTimestamp;
-      pipeline.zadd(leaderboardKey, score, bid.userId);
+      pipeline.zadd(leaderboardKeyStr, score, bid.userId);
     }
 
     await pipeline.exec();
-    this.logger.debug(`Warmed up ${bids.length} bids for auction ${auctionId}`);
+    this.logger.debug(
+      `Warmed up ${String(bids.length)} bids for auction ${auctionId}`,
+    );
   }
 
   /**
    * Set auction metadata (call on auction start and round changes)
    */
-  async setAuctionMeta(
+  public async setAuctionMeta(
     auctionId: string,
     meta: {
       minBidAmount: number;
@@ -485,15 +455,15 @@ export class BidCacheService implements OnModuleInit {
       "currentRound",
       meta.currentRound,
       "roundEndTime",
-      meta.roundEndTime || 0,
+      meta.roundEndTime ?? 0,
       "itemsInRound",
-      meta.itemsInRound || 0,
+      meta.itemsInRound ?? 0,
       "antiSnipingWindowMs",
-      meta.antiSnipingWindowMs || 0,
+      meta.antiSnipingWindowMs ?? 0,
       "antiSnipingExtensionMs",
-      meta.antiSnipingExtensionMs || 0,
+      meta.antiSnipingExtensionMs ?? 0,
       "maxExtensions",
-      meta.maxExtensions || 0,
+      meta.maxExtensions ?? 0,
       "warmedAt",
       Date.now(),
     );
@@ -503,7 +473,7 @@ export class BidCacheService implements OnModuleInit {
    * Get cached auction metadata (avoids MongoDB query)
    * Returns null if cache not warmed
    */
-  async getAuctionMeta(auctionId: string): Promise<{
+  public async getAuctionMeta(auctionId: string): Promise<{
     minBidAmount: number;
     status: string;
     currentRound: number;
@@ -516,26 +486,26 @@ export class BidCacheService implements OnModuleInit {
     const key = this.metaKey(auctionId);
     const data = await this.redis.hgetall(key);
 
-    if (!data || Object.keys(data).length === 0) {
+    if (Object.keys(data).length === 0) {
       return null;
     }
 
     return {
-      minBidAmount: parseInt(data.minBidAmount || "0", 10),
-      status: data.status || "unknown",
-      currentRound: parseInt(data.currentRound || "0", 10),
-      roundEndTime: parseInt(data.roundEndTime || "0", 10),
-      itemsInRound: parseInt(data.itemsInRound || "0", 10),
-      antiSnipingWindowMs: parseInt(data.antiSnipingWindowMs || "0", 10),
-      antiSnipingExtensionMs: parseInt(data.antiSnipingExtensionMs || "0", 10),
-      maxExtensions: parseInt(data.maxExtensions || "0", 10),
+      minBidAmount: parseInt(data.minBidAmount ?? "0", 10),
+      status: data.status ?? "unknown",
+      currentRound: parseInt(data.currentRound ?? "0", 10),
+      roundEndTime: parseInt(data.roundEndTime ?? "0", 10),
+      itemsInRound: parseInt(data.itemsInRound ?? "0", 10),
+      antiSnipingWindowMs: parseInt(data.antiSnipingWindowMs ?? "0", 10),
+      antiSnipingExtensionMs: parseInt(data.antiSnipingExtensionMs ?? "0", 10),
+      maxExtensions: parseInt(data.maxExtensions ?? "0", 10),
     };
   }
 
   /**
    * Update round end time (for anti-sniping extensions)
    */
-  async updateRoundEndTime(
+  public async updateRoundEndTime(
     auctionId: string,
     newEndTime: number,
   ): Promise<void> {
@@ -543,14 +513,12 @@ export class BidCacheService implements OnModuleInit {
     await this.redis.hset(key, "roundEndTime", newEndTime);
   }
 
-  // ==================== Core Bid Operations ====================
-
   /**
    * Place a bid using Lua script (atomic, ~1-2ms)
    *
    * @returns PlaceBidResult with success status and details
    */
-  async placeBid(
+  public async placeBid(
     auctionId: string,
     userId: string,
     amount: number,
@@ -598,22 +566,23 @@ export class BidCacheService implements OnModuleInit {
 
       // Map error codes to messages
       const errorMessages: Record<string, string> = {
-        MIN_BID: `Minimum bid is ${minBidAmount}`,
+        MIN_BID: `Minimum bid is ${String(minBidAmount)}`,
         BID_TOO_LOW: "Bid must be higher than current bid",
         INSUFFICIENT_BALANCE: "Insufficient balance",
       };
 
       return {
         success: false,
-        error: errorMessages[String(errorOrOk)] || "Unknown error",
+        error: errorMessages[String(errorOrOk)] ?? "Unknown error",
         previousAmount,
       };
     } catch (error) {
       // Script not loaded, reload and retry
-      if ((error as Error).message?.includes("NOSCRIPT")) {
+      const err = error as Error;
+      if (err.message.includes("NOSCRIPT")) {
         this.logger.warn("Lua script not found, reloading...");
         await this.onModuleInit();
-        return this.placeBid(auctionId, userId, amount, minBidAmount);
+        return await this.placeBid(auctionId, userId, amount, minBidAmount);
       }
       throw error;
     }
@@ -635,7 +604,7 @@ export class BidCacheService implements OnModuleInit {
    *
    * Returns all auction meta fields to eliminate separate getAuctionMeta call
    */
-  async placeBidUltraFast(
+  public async placeBidUltraFast(
     auctionId: string,
     userId: string,
     amount: number,
@@ -704,7 +673,7 @@ export class BidCacheService implements OnModuleInit {
 
       return {
         success: false,
-        error: errorMessages[errorCode] || `Unknown error: ${errorCode}`,
+        error: errorMessages[errorCode] ?? `Unknown error: ${errorCode}`,
         previousAmount: previousAmount as number,
         needsWarmup:
           errorCode === "NOT_WARMED" || errorCode === "USER_NOT_WARMED",
@@ -716,10 +685,11 @@ export class BidCacheService implements OnModuleInit {
         currentRound: currentRound as number,
       };
     } catch (error) {
-      if ((error as Error).message?.includes("NOSCRIPT")) {
+      const err = error as Error;
+      if (err.message.includes("NOSCRIPT")) {
         this.logger.warn("Lua script not found, reloading...");
         await this.onModuleInit();
-        return this.placeBidUltraFast(auctionId, userId, amount);
+        return await this.placeBidUltraFast(auctionId, userId, amount);
       }
       throw error;
     }
@@ -728,7 +698,7 @@ export class BidCacheService implements OnModuleInit {
   /**
    * Get user's bid info with rank
    */
-  async getBidInfo(
+  public async getBidInfo(
     auctionId: string,
     userId: string,
   ): Promise<{ amount: number; createdAt: Date | null; rank: number | null }> {
@@ -751,9 +721,10 @@ export class BidCacheService implements OnModuleInit {
         rank: rank >= 0 ? rank : null,
       };
     } catch (error) {
-      if ((error as Error).message?.includes("NOSCRIPT")) {
+      const err = error as Error;
+      if (err.message.includes("NOSCRIPT")) {
         await this.onModuleInit();
-        return this.getBidInfo(auctionId, userId);
+        return await this.getBidInfo(auctionId, userId);
       }
       throw error;
     }
@@ -762,7 +733,10 @@ export class BidCacheService implements OnModuleInit {
   /**
    * Get user's cached balance for an auction
    */
-  async getBalance(auctionId: string, userId: string): Promise<CachedBalance> {
+  public async getBalance(
+    auctionId: string,
+    userId: string,
+  ): Promise<CachedBalance> {
     try {
       const result = (await this.redis.evalsha(
         this.getBalanceSha,
@@ -771,38 +745,37 @@ export class BidCacheService implements OnModuleInit {
       )) as number[];
 
       return {
-        available: result[0] || 0,
-        frozen: result[1] || 0,
+        available: result[0] ?? 0,
+        frozen: result[1] ?? 0,
       };
     } catch (error) {
-      if ((error as Error).message?.includes("NOSCRIPT")) {
+      const err = error as Error;
+      if (err.message.includes("NOSCRIPT")) {
         await this.onModuleInit();
-        return this.getBalance(auctionId, userId);
+        return await this.getBalance(auctionId, userId);
       }
       throw error;
     }
   }
 
-  // ==================== Sync Operations ====================
-
   /**
    * Get all dirty (modified) user IDs for sync
    */
-  async getDirtyUserIds(auctionId: string): Promise<string[]> {
-    return this.redis.smembers(this.dirtyUsersKey(auctionId));
+  public async getDirtyUserIds(auctionId: string): Promise<string[]> {
+    return await this.redis.smembers(this.dirtyUsersKey(auctionId));
   }
 
   /**
    * Get all dirty bid user IDs for sync
    */
-  async getDirtyBidUserIds(auctionId: string): Promise<string[]> {
-    return this.redis.smembers(this.dirtyBidsKey(auctionId));
+  public async getDirtyBidUserIds(auctionId: string): Promise<string[]> {
+    return await this.redis.smembers(this.dirtyBidsKey(auctionId));
   }
 
   /**
    * Get all cached data for sync to MongoDB
    */
-  async getSyncData(auctionId: string): Promise<CacheSyncData> {
+  public async getSyncData(auctionId: string): Promise<CacheSyncData> {
     const dirtyUsers = await this.getDirtyUserIds(auctionId);
     const dirtyBids = await this.getDirtyBidUserIds(auctionId);
 
@@ -812,18 +785,18 @@ export class BidCacheService implements OnModuleInit {
     // Fetch balances
     if (dirtyUsers.length > 0) {
       const pipeline = this.redis.pipeline();
-      for (const userId of dirtyUsers) {
-        pipeline.hgetall(this.balanceKey(auctionId, userId));
+      for (const usrId of dirtyUsers) {
+        pipeline.hgetall(this.balanceKey(auctionId, usrId));
       }
       const results = await pipeline.exec();
 
       for (let i = 0; i < dirtyUsers.length; i++) {
-        const userId = dirtyUsers[i];
-        const result = results?.[i]?.[1] as Record<string, string> | null;
-        if (result && userId) {
-          balances.set(userId, {
-            available: parseInt(result.available || "0", 10),
-            frozen: parseInt(result.frozen || "0", 10),
+        const usrId = dirtyUsers[i];
+        const resultItem = results?.[i]?.[1] as Record<string, string> | null;
+        if (resultItem !== null && usrId !== undefined) {
+          balances.set(usrId, {
+            available: parseInt(resultItem.available ?? "0", 10),
+            frozen: parseInt(resultItem.frozen ?? "0", 10),
           });
         }
       }
@@ -832,19 +805,19 @@ export class BidCacheService implements OnModuleInit {
     // Fetch bids
     if (dirtyBids.length > 0) {
       const pipeline = this.redis.pipeline();
-      for (const userId of dirtyBids) {
-        pipeline.hgetall(this.bidKey(auctionId, userId));
+      for (const usrId of dirtyBids) {
+        pipeline.hgetall(this.bidKey(auctionId, usrId));
       }
       const results = await pipeline.exec();
 
       for (let i = 0; i < dirtyBids.length; i++) {
-        const userId = dirtyBids[i];
-        const result = results?.[i]?.[1] as Record<string, string> | null;
-        if (result && result.amount && userId) {
-          bids.set(userId, {
-            amount: parseInt(result.amount, 10),
-            createdAt: parseInt(result.createdAt || "0", 10),
-            version: parseInt(result.version || "0", 10),
+        const usrId = dirtyBids[i];
+        const resultItem = results?.[i]?.[1] as Record<string, string> | null;
+        if (resultItem?.amount !== undefined && usrId !== undefined) {
+          bids.set(usrId, {
+            amount: parseInt(resultItem.amount, 10),
+            createdAt: parseInt(resultItem.createdAt ?? "0", 10),
+            version: parseInt(resultItem.version ?? "0", 10),
           });
         }
       }
@@ -856,7 +829,7 @@ export class BidCacheService implements OnModuleInit {
   /**
    * Clear dirty flags after successful sync
    */
-  async clearDirtyFlags(auctionId: string): Promise<void> {
+  public async clearDirtyFlags(auctionId: string): Promise<void> {
     await this.redis.del(
       this.dirtyUsersKey(auctionId),
       this.dirtyBidsKey(auctionId),
@@ -866,7 +839,10 @@ export class BidCacheService implements OnModuleInit {
   /**
    * Clear specific dirty users after partial sync
    */
-  async clearDirtyUsers(auctionId: string, userIds: string[]): Promise<void> {
+  public async clearDirtyUsers(
+    auctionId: string,
+    userIds: string[],
+  ): Promise<void> {
     if (userIds.length === 0) return;
     await this.redis.srem(this.dirtyUsersKey(auctionId), ...userIds);
   }
@@ -874,26 +850,27 @@ export class BidCacheService implements OnModuleInit {
   /**
    * Clear specific dirty bids after partial sync
    */
-  async clearDirtyBids(auctionId: string, userIds: string[]): Promise<void> {
+  public async clearDirtyBids(
+    auctionId: string,
+    userIds: string[],
+  ): Promise<void> {
     if (userIds.length === 0) return;
     await this.redis.srem(this.dirtyBidsKey(auctionId), ...userIds);
   }
 
-  // ==================== Leaderboard Operations ====================
-
   /**
    * Get top N from leaderboard (delegates to existing LeaderboardService pattern)
    */
-  async getTopBidders(
+  public async getTopBidders(
     auctionId: string,
     count: number,
-    offset: number = 0,
+    offset = 0,
   ): Promise<
-    Array<{
+    {
       userId: string;
       amount: number;
       createdAt: Date;
-    }>
+    }[]
   > {
     const key = this.leaderboardKey(auctionId);
     const results = await this.redis.zrevrange(
@@ -903,21 +880,20 @@ export class BidCacheService implements OnModuleInit {
       "WITHSCORES",
     );
 
-    const entries: Array<{ userId: string; amount: number; createdAt: Date }> =
-      [];
+    const entries: { userId: string; amount: number; createdAt: Date }[] = [];
 
     for (let i = 0; i < results.length; i += 2) {
-      const userId = results[i];
-      const score = parseFloat(results[i + 1] || "0");
+      const usrId = results[i];
+      const score = parseFloat(results[i + 1] ?? "0");
 
-      if (!userId) continue;
+      if (usrId === undefined) continue;
 
       const amount = Math.floor(score / timestampMultiplier);
       const invertedTimestamp = score % timestampMultiplier;
       const timestamp = maxTimestamp - invertedTimestamp;
 
       entries.push({
-        userId,
+        userId: usrId,
         amount,
         createdAt: new Date(timestamp),
       });
@@ -929,14 +905,14 @@ export class BidCacheService implements OnModuleInit {
   /**
    * Get total number of bidders
    */
-  async getTotalBidders(auctionId: string): Promise<number> {
-    return this.redis.zcard(this.leaderboardKey(auctionId));
+  public async getTotalBidders(auctionId: string): Promise<number> {
+    return await this.redis.zcard(this.leaderboardKey(auctionId));
   }
 
   /**
    * Remove users from leaderboard (e.g., after winning)
    */
-  async removeFromLeaderboard(
+  public async removeFromLeaderboard(
     auctionId: string,
     userIds: string[],
   ): Promise<void> {
@@ -944,17 +920,15 @@ export class BidCacheService implements OnModuleInit {
     await this.redis.zrem(this.leaderboardKey(auctionId), ...userIds);
   }
 
-  // ==================== Cleanup ====================
-
   /**
    * Clear all cache data for an auction
    */
-  async clearAuctionCache(auctionId: string): Promise<void> {
+  public async clearAuctionCache(auctionId: string): Promise<void> {
     const pattern = this.auctionKeysPattern(auctionId);
-    const leaderboardKey = this.leaderboardKey(auctionId);
+    const leaderboardKeyStr = this.leaderboardKey(auctionId);
 
     let cursor = "0";
-    const keysToDelete: string[] = [leaderboardKey];
+    const keysToDelete: string[] = [leaderboardKeyStr];
 
     do {
       const [newCursor, keys] = await this.redis.scan(
@@ -978,16 +952,44 @@ export class BidCacheService implements OnModuleInit {
     }
 
     this.logger.debug(
-      `Cleared ${keysToDelete.length} keys for auction ${auctionId}`,
+      `Cleared ${String(keysToDelete.length)} keys for auction ${auctionId}`,
     );
   }
 
   /**
    * Check if auction cache is warmed up
    */
-  async isCacheWarmed(auctionId: string): Promise<boolean> {
-    const metaKey = this.metaKey(auctionId);
-    const exists = await this.redis.exists(metaKey);
+  public async isCacheWarmed(auctionId: string): Promise<boolean> {
+    const metaKeyStr = this.metaKey(auctionId);
+    const exists = await this.redis.exists(metaKeyStr);
     return exists === 1;
+  }
+
+  private balanceKey(auctionId: string, userId: string): string {
+    return `auction:${auctionId}:balance:${userId}`;
+  }
+
+  private bidKey(auctionId: string, userId: string): string {
+    return `auction:${auctionId}:bid:${userId}`;
+  }
+
+  private leaderboardKey(auctionId: string): string {
+    return `leaderboard:${auctionId}`;
+  }
+
+  private metaKey(auctionId: string): string {
+    return `auction:${auctionId}:meta`;
+  }
+
+  private dirtyUsersKey(auctionId: string): string {
+    return `auction:${auctionId}:dirty-users`;
+  }
+
+  private dirtyBidsKey(auctionId: string): string {
+    return `auction:${auctionId}:dirty-bids`;
+  }
+
+  private auctionKeysPattern(auctionId: string): string {
+    return `auction:${auctionId}:*`;
   }
 }

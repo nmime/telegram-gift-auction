@@ -1,2 +1,2 @@
 export * from "./audit-query.dto";
-export * from "./audit-response.dto";
+export type * from "./audit-response.dto";

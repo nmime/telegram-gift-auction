@@ -1,5 +1,5 @@
 import type { IUserBidResponse } from "@/modules/bids";
-import { AuctionStatus } from "@/schemas";
+import type { AuctionStatus } from "@/schemas";
 
 /**
  * Round configuration in auction response

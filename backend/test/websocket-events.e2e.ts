@@ -86,7 +86,7 @@ async function testAuctionUpdateEvent(): Promise<void> {
     'auction-update',
     1,
     { timeout: 5000 }
-  ).catch(() => [] as Array<{ status: string }>); // Don't fail if no events
+  ).catch(() => [] as { status: string }[]); // Don't fail if no events
 
   // Start auction - should trigger update
   await api.functional.api.auctions.start(adminConn, auction.id);

@@ -2,11 +2,9 @@
  * WebSocket Event DTOs for AsyncAPI documentation
  * Schemas are generated automatically via typia (same as Nestia)
  */
-import { tags } from "typia";
+import type { tags } from "typia";
 
-// ============================================
 // Client → Server Events (Subscribe)
-// ============================================
 
 /**
  * JWT token for socket authentication
@@ -47,9 +45,7 @@ export interface AuctionIdPayload {
   auctionId: string;
 }
 
-// ============================================
 // Server → Client Events (Publish)
-// ============================================
 
 /**
  * Response to 'auth' event

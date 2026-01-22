@@ -1,0 +1,155 @@
+# Artillery WebSocket/Socket.IO Test Suite
+# Tests real-time auction updates via WebSocket
+# Run: npx artillery run test/artillery/websocket-test.yml
+
+config:
+  target: "http://localhost:4000"
+  phases:
+    - name: "Warmup"
+      duration: 10
+      arrivalRate: 2
+    - name: "Ramp up connections"
+      duration: 30
+      arrivalRate: 5
+      rampTo: 20
+    - name: "Sustained connections"
+      duration: 60
+      arrivalRate: 20
+    - name: "Peak connections"
+      duration: 30
+      arrivalRate: 50
+    - name: "Cool down"
+      duration: 10
+      arrivalRate: 5
+
+  processor: "./websocket-functions.js"
+
+  plugins:
+    expect: {}
+
+  engines:
+    socketio:
+      transports: ["websocket"]
+
+before:
+  flow:
+    - function: "setupWsTest"
+
+environments:
+    # Quick connection test
+    smoke:
+      phases:
+        - duration: 10
+          arrivalRate: 2
+
+    # Standard load
+    load:
+      phases:
+        - duration: 30
+          arrivalRate: 10
+        - duration: 60
+          arrivalRate: 30
+        - duration: 30
+          arrivalRate: 10
+
+    # Stress test connections
+    stress:
+      phases:
+        - duration: 20
+          arrivalRate: 20
+          rampTo: 100
+        - duration: 60
+          arrivalRate: 100
+        - duration: 20
+          arrivalRate: 50
+
+scenarios:
+  # ============================================================
+  # SCENARIO 1: WebSocket Connection & Authentication
+  # ============================================================
+  - name: "WebSocket Connection Flow"
+    engine: socketio
+    weight: 40
+    beforeScenario: "beforeScenario"
+    flow:
+      # Connect to WebSocket
+      - emit:
+          channel: "auth"
+          data: "{{ token }}"
+          response:
+            channel: "auth-response"
+            data:
+              success: true
+
+      - think: 1
+
+      # Join auction room
+      - emit:
+          channel: "join-auction"
+          data: "{{ auctionId }}"
+          response:
+            channel: "join-auction-response"
+
+      - think: 2
+
+      # Listen for updates
+      - loop:
+          - think: 5
+        count: 10
+
+  # ============================================================
+  # SCENARIO 2: Real-time Bid Monitoring
+  # ============================================================
+  - name: "Bid Monitoring"
+    engine: socketio
+    weight: 30
+    beforeScenario: "beforeScenario"
+    flow:
+      - emit:
+          channel: "auth"
+          data: "{{ token }}"
+          response:
+            channel: "auth-response"
+
+      - emit:
+          channel: "join-auction"
+          data: "{{ auctionId }}"
+
+      # Monitor for new bids
+      - loop:
+          - think: 2
+        count: 30
+
+  # ============================================================
+  # SCENARIO 3: WebSocket Bidding
+  # Place bids via WebSocket for lower latency
+  # ============================================================
+  - name: "WebSocket Bidding"
+    engine: socketio
+    weight: 30
+    beforeScenario: "beforeScenario"
+    flow:
+      - emit:
+          channel: "auth"
+          data: "{{ token }}"
+          response:
+            channel: "auth-response"
+
+      - emit:
+          channel: "join-auction"
+          data: "{{ auctionId }}"
+
+      - think: 1
+
+      # Place bids via WebSocket
+      - loop:
+          - function: "generateWsBidAmount"
+          - emit:
+              channel: "place-bid"
+              data:
+                auctionId: "{{ auctionId }}"
+                amount: "{{ bidAmount }}"
+              response:
+                channel: "bid-response"
+          - think: 0.5
+        count: 10

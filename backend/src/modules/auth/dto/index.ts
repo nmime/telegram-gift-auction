@@ -1,2 +1,2 @@
-export * from "./auth-response.dto";
-export * from "./telegram-auth.dto";
+export type * from "./auth-response.dto";
+export type * from "./telegram-auth.dto";

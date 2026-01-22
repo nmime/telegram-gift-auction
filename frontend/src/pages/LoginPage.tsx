@@ -3,11 +3,11 @@ import { useTranslation } from 'react-i18next';
 import { useAuth } from '../hooks/useAuth';
 import type { TelegramWidgetUser } from '../types';
 
-const BOT_USERNAME = import.meta.env.VITE_BOT_USERNAME || '';
+const BOT_USERNAME: string = (import.meta.env.VITE_BOT_USERNAME as string | undefined) ?? '';
 const isLocalhost = typeof window !== 'undefined' &&
   (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
 
-export default function LoginPage() {
+export default function LoginPage(): React.JSX.Element {
   const { t } = useTranslation();
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -22,7 +22,7 @@ export default function LoginPage() {
     try {
       await loginWithTelegramWidget(user);
     } catch (err) {
-      setError((err as Error).message || t('auth.loginFailed'));
+      setError((err as Error).message !== '' ? (err as Error).message : t('auth.loginFailed'));
     } finally {
       setLoading(false);
     }
@@ -30,13 +30,13 @@ export default function LoginPage() {
 
   useEffect(() => {
     // Only show widget if not in Telegram Mini App and bot username is configured
-    if (isTelegramMiniApp || !BOT_USERNAME || !telegramWidgetRef.current) {
+    if (isTelegramMiniApp || BOT_USERNAME === '' || telegramWidgetRef.current === null) {
       setWidgetLoading(false);
       return;
     }
 
     // Add the Telegram callback to window
-    (window as Window & { onTelegramAuth?: (user: TelegramWidgetUser) => void }).onTelegramAuth = handleTelegramAuth;
+    (window as Window & { onTelegramAuth?: (user: TelegramWidgetUser) => Promise<void> }).onTelegramAuth = handleTelegramAuth;
 
     // Create Telegram Login Widget script
     const script = document.createElement('script');
@@ -91,7 +91,7 @@ export default function LoginPage() {
         </p>
 
         {/* Telegram Login Widget */}
-        {!BOT_USERNAME ? (
+        {BOT_USERNAME === '' ? (
           <div style={{ padding: '12px', backgroundColor: 'rgba(255,0,0,0.1)', borderRadius: '8px' }}>
             <p className="text-danger" style={{ textAlign: 'center', margin: 0 }}>
               {t('auth.botNotConfigured')}
@@ -129,7 +129,7 @@ export default function LoginPage() {
                 {t('auth.loggingIn')}
               </p>
             )}
-            {error && (
+            {error !== '' && (
               <div style={{ marginTop: '16px', padding: '12px', backgroundColor: 'rgba(255,0,0,0.1)', borderRadius: '8px' }}>
                 <p className="text-danger" style={{ textAlign: 'center', margin: 0 }}>
                   {error}

@@ -1,0 +1,54 @@
+# Artillery WebSocket MAX Throughput Test
+# No artificial delays - pure stress test
+# Run: npx artillery run test/artillery/websocket-stress.yml
+
+config:
+  target: "http://localhost:4000"
+  phases:
+    - name: "Ramp to max"
+      duration: 20
+      arrivalRate: 50
+      rampTo: 200
+    - name: "Sustained max"
+      duration: 30
+      arrivalRate: 200
+    - name: "Peak burst"
+      duration: 10
+      arrivalRate: 500
+
+  processor: "./websocket-functions.js"
+
+  engines:
+    socketio:
+      transports: ["websocket"]
+
+before:
+  flow:
+    - function: "setupWsTest"
+
+scenarios:
+  # High-frequency emit test - NO DELAYS
+  - name: "Max Throughput Test"
+    engine: socketio
+    weight: 100
+    beforeScenario: "beforeScenario"
+    flow:
+      # Auth
+      - emit:
+          channel: "auth"
+          data: "{{ token }}"
+
+      # Join auction
+      - emit:
+          channel: "join-auction"
+          data: "{{ auctionId }}"
+
+      # Rapid fire emits - NO THINK TIME
+      - loop:
+          - function: "generateWsBidAmount"
+          - emit:
+              channel: "place-bid"
+              data:
+                auctionId: "{{ auctionId }}"
+                amount: "{{ bidAmount }}"
+        count: 50

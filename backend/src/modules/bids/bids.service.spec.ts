@@ -1,4 +1,4 @@
-import { Test, TestingModule } from "@nestjs/testing";
+import { Test, type TestingModule } from "@nestjs/testing";
 import { getModelToken } from "@nestjs/mongoose";
 import { Types } from "mongoose";
 import { BidsService } from "./bids.service";
@@ -607,8 +607,8 @@ describe("BidsService", () => {
 
       const result = await service.getByAuction(auctionId);
 
-      expect(result && result[0]).toHaveProperty("wonRound", 2);
-      expect(result && result[0]).toHaveProperty("itemNumber", 10);
+      expect(result?.[0]).toHaveProperty("wonRound", 2);
+      expect(result?.[0]).toHaveProperty("itemNumber", 10);
     });
 
     it("should handle bids with null optional fields", async () => {

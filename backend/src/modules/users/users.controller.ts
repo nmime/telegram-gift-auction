@@ -27,7 +27,7 @@ export class UsersController {
   async getBalance(
     @Req() req: AuthenticatedRequest,
   ): Promise<IBalanceResponse> {
-    return this.usersService.getBalance(req.user.sub);
+    return await this.usersService.getBalance(req.user.sub);
   }
 
   /**

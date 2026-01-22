@@ -1,14 +1,19 @@
 # Architecture
 
-## ⚡ Performance Highlights
+[← Back to README](../README.md) · [API](./api.md) · [Concurrency](./concurrency.md) · [Testing](./testing.md) · [Deployment](./deployment.md)
 
-| Feature | Throughput | Latency |
-|---------|------------|---------|
-| **WebSocket Bidding** | **~3,000 rps × number of CPUs** | p99 < 5ms |
-| HTTP Fast Bid (Redis) | ~500 rps × number of CPUs | p99 < 20ms |
-| Standard Bid (MongoDB) | ~20 bids/sec | p99 < 4s |
+---
 
-**Cluster Mode**: Set `CLUSTER_WORKERS=4` for multi-core scaling (linear throughput increase).
+## Performance Highlights (Single Process)
+
+| Feature | Peak | Sustained | Latency |
+|---------|------|-----------|---------|
+| **WebSocket** | **63,000 emit/s** | 43,000/s | 0ms |
+| HTTP (raw) | 600 req/s | 140 req/s | 18ms |
+| HTTP (rate limited) | 138 req/s | 138 req/s | 18ms |
+
+**Cluster Mode**: Set `CLUSTER_WORKERS=auto` for multi-core scaling.
+Full benchmarks: [BENCHMARK_REPORT.md](../backend/test/artillery/BENCHMARK_REPORT.md)
 
 ## System Overview
 

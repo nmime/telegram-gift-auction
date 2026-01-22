@@ -1,0 +1,298 @@
+# Artillery Edge Cases & Validation Test Suite
+# Tests error handling, validation, and edge cases
+# Run: npx artillery run test/artillery/edge-cases.yml
+
+config:
+  target: "http://localhost:4000"
+  phases:
+    - name: "Edge case testing"
+      duration: 60
+      arrivalRate: 5
+
+  processor: "./edge-case-functions.js"
+
+  plugins:
+    expect: {}
+
+  defaults:
+    headers:
+      Content-Type: "application/json"
+
+  http:
+    timeout: 10
+
+before:
+  flow:
+    - function: "setupEdgeCaseTest"
+
+scenarios:
+  # ============================================================
+  # SCENARIO 1: Invalid Authentication
+  # ============================================================
+  - name: "Invalid Auth Tests"
+    weight: 15
+    flow:
+      # Test with invalid token
+      - post:
+          url: "/api/auctions/{{ auctionId }}/bid"
+          headers:
+            Authorization: "Bearer invalid_token_12345"
+          json:
+            amount: 1000
+          expect:
+            - statusCode: 401
+
+      # Test without token
+      - post:
+          url: "/api/auctions/{{ auctionId }}/bid"
+          json:
+            amount: 1000
+          expect:
+            - statusCode: 401
+
+      # Test with malformed token
+      - post:
+          url: "/api/auctions/{{ auctionId }}/bid"
+          headers:
+            Authorization: "NotBearer token"
+          json:
+            amount: 1000
+          expect:
+            - statusCode: 401
+
+  # ============================================================
+  # SCENARIO 2: Invalid Bid Amounts
+  # ============================================================
+  - name: "Invalid Bid Amount Tests"
+    weight: 20
+    flow:
+      - function: "generateUsername"
+      - function: "loginUser"
+
+      - post:
+          url: "/api/users/deposit"
+          headers:
+            Authorization: "Bearer {{ token }}"
+          json:
+            amount: 50000
+
+      # Zero bid
+      - post:
+          url: "/api/auctions/{{ auctionId }}/bid"
+          headers:
+            Authorization: "Bearer {{ token }}"
+          json:
+            amount: 0
+          expect:
+            - statusCode: 400
+
+      # Negative bid
+      - post:
+          url: "/api/auctions/{{ auctionId }}/bid"
+          headers:
+            Authorization: "Bearer {{ token }}"
+          json:
+            amount: -100
+          expect:
+            - statusCode: 400
+
+      # Decimal bid (if integers required)
+      - post:
+          url: "/api/auctions/{{ auctionId }}/bid"
+          headers:
+            Authorization: "Bearer {{ token }}"
+          json:
+            amount: 100.5
+
+      # Very small bid (below minimum)
+      - post:
+          url: "/api/auctions/{{ auctionId }}/bid"
+          headers:
+            Authorization: "Bearer {{ token }}"
+          json:
+            amount: 1
+          expect:
+            - statusCode: 400
+
+      # String instead of number
+      - post:
+          url: "/api/auctions/{{ auctionId }}/bid"
+          headers:
+            Authorization: "Bearer {{ token }}"
+          json:
+            amount: "not_a_number"
+          expect:
+            - statusCode: 400
+
+  # ============================================================
+  # SCENARIO 3: Insufficient Funds
+  # ============================================================
+  - name: "Insufficient Funds Tests"
+    weight: 15
+    flow:
+      - function: "generateUsername"
+      - function: "loginUser"
+
+      # Small deposit
+      - post:
+          url: "/api/users/deposit"
+          headers:
+            Authorization: "Bearer {{ token }}"
+          json:
+            amount: 100
+
+      # Try to bid more than balance
+      - post:
+          url: "/api/auctions/{{ auctionId }}/bid"
+          headers:
+            Authorization: "Bearer {{ token }}"
+          json:
+            amount: 10000000
+          expect:
+            - statusCode: 400
+
+  # ============================================================
+  # SCENARIO 4: Invalid Auction ID
+  # ============================================================
+  - name: "Invalid Auction Tests"
+    weight: 15
+    flow:
+      - function: "generateUsername"
+      - function: "loginUser"
+
+      - post:
+          url: "/api/users/deposit"
+          headers:
+            Authorization: "Bearer {{ token }}"
+          json:
+            amount: 50000
+
+      # Non-existent auction
+      - post:
+          url: "/api/auctions/000000000000000000000000/bid"
+          headers:
+            Authorization: "Bearer {{ token }}"
+          json:
+            amount: 1000
+          expect:
+            - statusCode:
+                - 400
+                - 404
+
+      # Invalid auction ID format
+      - post:
+          url: "/api/auctions/invalid-id/bid"
+          headers:
+            Authorization: "Bearer {{ token }}"
+          json:
+            amount: 1000
+          expect:
+            - statusCode:
+                - 400
+                - 404
+                - 500
+
+      # Get non-existent auction
+      - get:
+          url: "/api/auctions/000000000000000000000000"
+          headers:
+            Authorization: "Bearer {{ token }}"
+          expect:
+            - statusCode:
+                - 400
+                - 404
+
+  # ============================================================
+  # SCENARIO 5: Tie-Breaking Race Condition
+  # Multiple users bid same amount simultaneously
+  # ============================================================
+  - name: "Tie-Breaking Test"
+    weight: 20
+    flow:
+      - function: "generateUsername"
+      - function: "loginUser"
+
+      - post:
+          url: "/api/users/deposit"
+          headers:
+            Authorization: "Bearer {{ token }}"
+          json:
+            amount: 100000
+
+      # Get current highest bid
+      - get:
+          url: "/api/auctions/{{ auctionId }}/leaderboard"
+          headers:
+            Authorization: "Bearer {{ token }}"
+          capture:
+            - json: "$[0].amount"
+              as: "highestBid"
+              default: 100
+
+      # Calculate tie amount (same for all VUs in this scenario)
+      - function: "calculateTieAmount"
+
+      # All VUs try to bid the same amount
+      - post:
+          url: "/api/auctions/{{ auctionId }}/bid"
+          headers:
+            Authorization: "Bearer {{ token }}"
+          json:
+            amount: "{{ tieAmount }}"
+
+  # ============================================================
+  # SCENARIO 6: Deposit/Withdrawal Edge Cases
+  # ============================================================
+  - name: "Financial Edge Cases"
+    weight: 15
+    flow:
+      - function: "generateUsername"
+      - function: "loginUser"
+
+      # Zero deposit
+      - post:
+          url: "/api/users/deposit"
+          headers:
+            Authorization: "Bearer {{ token }}"
+          json:
+            amount: 0
+          expect:
+            - statusCode: 400
+
+      # Negative deposit
+      - post:
+          url: "/api/users/deposit"
+          headers:
+            Authorization: "Bearer {{ token }}"
+          json:
+            amount: -100
+          expect:
+            - statusCode: 400
+
+      # Valid deposit
+      - post:
+          url: "/api/users/deposit"
+          headers:
+            Authorization: "Bearer {{ token }}"
+          json:
+            amount: 1000
+
+      # Withdraw more than balance
+      - post:
+          url: "/api/users/withdraw"
+          headers:
+            Authorization: "Bearer {{ token }}"
+          json:
+            amount: 1000000
+          expect:
+            - statusCode: 400
+
+      # Negative withdrawal
+      - post:
+          url: "/api/users/withdraw"
+          headers:
+            Authorization: "Bearer {{ token }}"
+          json:
+            amount: -100
+          expect:
+            - statusCode: 400

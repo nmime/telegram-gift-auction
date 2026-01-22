@@ -1,4 +1,4 @@
-import { AuditResultStatus } from "./audit-query.dto";
+import type { AuditResultStatus } from "./audit-query.dto";
 
 /**
  * Audit log entry response

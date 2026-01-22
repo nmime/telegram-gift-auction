@@ -13,7 +13,7 @@ export class TelegramController {
     private readonly telegramBotService: TelegramBotService,
     private readonly configService: ConfigService,
   ) {
-    this.webhookSecret = this.configService.get<string>("WEBHOOK_SECRET") || "";
+    this.webhookSecret = this.configService.get<string>("WEBHOOK_SECRET") ?? "";
   }
 
   /**
@@ -27,18 +27,19 @@ export class TelegramController {
     @Req() request: FastifyRequest,
     @Res() reply: FastifyReply,
     @Headers("x-telegram-bot-api-secret-token") secretToken?: string,
-  ) {
+  ): Promise<{ error: string } | undefined> {
     // Validate secret token in production
-    if (this.webhookSecret && secretToken !== this.webhookSecret) {
+    if (this.webhookSecret !== "" && secretToken !== this.webhookSecret) {
       this.logger.warn("Invalid webhook secret token");
-      return reply.status(401).send({ error: "Unauthorized" });
+      return await reply.status(401).send({ error: "Unauthorized" });
     }
 
     try {
       await this.telegramBotService.handleWebhook(request, reply);
+      return;
     } catch (error) {
       this.logger.error("Webhook error:", error);
-      return reply.status(500).send({ error: "Internal server error" });
+      return await reply.status(500).send({ error: "Internal server error" });
     }
   }
 }

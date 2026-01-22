@@ -1,12 +1,11 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import type { Auction } from '../types';
-import { AuctionStatus } from '../types';
+import { type Auction, AuctionStatus } from '../types';
 import { useNotification } from '../context/NotificationContext';
 import { SkeletonAuctionGrid } from '../components/Skeleton';
 import * as api from '../api';
 
-export default function AuctionsPage() {
+export default function AuctionsPage(): React.JSX.Element {
   const [auctions, setAuctions] = useState<Auction[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -29,7 +28,7 @@ export default function AuctionsPage() {
   }, [filter, showNotification]);
 
   useEffect(() => {
-    loadAuctions();
+    void loadAuctions();
   }, [loadAuctions]);
 
   const getStatusBadgeClass = (status: AuctionStatus) => {

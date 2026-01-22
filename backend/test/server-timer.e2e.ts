@@ -170,7 +170,7 @@ async function testMultipleClientsSync(): Promise<void> {
 
   // Create 3 WebSocket clients
   const sockets: Socket[] = [];
-  const countdowns: Map<number, number[]> = new Map();
+  const countdowns = new Map<number, number[]>();
 
   for (let i = 0; i < 3; i++) {
     const token = await getAuthToken(`wm_${timestamp}_${i}`);

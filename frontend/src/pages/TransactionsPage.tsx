@@ -4,7 +4,7 @@ import { useNotification } from '../context/NotificationContext';
 import { SkeletonTransactionsTable } from '../components/Skeleton';
 import * as api from '../api';
 
-export default function TransactionsPage() {
+export default function TransactionsPage(): React.JSX.Element {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -26,7 +26,7 @@ export default function TransactionsPage() {
   }, [showNotification]);
 
   useEffect(() => {
-    loadTransactions();
+    void loadTransactions();
   }, [loadTransactions]);
 
   const getTypeColor = (type: string) => {
@@ -108,7 +108,7 @@ export default function TransactionsPage() {
                     )}
                   </td>
                   <td style={{ padding: '12px' }} className="text-muted">
-                    {tx.description || '-'}
+                    {tx.description ?? '-'}
                   </td>
                   <td style={{ padding: '12px', textAlign: 'right' }} className="text-muted">
                     {new Date(tx.createdAt).toLocaleString()}

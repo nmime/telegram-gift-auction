@@ -4,7 +4,7 @@ import type { RoundConfig } from '../types';
 import { useNotification } from '../context/NotificationContext';
 import * as api from '../api';
 
-export default function CreateAuctionPage() {
+export default function CreateAuctionPage(): React.JSX.Element {
   const navigate = useNavigate();
   const { showNotification } = useNotification();
 
@@ -47,7 +47,7 @@ export default function CreateAuctionPage() {
   const handleNumberInput = (
     setter: (value: number) => void,
     value: string,
-    min: number = 1
+    min = 1
   ) => {
     const parsed = parseInt(value, 10);
     if (!isNaN(parsed)) {
@@ -122,7 +122,7 @@ export default function CreateAuctionPage() {
       });
 
       showNotification('Auction created successfully!', 'success');
-      navigate(`/auctions/${auction.id}`);
+      void navigate(`/auctions/${auction.id}`);
     } catch (err) {
       const message = (err as Error).message || 'Failed to create auction';
       setError(message);
@@ -363,7 +363,7 @@ export default function CreateAuctionPage() {
           <button
             type="button"
             className="btn btn-secondary"
-            onClick={() => navigate('/auctions')}
+            onClick={async () => await navigate('/auctions')}
           >
             Cancel
           </button>

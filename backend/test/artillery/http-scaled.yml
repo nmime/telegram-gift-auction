@@ -1,0 +1,94 @@
+# Artillery HTTP Scaled Test
+# Respects rate limits by using MANY users with FEW requests each
+# This tests realistic production scenarios
+# Run: npx artillery run test/artillery/http-scaled.yml
+
+config:
+  target: "http://localhost:4000"
+  phases:
+    # Many users, each making few requests
+    - name: "Scaled users"
+      duration: 30
+      arrivalRate: 100
+    - name: "Peak scaled"
+      duration: 30
+      arrivalRate: 200
+    - name: "Extreme scaled"
+      duration: 30
+      arrivalRate: 300
+
+  processor: "./functions.js"
+
+  plugins:
+    metrics-by-endpoint: {}
+
+  defaults:
+    headers:
+      Content-Type: "application/json"
+
+  http:
+    timeout: 30
+    pool: 1000
+
+before:
+  flow:
+    - function: "createTestAuction"
+
+scenarios:
+  # Each user makes just 5 quick requests (within rate limit)
+  - name: "Quick Bidder"
+    weight: 60
+    flow:
+      - function: "generateUsername"
+      - function: "loginUser"
+
+      - post:
+          url: "/api/users/deposit"
+          headers:
+            Authorization: "Bearer {{ token }}"
+          json:
+            amount: 100000
+
+      - get:
+          url: "/api/auctions"
+          headers:
+            Authorization: "Bearer {{ token }}"
+          capture:
+            - json: "$[0].id"
+              as: "auctionId"
+
+      # Just 5 bids per user (within 20/s limit)
+      - loop:
+          - function: "generateBidAmount"
+          - post:
+              url: "/api/auctions/{{ auctionId }}/bid"
+              headers:
+                Authorization: "Bearer {{ token }}"
+              json:
+                amount: "{{ bidAmount }}"
+          - think: 0.1
+        count: 5
+
+  # Read-only users
+  - name: "Watcher"
+    weight: 40
+    flow:
+      - function: "generateUsername"
+      - function: "loginUser"
+
+      - get:
+          url: "/api/auctions"
+          headers:
+            Authorization: "Bearer {{ token }}"
+          capture:
+            - json: "$[0].id"
+              as: "auctionId"
+
+      # Quick reads
+      - loop:
+          - get:
+              url: "/api/auctions/{{ auctionId }}/leaderboard"
+              headers:
+                Authorization: "Bearer {{ token }}"
+          - think: 0.1
+        count: 10

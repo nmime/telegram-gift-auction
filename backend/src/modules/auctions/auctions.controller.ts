@@ -71,7 +71,7 @@ export class AuctionsController {
    */
   @TypedRoute.Get("system/audit")
   async auditFinancialIntegrity(): Promise<IAuditResponse> {
-    return this.auctionsService.auditFinancialIntegrity();
+    return await this.auctionsService.auditFinancialIntegrity();
   }
 
   /**
@@ -308,7 +308,7 @@ export class AuctionsController {
         endTime: r.endTime,
         extensionsCount: r.extensionsCount,
         completed: r.completed,
-        winnerBidIds: r.winnerBidIds?.map((id) => id.toString()) || [],
+        winnerBidIds: r.winnerBidIds.map((id): string => id.toString()),
       })),
       status: auction.status,
       currentRound: auction.currentRound,

@@ -1,12 +1,12 @@
-import { Injectable, ExecutionContext } from "@nestjs/common";
+import { Injectable, type ExecutionContext } from "@nestjs/common";
 import {
   ThrottlerGuard,
-  ThrottlerModuleOptions,
-  ThrottlerStorage,
+  type ThrottlerModuleOptions,
+  type ThrottlerStorage,
 } from "@nestjs/throttler";
-import { Reflector } from "@nestjs/core";
-import { ConfigService } from "@nestjs/config";
-import { FastifyRequest } from "fastify";
+import type { Reflector } from "@nestjs/core";
+import type { ConfigService } from "@nestjs/config";
+import type { FastifyRequest } from "fastify";
 
 export const localhostIps = [
   "127.0.0.1",
@@ -17,43 +17,44 @@ export const localhostIps = [
 
 export function getClientIp(request: FastifyRequest): string {
   const realIp = request.headers["x-real-ip"] as string | undefined;
-  if (realIp) {
+  if (realIp !== undefined && realIp !== "") {
     return realIp;
   }
 
   const cfConnectingIp = request.headers["cf-connecting-ip"] as
     | string
     | undefined;
-  if (cfConnectingIp) {
+  if (cfConnectingIp !== undefined && cfConnectingIp !== "") {
     return cfConnectingIp;
   }
 
   const trueClientIp = request.headers["true-client-ip"] as string | undefined;
-  if (trueClientIp) {
+  if (trueClientIp !== undefined && trueClientIp !== "") {
     return trueClientIp;
   }
 
   const originalForwardedFor = request.headers["x-original-forwarded-for"] as
     | string
     | undefined;
-  if (originalForwardedFor) {
+  if (originalForwardedFor !== undefined && originalForwardedFor !== "") {
     return originalForwardedFor;
   }
 
   const forwardedFor = request.headers["x-forwarded-for"] as string | undefined;
-  if (forwardedFor) {
+  if (forwardedFor !== undefined && forwardedFor !== "") {
     const firstIp = forwardedFor.split(",")[0]?.trim();
-    if (firstIp) {
+    if (firstIp !== undefined && firstIp !== "") {
       return firstIp;
     }
   }
 
   const clientIp = request.headers["x-client-ip"] as string | undefined;
-  if (clientIp) {
+  if (clientIp !== undefined && clientIp !== "") {
     return clientIp;
   }
 
-  return request.ip || "0.0.0.0";
+  const ip = request.ip;
+  return ip !== "" ? ip : "0.0.0.0";
 }
 
 @Injectable()
@@ -71,11 +72,7 @@ export class CustomThrottlerGuard extends ThrottlerGuard {
       configService.get<string>("NODE_ENV") === "development";
   }
 
-  protected async getTracker(request: FastifyRequest): Promise<string> {
-    return getClientIp(request);
-  }
-
-  async canActivate(context: ExecutionContext): Promise<boolean> {
+  override async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest<FastifyRequest>();
     const clientIp = getClientIp(request);
 
@@ -86,6 +83,12 @@ export class CustomThrottlerGuard extends ThrottlerGuard {
       return true;
     }
 
-    return super.canActivate(context);
+    return await super.canActivate(context);
+  }
+
+  protected override async getTracker(
+    request: FastifyRequest,
+  ): Promise<string> {
+    return await Promise.resolve(getClientIp(request));
   }
 }

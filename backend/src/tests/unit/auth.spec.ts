@@ -1,15 +1,14 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { Test, TestingModule } from "@nestjs/testing";
+import { Test, type TestingModule } from "@nestjs/testing";
 import { getModelToken } from "@nestjs/mongoose";
 import { JwtService } from "@nestjs/jwt";
-import { UnauthorizedException } from "@nestjs/common";
+import { UnauthorizedException, type ExecutionContext } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { AuthService } from "@/modules/auth/auth.service";
 import { TelegramService } from "@/modules/auth/telegram.service";
 import { AuthController } from "@/modules/auth/auth.controller";
 import { AuthGuard } from "@/common/guards/auth.guard";
 import { User } from "@/schemas";
-import { ExecutionContext } from "@nestjs/common";
 
 // Mock @grammyjs/validator
 jest.mock("@grammyjs/validator", () => ({

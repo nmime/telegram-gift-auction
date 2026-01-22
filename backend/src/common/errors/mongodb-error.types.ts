@@ -29,11 +29,10 @@ export function isTransientTransactionError(error: unknown): boolean {
   if (!isMongoDBError(error)) return false;
 
   return (
-    error.hasErrorLabel?.("TransientTransactionError") ||
+    (error.hasErrorLabel?.("TransientTransactionError") ?? false) ||
     error.code === MongoErrorCode.WriteConflict ||
     error.code === MongoErrorCode.TransactionAborted ||
     error.codeName === "WriteConflict" ||
-    error.message?.includes("WriteConflict") ||
-    false
+    error.message.includes("WriteConflict")
   );
 }

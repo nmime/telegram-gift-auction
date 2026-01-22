@@ -1,5 +1,9 @@
 # Auction Mechanics
 
+[← Back to README](../README.md) · [Architecture](./architecture.md) · [API](./api.md) · [Concurrency](./concurrency.md) · [Testing](./testing.md)
+
+---
+
 ## Multi-Round Elimination System
 
 Unlike simple "highest bid wins" auctions, this system implements a sophisticated multi-round elimination format where items are distributed across multiple rounds.

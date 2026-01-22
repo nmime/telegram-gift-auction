@@ -3,20 +3,20 @@ import { useTranslation } from 'react-i18next';
 import { useAuth } from '../hooks/useAuth';
 import { getCurrentLanguage } from '../i18n';
 
-export default function ProfilePage() {
+export default function ProfilePage(): React.JSX.Element {
   const { t } = useTranslation();
   const { user, logout, isTelegramMiniApp, setLanguage } = useAuth();
   const currentLang = getCurrentLanguage();
   const navigate = useNavigate();
 
-  const handleLogout = async () => {
+  const handleLogout = async (): Promise<void> => {
     await logout();
-    navigate('/');
+    void navigate('/');
   };
 
-  const displayName = user?.firstName
-    ? `${user.firstName}${user.lastName ? ` ${user.lastName}` : ''}`
-    : user?.username || '';
+  const displayName = user?.firstName !== undefined
+    ? `${user.firstName}${user.lastName !== undefined ? ` ${user.lastName}` : ''}`
+    : user?.username ?? '';
 
   return (
     <div>
@@ -25,7 +25,7 @@ export default function ProfilePage() {
           {user?.photoUrl ? (
             <img src={user.photoUrl} alt="" className="profile-avatar-img" />
           ) : (
-            (user?.firstName || user?.username || '?').charAt(0).toUpperCase()
+            (user?.firstName ?? user?.username ?? '?').charAt(0).toUpperCase()
           )}
         </div>
         <div className="profile-name">{displayName}</div>
@@ -36,16 +36,16 @@ export default function ProfilePage() {
 
       <div className="profile-stats">
         <div className="profile-stat">
-          <div className="profile-stat-value">{user?.balance || 0}</div>
+          <div className="profile-stat-value">{user?.balance ?? 0}</div>
           <div className="profile-stat-label">{t('balance.available')}</div>
         </div>
         <div className="profile-stat">
-          <div className="profile-stat-value">{user?.frozenBalance || 0}</div>
+          <div className="profile-stat-value">{user?.frozenBalance ?? 0}</div>
           <div className="profile-stat-label">{t('balance.frozen')}</div>
         </div>
         <div className="profile-stat">
           <div className="profile-stat-value">
-            {(user?.balance || 0) + (user?.frozenBalance || 0)}
+            {(user?.balance ?? 0) + (user?.frozenBalance ?? 0)}
           </div>
           <div className="profile-stat-label">{t('balance.total')}</div>
         </div>
@@ -56,13 +56,13 @@ export default function ProfilePage() {
         <div className="language-selector">
           <button
             className={`language-btn ${currentLang === 'en' ? 'active' : ''}`}
-            onClick={() => setLanguage('en')}
+            onClick={async () => await setLanguage('en')}
           >
             🇬🇧 {t('settings.languageEn')}
           </button>
           <button
             className={`language-btn ${currentLang === 'ru' ? 'active' : ''}`}
-            onClick={() => setLanguage('ru')}
+            onClick={async () => await setLanguage('ru')}
           >
             🇷🇺 {t('settings.languageRu')}
           </button>

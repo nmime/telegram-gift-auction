@@ -1,10 +1,10 @@
 import { Inject, Injectable, Logger } from "@nestjs/common";
 import { JwtService } from "@nestjs/jwt";
-import { Server, Socket } from "socket.io";
+import type { Server, Socket } from "socket.io";
 import { createAdapter } from "@socket.io/redis-adapter";
-import Redis from "ioredis";
+import type Redis from "ioredis";
 import { AsyncApi, AsyncApiPub, AsyncApiSub } from "@nmime/nestjs-asyncapi";
-import { AuctionDocument, BidDocument } from "@/schemas";
+import type { AuctionDocument, BidDocument } from "@/schemas";
 import { redisClient, BidCacheService } from "@/modules/redis";
 import type { PlaceBidPayload } from "./events.dto";
 // Stub classes for nestjs-asyncapi decorators (actual schemas from typia)
@@ -34,7 +34,7 @@ interface AuthenticatedSocket extends Socket {
 export class EventsGateway {
   private readonly logger = new Logger(EventsGateway.name);
   private server: Server | null = null;
-  private connectedClients: Map<string, Set<string>> = new Map();
+  private connectedClients = new Map<string, Set<string>>();
 
   constructor(
     @Inject(redisClient) private readonly redis: Redis,
@@ -44,7 +44,9 @@ export class EventsGateway {
     this.logger.log("EventsGateway constructor called");
   }
 
-  setServer(server: Server) {
+  // ========== PUBLIC METHODS ==========
+
+  setServer(server: Server): void {
     this.server = server;
     this.logger.log("Socket.IO server set");
 
@@ -58,7 +60,158 @@ export class EventsGateway {
     server.on("connection", (client: Socket) => this.handleConnection(client));
   }
 
-  private handleConnection(client: AuthenticatedSocket) {
+  @AsyncApiPub({
+    channel: "auction-update",
+    summary: "Auction state changed",
+    description:
+      "Broadcast when auction status, current round, or rounds configuration changes",
+    message: { payload: AuctionUpdateEvent },
+  })
+  emitAuctionUpdate(auction: AuctionDocument): void {
+    if (this.server === null) return;
+    this.server.to(`auction:${auction._id.toString()}`).emit("auction-update", {
+      id: auction._id,
+      status: auction.status,
+      currentRound: auction.currentRound,
+      rounds: auction.rounds,
+    });
+  }
+
+  @AsyncApiPub({
+    channel: "new-bid",
+    summary: "New bid placed",
+    description: "Broadcast to auction room when a bid is placed or increased",
+    message: { payload: NewBidEvent },
+  })
+  emitNewBid(
+    auctionId: string,
+    bidInfo: { amount: number; timestamp: Date; isIncrease: boolean },
+  ): void {
+    if (this.server === null) return;
+    const room = `auction:${auctionId}`;
+    const roomSize = this.server.sockets.adapter.rooms.get(room)?.size ?? 0;
+    this.logger.debug("Emitting new-bid", {
+      auctionId,
+      amount: bidInfo.amount,
+      roomSize,
+    });
+    this.server.to(room).emit("new-bid", {
+      auctionId,
+      amount: bidInfo.amount,
+      timestamp: bidInfo.timestamp,
+      isIncrease: bidInfo.isIncrease,
+    });
+  }
+
+  @AsyncApiPub({
+    channel: "anti-sniping",
+    summary: "Anti-sniping extension",
+    description:
+      "Broadcast when round end time is extended due to late bid (anti-sniping protection)",
+    message: { payload: AntiSnipingEvent },
+  })
+  emitAntiSnipingExtension(
+    auction: AuctionDocument,
+    extensionCount: number,
+  ): void {
+    if (this.server === null) return;
+    const currentRound = auction.rounds[auction.currentRound - 1];
+    this.server.to(`auction:${auction._id.toString()}`).emit("anti-sniping", {
+      auctionId: auction._id,
+      roundNumber: auction.currentRound,
+      newEndTime: currentRound?.endTime,
+      extensionCount,
+    });
+  }
+
+  @AsyncApiPub({
+    channel: "round-start",
+    summary: "Round started",
+    description: "Broadcast when a new round begins in the auction",
+    message: { payload: RoundStartEvent },
+  })
+  emitRoundStart(auction: AuctionDocument, roundNumber: number): void {
+    if (this.server === null) return;
+    const round = auction.rounds[roundNumber - 1];
+    this.server.to(`auction:${auction._id.toString()}`).emit("round-start", {
+      auctionId: auction._id,
+      roundNumber,
+      itemsCount: round?.itemsCount,
+      startTime: round?.startTime,
+      endTime: round?.endTime,
+    });
+  }
+
+  @AsyncApiPub({
+    channel: "round-complete",
+    summary: "Round completed",
+    description: "Broadcast when a round ends with winner information",
+    message: { payload: RoundCompleteEvent },
+  })
+  emitRoundComplete(
+    auction: AuctionDocument,
+    roundNumber: number,
+    winners: BidDocument[],
+  ): void {
+    if (this.server === null) return;
+    this.server.to(`auction:${auction._id.toString()}`).emit("round-complete", {
+      auctionId: auction._id,
+      roundNumber,
+      winnersCount: winners.length,
+      winners: winners.map((w) => ({
+        amount: w.amount,
+        itemNumber: w.itemNumber,
+      })),
+    });
+  }
+
+  @AsyncApiPub({
+    channel: "auction-complete",
+    summary: "Auction completed",
+    description: "Broadcast when the entire auction ends (all rounds finished)",
+    message: { payload: AuctionCompleteEvent },
+  })
+  emitAuctionComplete(auction: AuctionDocument): void {
+    if (this.server === null) return;
+    this.server
+      .to(`auction:${auction._id.toString()}`)
+      .emit("auction-complete", {
+        auctionId: auction._id,
+        endTime: auction.endTime,
+        totalRounds: auction.rounds.length,
+      });
+  }
+
+  emitGlobal(event: string, data: unknown): void {
+    if (this.server === null) return;
+    this.server.emit(event, data);
+  }
+
+  @AsyncApiPub({
+    channel: "countdown",
+    summary: "Countdown tick",
+    description:
+      "Broadcast every second with remaining time and server clock for synchronization",
+    message: { payload: CountdownEvent },
+  })
+  emitCountdown(
+    auctionId: string,
+    data: {
+      auctionId: string;
+      roundNumber: number;
+      timeLeftSeconds: number;
+      roundEndTime: string;
+      isUrgent: boolean;
+      serverTime: string;
+    },
+  ): void {
+    if (this.server === null) return;
+    this.server.to(`auction:${auctionId}`).emit("countdown", data);
+  }
+
+  // ========== PRIVATE METHODS ==========
+
+  private handleConnection(client: AuthenticatedSocket): void {
     this.logger.log("Client connected", client.id);
 
     client.on("disconnect", () => this.handleDisconnect(client));
@@ -71,8 +224,10 @@ export class EventsGateway {
 
     // Auth-required event: authenticate and place bid
     client.on("auth", (token: string) => this.handleAuth(client, token));
-    client.on("place-bid", (payload: PlaceBidPayload) =>
-      this.handlePlaceBid(client, payload),
+    client.on(
+      "place-bid",
+      async (payload: PlaceBidPayload) =>
+        await this.handlePlaceBid(client, payload),
     );
   }
 
@@ -93,9 +248,11 @@ export class EventsGateway {
     description: "Response to auth event with success status and user info",
     message: { payload: AuthResponse },
   })
-  private handleAuth(client: AuthenticatedSocket, token: string) {
+  private handleAuth(client: AuthenticatedSocket, token: string): void {
     try {
-      const payload = this.jwtService.verify(token);
+      const payload = this.jwtService.verify<{ sub: string; username: string }>(
+        token,
+      );
       client.userId = payload.sub;
       client.username = payload.username;
       client.emit("auth-response", { success: true, userId: client.userId });
@@ -114,7 +271,7 @@ export class EventsGateway {
 
   /**
    * Ultra-fast WebSocket bid placement
-   * Skips HTTP overhead for maximum throughput (~3,000 rps × number of CPUs)
+   * Skips HTTP overhead for maximum throughput (~3,000 rps x number of CPUs)
    */
   @AsyncApiSub({
     channel: "place-bid",
@@ -133,9 +290,9 @@ export class EventsGateway {
   private async handlePlaceBid(
     client: AuthenticatedSocket,
     payload: PlaceBidPayload,
-  ) {
+  ): Promise<void> {
     // Check authentication
-    if (!client.userId) {
+    if (client.userId === undefined) {
       client.emit("bid-response", {
         success: false,
         error: "Not authenticated. Call 'auth' event first.",
@@ -146,7 +303,12 @@ export class EventsGateway {
     const { auctionId, amount } = payload;
 
     // Validate payload
-    if (!auctionId || typeof amount !== "number" || amount <= 0) {
+    if (
+      typeof auctionId !== "string" ||
+      auctionId === "" ||
+      typeof amount !== "number" ||
+      amount <= 0
+    ) {
       client.emit("bid-response", {
         success: false,
         error:
@@ -173,17 +335,16 @@ export class EventsGateway {
         });
 
         // Broadcast new bid to auction room
+        const newAmount = result.newAmount ?? 0;
         this.emitNewBid(auctionId, {
-          amount: result.newAmount!,
+          amount: newAmount,
           timestamp: new Date(),
-          isIncrease: !result.isNewBid,
+          isIncrease: result.isNewBid !== true,
         });
 
         // Async anti-sniping check (don't block response)
-        if (result.roundEndTime && result.roundEndTime > 0) {
-          this.checkAntiSniping(auctionId, result).catch((err) =>
-            this.logger.error("Anti-sniping check failed", err),
-          );
+        if (result.roundEndTime !== undefined && result.roundEndTime > 0) {
+          this.checkAntiSniping(auctionId, result);
         }
       } else {
         client.emit("bid-response", {
@@ -205,21 +366,22 @@ export class EventsGateway {
    * Async anti-sniping check - extends round if bid is in sniping window
    * This is fire-and-forget to not block the bid response
    */
-  private async checkAntiSniping(
+  private checkAntiSniping(
     auctionId: string,
     result: {
       roundEndTime?: number;
       antiSnipingWindowMs?: number;
       antiSnipingExtensionMs?: number;
     },
-  ) {
+  ): void {
     const now = Date.now();
-    const windowStart =
-      (result.roundEndTime || 0) - (result.antiSnipingWindowMs || 0);
+    const roundEndTime = result.roundEndTime ?? 0;
+    const antiSnipingWindowMs = result.antiSnipingWindowMs ?? 0;
+    const windowStart = roundEndTime - antiSnipingWindowMs;
 
     if (
       now < windowStart ||
-      !result.antiSnipingExtensionMs ||
+      result.antiSnipingExtensionMs === undefined ||
       result.antiSnipingExtensionMs <= 0
     ) {
       return; // Not in anti-sniping window
@@ -235,7 +397,7 @@ export class EventsGateway {
     });
   }
 
-  private handleDisconnect(client: Socket) {
+  private handleDisconnect(client: Socket): void {
     this.logger.log("Client disconnected", client.id);
     this.connectedClients.forEach((clients, auctionId) => {
       clients.delete(client.id);
@@ -257,13 +419,16 @@ export class EventsGateway {
     description: "Confirmation of joining the auction room",
     message: { payload: AuctionRoomResponse },
   })
-  private handleJoinAuction(client: Socket, auctionId: string) {
-    client.join(`auction:${auctionId}`);
+  private handleJoinAuction(client: Socket, auctionId: string): void {
+    void client.join(`auction:${auctionId}`);
 
     if (!this.connectedClients.has(auctionId)) {
       this.connectedClients.set(auctionId, new Set());
     }
-    this.connectedClients.get(auctionId)!.add(client.id);
+    const clientsSet = this.connectedClients.get(auctionId);
+    if (clientsSet !== undefined) {
+      clientsSet.add(client.id);
+    }
 
     this.logger.debug("Client joined auction", {
       clientId: client.id,
@@ -284,11 +449,11 @@ export class EventsGateway {
     description: "Confirmation of leaving the auction room",
     message: { payload: AuctionRoomResponse },
   })
-  private handleLeaveAuction(client: Socket, auctionId: string) {
-    client.leave(`auction:${auctionId}`);
+  private handleLeaveAuction(client: Socket, auctionId: string): void {
+    void client.leave(`auction:${auctionId}`);
 
     const clients = this.connectedClients.get(auctionId);
-    if (clients) {
+    if (clients !== undefined) {
       clients.delete(client.id);
       if (clients.size === 0) {
         this.connectedClients.delete(auctionId);
@@ -300,151 +465,5 @@ export class EventsGateway {
       auctionId,
     });
     client.emit("leave-auction-response", { success: true });
-  }
-
-  @AsyncApiPub({
-    channel: "auction-update",
-    summary: "Auction state changed",
-    description:
-      "Broadcast when auction status, current round, or rounds configuration changes",
-    message: { payload: AuctionUpdateEvent },
-  })
-  emitAuctionUpdate(auction: AuctionDocument) {
-    if (!this.server) return;
-    this.server.to(`auction:${auction._id.toString()}`).emit("auction-update", {
-      id: auction._id,
-      status: auction.status,
-      currentRound: auction.currentRound,
-      rounds: auction.rounds,
-    });
-  }
-
-  @AsyncApiPub({
-    channel: "new-bid",
-    summary: "New bid placed",
-    description: "Broadcast to auction room when a bid is placed or increased",
-    message: { payload: NewBidEvent },
-  })
-  emitNewBid(
-    auctionId: string,
-    bidInfo: { amount: number; timestamp: Date; isIncrease: boolean },
-  ) {
-    if (!this.server) return;
-    const room = `auction:${auctionId}`;
-    const roomSize = this.server.sockets.adapter.rooms.get(room)?.size || 0;
-    this.logger.debug("Emitting new-bid", {
-      auctionId,
-      amount: bidInfo.amount,
-      roomSize,
-    });
-    this.server.to(room).emit("new-bid", {
-      auctionId,
-      amount: bidInfo.amount,
-      timestamp: bidInfo.timestamp,
-      isIncrease: bidInfo.isIncrease,
-    });
-  }
-
-  @AsyncApiPub({
-    channel: "anti-sniping",
-    summary: "Anti-sniping extension",
-    description:
-      "Broadcast when round end time is extended due to late bid (anti-sniping protection)",
-    message: { payload: AntiSnipingEvent },
-  })
-  emitAntiSnipingExtension(auction: AuctionDocument, extensionCount: number) {
-    if (!this.server) return;
-    const currentRound = auction.rounds[auction.currentRound - 1];
-    this.server.to(`auction:${auction._id.toString()}`).emit("anti-sniping", {
-      auctionId: auction._id,
-      roundNumber: auction.currentRound,
-      newEndTime: currentRound?.endTime,
-      extensionCount,
-    });
-  }
-
-  @AsyncApiPub({
-    channel: "round-start",
-    summary: "Round started",
-    description: "Broadcast when a new round begins in the auction",
-    message: { payload: RoundStartEvent },
-  })
-  emitRoundStart(auction: AuctionDocument, roundNumber: number) {
-    if (!this.server) return;
-    const round = auction.rounds[roundNumber - 1];
-    this.server.to(`auction:${auction._id.toString()}`).emit("round-start", {
-      auctionId: auction._id,
-      roundNumber,
-      itemsCount: round?.itemsCount,
-      startTime: round?.startTime,
-      endTime: round?.endTime,
-    });
-  }
-
-  @AsyncApiPub({
-    channel: "round-complete",
-    summary: "Round completed",
-    description: "Broadcast when a round ends with winner information",
-    message: { payload: RoundCompleteEvent },
-  })
-  emitRoundComplete(
-    auction: AuctionDocument,
-    roundNumber: number,
-    winners: BidDocument[],
-  ) {
-    if (!this.server) return;
-    this.server.to(`auction:${auction._id.toString()}`).emit("round-complete", {
-      auctionId: auction._id,
-      roundNumber,
-      winnersCount: winners.length,
-      winners: winners.map((w) => ({
-        amount: w.amount,
-        itemNumber: w.itemNumber,
-      })),
-    });
-  }
-
-  @AsyncApiPub({
-    channel: "auction-complete",
-    summary: "Auction completed",
-    description: "Broadcast when the entire auction ends (all rounds finished)",
-    message: { payload: AuctionCompleteEvent },
-  })
-  emitAuctionComplete(auction: AuctionDocument) {
-    if (!this.server) return;
-    this.server
-      .to(`auction:${auction._id.toString()}`)
-      .emit("auction-complete", {
-        auctionId: auction._id,
-        endTime: auction.endTime,
-        totalRounds: auction.rounds.length,
-      });
-  }
-
-  emitGlobal(event: string, data: unknown) {
-    if (!this.server) return;
-    this.server.emit(event, data);
-  }
-
-  @AsyncApiPub({
-    channel: "countdown",
-    summary: "Countdown tick",
-    description:
-      "Broadcast every second with remaining time and server clock for synchronization",
-    message: { payload: CountdownEvent },
-  })
-  emitCountdown(
-    auctionId: string,
-    data: {
-      auctionId: string;
-      roundNumber: number;
-      timeLeftSeconds: number;
-      roundEndTime: string;
-      isUrgent: boolean;
-      serverTime: string;
-    },
-  ) {
-    if (!this.server) return;
-    this.server.to(`auction:${auctionId}`).emit("countdown", data);
   }
 }

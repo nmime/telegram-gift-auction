@@ -1,3 +1,3 @@
-export * from "./create-auction.dto";
-export * from "./place-bid.dto";
-export * from "./auction-response.dto";
+export type * from "./create-auction.dto";
+export type * from "./place-bid.dto";
+export type * from "./auction-response.dto";

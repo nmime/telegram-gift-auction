@@ -1,12 +1,12 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { Test, TestingModule } from "@nestjs/testing";
+import { Test, type TestingModule } from "@nestjs/testing";
 import { JwtService } from "@nestjs/jwt";
 import { UnauthorizedException } from "@nestjs/common";
 import { AuthController } from "@/modules/auth/auth.controller";
 import { AuthService } from "@/modules/auth/auth.service";
 import { TelegramService } from "@/modules/auth/telegram.service";
-import { AuthenticatedRequest } from "@/common";
-import {
+import type { AuthenticatedRequest } from "@/common";
+import type {
   ILoginResponse,
   ITelegramWidgetAuth,
   ITelegramWebAppAuth,

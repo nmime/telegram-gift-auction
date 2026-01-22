@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { Test, TestingModule } from "@nestjs/testing";
+import { Test, type TestingModule } from "@nestjs/testing";
 import { BadRequestException, NotFoundException } from "@nestjs/common";
 import { AuctionsController } from "@/modules/auctions/auctions.controller";
 import { AuctionsService } from "@/modules/auctions/auctions.service";
@@ -111,8 +111,6 @@ describe("AuctionsController", () => {
     });
   });
 
-  // ==================== CREATE AUCTION TESTS ====================
-
   describe("Create Auction (POST /auctions)", () => {
     const validCreateDto = {
       title: "New Auction",
@@ -141,7 +139,7 @@ describe("AuctionsController", () => {
         rounds: [],
       };
 
-      auctionsService.create.mockResolvedValue(expectedAuction as any);
+      auctionsService.create.mockResolvedValue(expectedAuction);
 
       const result = await controller.create(
         validCreateDto,
@@ -166,7 +164,7 @@ describe("AuctionsController", () => {
         rounds: [],
       };
 
-      auctionsService.create.mockResolvedValue(expectedAuction as any);
+      auctionsService.create.mockResolvedValue(expectedAuction);
 
       const result = await controller.create(
         validCreateDto,
@@ -185,7 +183,7 @@ describe("AuctionsController", () => {
         status: AuctionStatus.PENDING,
       };
 
-      auctionsService.create.mockResolvedValue(expectedAuction as any);
+      auctionsService.create.mockResolvedValue(expectedAuction);
 
       const result = await controller.create(
         validCreateDto,
@@ -202,7 +200,7 @@ describe("AuctionsController", () => {
         roundsConfig: validCreateDto.rounds,
       };
 
-      auctionsService.create.mockResolvedValue(expectedAuction as any);
+      auctionsService.create.mockResolvedValue(expectedAuction);
 
       const result = await controller.create(
         validCreateDto,
@@ -268,8 +266,6 @@ describe("AuctionsController", () => {
       expect(controller.create).toBeDefined();
     });
   });
-
-  // ==================== GET AUCTIONS TESTS ====================
 
   describe("Get All Auctions (GET /auctions)", () => {
     const mockAuctions = [
@@ -364,13 +360,11 @@ describe("AuctionsController", () => {
     });
   });
 
-  // ==================== GET AUCTION BY ID TESTS ====================
-
   describe("Get Auction By ID (GET /auctions/:id)", () => {
     const validId = "507f1f77bcf86cd799439011";
 
     it("should return auction with valid ID", async () => {
-      auctionsService.findById.mockResolvedValue(mockAuctionDocument as any);
+      auctionsService.findById.mockResolvedValue(mockAuctionDocument);
 
       const result = await controller.findOne(validId);
 
@@ -380,7 +374,7 @@ describe("AuctionsController", () => {
     });
 
     it("should include rounds and bid history", async () => {
-      auctionsService.findById.mockResolvedValue(mockAuctionDocument as any);
+      auctionsService.findById.mockResolvedValue(mockAuctionDocument);
 
       const result = await controller.findOne(validId);
 
@@ -410,8 +404,6 @@ describe("AuctionsController", () => {
     });
   });
 
-  // ==================== START AUCTION TESTS ====================
-
   describe("Start Auction (POST /auctions/:id/start)", () => {
     const validId = "507f1f77bcf86cd799439011";
 
@@ -423,7 +415,7 @@ describe("AuctionsController", () => {
         currentRound: 1,
       };
 
-      auctionsService.start.mockResolvedValue(startedAuction as any);
+      auctionsService.start.mockResolvedValue(startedAuction);
 
       const result = await controller.start(validId);
 
@@ -472,7 +464,7 @@ describe("AuctionsController", () => {
         ],
       };
 
-      auctionsService.start.mockResolvedValue(startedAuction as any);
+      auctionsService.start.mockResolvedValue(startedAuction);
 
       const result = await controller.start(validId);
 
@@ -502,7 +494,7 @@ describe("AuctionsController", () => {
         botCount: 5,
       };
 
-      auctionsService.start.mockResolvedValue(startedAuction as any);
+      auctionsService.start.mockResolvedValue(startedAuction);
 
       await controller.start(validId);
 
@@ -516,15 +508,13 @@ describe("AuctionsController", () => {
         botsEnabled: false,
       };
 
-      auctionsService.start.mockResolvedValue(startedAuction as any);
+      auctionsService.start.mockResolvedValue(startedAuction);
 
       await controller.start(validId);
 
       expect(botService.startBots).not.toHaveBeenCalled();
     });
   });
-
-  // ==================== GET AUCTION ROUNDS TESTS ====================
 
   describe("Get Auction Rounds", () => {
     it("should return all rounds for auction", async () => {
@@ -552,7 +542,7 @@ describe("AuctionsController", () => {
         ],
       };
 
-      auctionsService.findById.mockResolvedValue(auctionWithRounds as any);
+      auctionsService.findById.mockResolvedValue(auctionWithRounds);
 
       const result = await controller.findOne(auctionWithRounds._id.toString());
 
@@ -560,7 +550,7 @@ describe("AuctionsController", () => {
     });
 
     it("should include current active round details", async () => {
-      auctionsService.findById.mockResolvedValue(mockAuctionDocument as any);
+      auctionsService.findById.mockResolvedValue(mockAuctionDocument);
 
       const result = await controller.findOne(
         mockAuctionDocument._id.toString(),
@@ -583,7 +573,7 @@ describe("AuctionsController", () => {
         ],
       };
 
-      auctionsService.findById.mockResolvedValue(completedAuction as any);
+      auctionsService.findById.mockResolvedValue(completedAuction);
 
       const result = await controller.findOne(completedAuction._id.toString());
 
@@ -605,7 +595,7 @@ describe("AuctionsController", () => {
         ],
       };
 
-      auctionsService.findById.mockResolvedValue(auctionWithExtensions as any);
+      auctionsService.findById.mockResolvedValue(auctionWithExtensions);
 
       const result = await controller.findOne(
         auctionWithExtensions._id.toString(),
@@ -614,8 +604,6 @@ describe("AuctionsController", () => {
       expect(result.rounds[0]!.extensionsCount).toBe(3);
     });
   });
-
-  // ==================== ADMIN OPERATIONS TESTS ====================
 
   describe("Admin Operations", () => {
     it("should perform financial audit", async () => {
@@ -662,8 +650,6 @@ describe("AuctionsController", () => {
     });
   });
 
-  // ==================== ERROR SCENARIOS TESTS ====================
-
   describe("Error Scenarios", () => {
     it("should validate auction data on creation", async () => {
       const invalidDto = {
@@ -688,8 +674,6 @@ describe("AuctionsController", () => {
       expect(controller.start).toBeDefined();
     });
   });
-
-  // ==================== GET LEADERBOARD TESTS ====================
 
   describe("Get Auction Leaderboard (GET /auctions/:id/leaderboard)", () => {
     const validId = "507f1f77bcf86cd799439011";
@@ -806,8 +790,6 @@ describe("AuctionsController", () => {
     });
   });
 
-  // ==================== GET MY BIDS TESTS ====================
-
   describe("Get My Bids (GET /auctions/:id/my-bids)", () => {
     const validId = "507f1f77bcf86cd799439011";
     const mockBids = [
@@ -883,8 +865,6 @@ describe("AuctionsController", () => {
     });
   });
 
-  // ==================== GET MINIMUM WINNING BID TESTS ====================
-
   describe("Get Minimum Winning Bid (GET /auctions/:id/min-winning-bid)", () => {
     const validId = "507f1f77bcf86cd799439011";
 
@@ -914,8 +894,6 @@ describe("AuctionsController", () => {
       expect(result.minWinningBid).toBe(510);
     });
   });
-
-  // ==================== PLACE BID TESTS ====================
 
   describe("Place Bid (POST /auctions/:id/bid)", () => {
     const validId = "507f1f77bcf86cd799439011";
@@ -947,7 +925,7 @@ describe("AuctionsController", () => {
     it("should place bid successfully", async () => {
       auctionsService.placeBid.mockResolvedValue(mockBidResponse as any);
 
-      const mockRequest = createMockRequest() as any;
+      const mockRequest = createMockRequest();
 
       const result = await controller.placeBid(
         validId,
@@ -965,7 +943,7 @@ describe("AuctionsController", () => {
       );
 
       const lowBidDto = { amount: 50 };
-      const mockRequest = createMockRequest() as any;
+      const mockRequest = createMockRequest();
 
       await expect(
         controller.placeBid(validId, lowBidDto, mockRequest),
@@ -977,7 +955,7 @@ describe("AuctionsController", () => {
         new BadRequestException("Minimum bid increment is 10"),
       );
 
-      const mockRequest = createMockRequest() as any;
+      const mockRequest = createMockRequest();
 
       await expect(
         controller.placeBid(validId, validBidDto, mockRequest),
@@ -989,15 +967,13 @@ describe("AuctionsController", () => {
         new BadRequestException("Insufficient balance"),
       );
 
-      const mockRequest = createMockRequest() as any;
+      const mockRequest = createMockRequest();
 
       await expect(
         controller.placeBid(validId, { amount: 10000 }, mockRequest),
       ).rejects.toThrow(BadRequestException);
     });
   });
-
-  // ==================== FAST BID TESTS ====================
 
   describe("Place Fast Bid (POST /auctions/:id/fast-bid)", () => {
     const validId = "507f1f77bcf86cd799439011";

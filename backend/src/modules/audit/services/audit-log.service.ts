@@ -1,7 +1,6 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { Injectable } from "@nestjs/common";
 import { InjectModel } from "@nestjs/mongoose";
-import { Model, Types } from "mongoose";
+import { Model, Types, PipelineStage } from "mongoose";
 import { AuditLog, AuditLogDocument } from "@/schemas";
 
 export interface CreateAuditLogDto {
@@ -9,13 +8,13 @@ export interface CreateAuditLogDto {
   action: string;
   resource: string;
   resourceId?: Types.ObjectId | string;
-  oldValues?: Record<string, any>;
-  newValues?: Record<string, any>;
+  oldValues?: Record<string, unknown>;
+  newValues?: Record<string, unknown>;
   result: "success" | "failure";
   errorMessage?: string;
   ipAddress?: string;
   userAgent?: string;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 
 export interface AuditLogFilter {
@@ -36,6 +35,31 @@ export interface AuditLogSummary {
   failureCount: number;
 }
 
+export interface UserAuditLogSummary {
+  userId: Types.ObjectId | null;
+  count: number;
+  successCount: number;
+  failureCount: number;
+}
+
+interface DateRangeQuery {
+  $gte?: Date;
+  $lte?: Date;
+}
+
+interface AuditLogQueryFilter {
+  userId?: Types.ObjectId;
+  action?: string;
+  resource?: string;
+  result?: "success" | "failure";
+  createdAt?: DateRangeQuery;
+}
+
+interface MatchStageWithCreatedAt {
+  userId?: { $exists: boolean; $ne: null };
+  createdAt?: DateRangeQuery;
+}
+
 @Injectable()
 export class AuditLogService {
   constructor(
@@ -46,23 +70,25 @@ export class AuditLogService {
   async createLog(dto: CreateAuditLogDto): Promise<AuditLogDocument> {
     const auditLog = new this.auditLogModel({
       ...dto,
-      userId: dto.userId ? new Types.ObjectId(dto.userId) : undefined,
-      resourceId: dto.resourceId
-        ? new Types.ObjectId(dto.resourceId)
-        : undefined,
+      userId:
+        dto.userId !== undefined ? new Types.ObjectId(dto.userId) : undefined,
+      resourceId:
+        dto.resourceId !== undefined
+          ? new Types.ObjectId(dto.resourceId)
+          : undefined,
     });
-    return auditLog.save();
+    return await auditLog.save();
   }
 
   async findByUser(
     userId: string | Types.ObjectId,
     options?: { limit?: number; skip?: number },
   ): Promise<AuditLogDocument[]> {
-    return this.auditLogModel
+    return await this.auditLogModel
       .find({ userId: new Types.ObjectId(userId) })
       .sort({ createdAt: -1 })
-      .limit(options?.limit || 100)
-      .skip(options?.skip || 0)
+      .limit(options?.limit ?? 100)
+      .skip(options?.skip ?? 0)
       .exec();
   }
 
@@ -71,7 +97,7 @@ export class AuditLogService {
     endDate: Date,
     options?: { limit?: number; skip?: number },
   ): Promise<AuditLogDocument[]> {
-    return this.auditLogModel
+    return await this.auditLogModel
       .find({
         createdAt: {
           $gte: startDate,
@@ -79,8 +105,8 @@ export class AuditLogService {
         },
       })
       .sort({ createdAt: -1 })
-      .limit(options?.limit || 100)
-      .skip(options?.skip || 0)
+      .limit(options?.limit ?? 100)
+      .skip(options?.skip ?? 0)
       .exec();
   }
 
@@ -88,11 +114,11 @@ export class AuditLogService {
     action: string,
     options?: { limit?: number; skip?: number },
   ): Promise<AuditLogDocument[]> {
-    return this.auditLogModel
+    return await this.auditLogModel
       .find({ action })
       .sort({ createdAt: -1 })
-      .limit(options?.limit || 100)
-      .skip(options?.skip || 0)
+      .limit(options?.limit ?? 100)
+      .skip(options?.skip ?? 0)
       .exec();
   }
 
@@ -100,44 +126,44 @@ export class AuditLogService {
     resource: string,
     options?: { limit?: number; skip?: number },
   ): Promise<AuditLogDocument[]> {
-    return this.auditLogModel
+    return await this.auditLogModel
       .find({ resource })
       .sort({ createdAt: -1 })
-      .limit(options?.limit || 100)
-      .skip(options?.skip || 0)
+      .limit(options?.limit ?? 100)
+      .skip(options?.skip ?? 0)
       .exec();
   }
 
   async findWithFilters(filter: AuditLogFilter): Promise<AuditLogDocument[]> {
-    const query: any = {};
+    const query: AuditLogQueryFilter = {};
 
-    if (filter.userId) {
+    if (filter.userId !== undefined) {
       query.userId = new Types.ObjectId(filter.userId);
     }
-    if (filter.action) {
+    if (filter.action !== undefined) {
       query.action = filter.action;
     }
-    if (filter.resource) {
+    if (filter.resource !== undefined) {
       query.resource = filter.resource;
     }
-    if (filter.result) {
+    if (filter.result !== undefined) {
       query.result = filter.result;
     }
-    if (filter.startDate || filter.endDate) {
+    if (filter.startDate !== undefined || filter.endDate !== undefined) {
       query.createdAt = {};
-      if (filter.startDate) {
+      if (filter.startDate !== undefined) {
         query.createdAt.$gte = filter.startDate;
       }
-      if (filter.endDate) {
+      if (filter.endDate !== undefined) {
         query.createdAt.$lte = filter.endDate;
       }
     }
 
-    return this.auditLogModel
+    return await this.auditLogModel
       .find(query)
       .sort({ createdAt: -1 })
-      .limit(filter.limit || 100)
-      .skip(filter.skip || 0)
+      .limit(filter.limit ?? 100)
+      .skip(filter.skip ?? 0)
       .exec();
   }
 
@@ -145,14 +171,18 @@ export class AuditLogService {
     startDate?: Date,
     endDate?: Date,
   ): Promise<AuditLogSummary[]> {
-    const matchStage: any = {};
-    if (startDate || endDate) {
+    const matchStage: MatchStageWithCreatedAt = {};
+    if (startDate !== undefined || endDate !== undefined) {
       matchStage.createdAt = {};
-      if (startDate) matchStage.createdAt.$gte = startDate;
-      if (endDate) matchStage.createdAt.$lte = endDate;
+      if (startDate !== undefined) {
+        matchStage.createdAt.$gte = startDate;
+      }
+      if (endDate !== undefined) {
+        matchStage.createdAt.$lte = endDate;
+      }
     }
 
-    const pipeline: any[] = [];
+    const pipeline: PipelineStage[] = [];
     if (Object.keys(matchStage).length > 0) {
       pipeline.push({ $match: matchStage });
     }
@@ -182,19 +212,28 @@ export class AuditLogService {
       { $sort: { count: -1 } },
     );
 
-    return this.auditLogModel.aggregate(pipeline).exec();
+    return await this.auditLogModel.aggregate<AuditLogSummary>(pipeline).exec();
   }
 
-  async getSummaryByUser(startDate?: Date, endDate?: Date): Promise<any[]> {
-    const matchStage: any = { userId: { $exists: true, $ne: null } };
-    if (startDate || endDate) {
+  async getSummaryByUser(
+    startDate?: Date,
+    endDate?: Date,
+  ): Promise<UserAuditLogSummary[]> {
+    const matchStage: MatchStageWithCreatedAt = {
+      userId: { $exists: true, $ne: null },
+    };
+    if (startDate !== undefined || endDate !== undefined) {
       matchStage.createdAt = {};
-      if (startDate) matchStage.createdAt.$gte = startDate;
-      if (endDate) matchStage.createdAt.$lte = endDate;
+      if (startDate !== undefined) {
+        matchStage.createdAt.$gte = startDate;
+      }
+      if (endDate !== undefined) {
+        matchStage.createdAt.$lte = endDate;
+      }
     }
 
-    return this.auditLogModel
-      .aggregate([
+    return await this.auditLogModel
+      .aggregate<UserAuditLogSummary>([
         { $match: matchStage },
         {
           $group: {
@@ -223,19 +262,19 @@ export class AuditLogService {
   }
 
   async countLogs(filter?: Partial<AuditLogFilter>): Promise<number> {
-    const query: any = {};
-    if (filter?.userId) {
+    const query: AuditLogQueryFilter = {};
+    if (filter?.userId !== undefined) {
       query.userId = new Types.ObjectId(filter.userId);
     }
-    if (filter?.action) {
+    if (filter?.action !== undefined) {
       query.action = filter.action;
     }
-    if (filter?.resource) {
+    if (filter?.resource !== undefined) {
       query.resource = filter.resource;
     }
-    if (filter?.result) {
+    if (filter?.result !== undefined) {
       query.result = filter.result;
     }
-    return this.auditLogModel.countDocuments(query).exec();
+    return await this.auditLogModel.countDocuments(query).exec();
   }
 }

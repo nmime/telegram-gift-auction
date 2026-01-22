@@ -15,7 +15,7 @@ export class TransactionsService {
     limit = 50,
     offset = 0,
   ): Promise<TransactionDocument[]> {
-    return this.transactionModel
+    return await this.transactionModel
       .find({ userId: new Types.ObjectId(userId) })
       .sort({ createdAt: -1 })
       .skip(offset)
@@ -24,7 +24,7 @@ export class TransactionsService {
   }
 
   async getByAuction(auctionId: string): Promise<TransactionDocument[]> {
-    return this.transactionModel
+    return await this.transactionModel
       .find({ auctionId: new Types.ObjectId(auctionId) })
       .sort({ createdAt: -1 })
       .exec();

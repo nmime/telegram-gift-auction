@@ -3,7 +3,7 @@ interface LoadingSpinnerProps {
   text?: string;
 }
 
-export default function LoadingSpinner({ size = 'md', text }: LoadingSpinnerProps) {
+export default function LoadingSpinner({ size = 'md', text }: LoadingSpinnerProps): React.JSX.Element {
   const sizeClass = size === 'sm' ? 'spinner-sm' : size === 'lg' ? 'spinner-lg' : '';
 
   return (

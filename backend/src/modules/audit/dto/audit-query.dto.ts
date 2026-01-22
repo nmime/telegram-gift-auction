@@ -1,4 +1,4 @@
-import { tags } from "typia";
+import type { tags } from "typia";
 
 /**
  * Audit action result status

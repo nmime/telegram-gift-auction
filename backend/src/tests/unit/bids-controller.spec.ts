@@ -1,12 +1,12 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { Test, TestingModule } from "@nestjs/testing";
+import { Test, type TestingModule } from "@nestjs/testing";
 import { Types } from "mongoose";
 import { JwtService } from "@nestjs/jwt";
 import { BidsController } from "@/modules/bids/bids.controller";
 import { BidsService } from "@/modules/bids/bids.service";
 import { BidStatus, AuctionStatus } from "@/schemas";
-import { AuthenticatedRequest, AuthGuard } from "@/common";
-import { IBidResponse } from "@/modules/bids/dto";
+import { type AuthenticatedRequest, AuthGuard } from "@/common";
+import type { IBidResponse } from "@/modules/bids/dto";
 
 describe("BidsController", () => {
   let controller: BidsController;

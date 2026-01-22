@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { Test, TestingModule } from "@nestjs/testing";
+import { Test, type TestingModule } from "@nestjs/testing";
 import { getModelToken, getConnectionToken } from "@nestjs/mongoose";
 import {
   BadRequestException,
@@ -26,19 +26,6 @@ import {
   BidStatus,
 } from "@/schemas";
 import { Types } from "mongoose";
-
-/**
- * INTEGRATION TESTS: ERROR RECOVERY AND RESILIENCE
- *
- * Tests how the system recovers from failures across all layers:
- * - Database connection failures and recovery
- * - Service failures and cascading effects
- * - Cache consistency after failures
- * - Transaction rollback scenarios
- * - Data consistency after errors
- * - Timeout and retry handling
- * - Partial failure handling
- */
 
 // MongoDB Memory Server with replica set requires time to download binary on first run
 jest.setTimeout(180000);
@@ -258,8 +245,6 @@ describe("Error Recovery and Resilience Integration Tests", () => {
     jest.clearAllMocks();
   });
 
-  // ==================== DATABASE CONNECTION RECOVERY (6 tests) ====================
-
   describe("1. Database Connection Recovery", () => {
     it("should retry operation when transient DB error occurs and succeed", async () => {
       const mockUser = {
@@ -309,21 +294,21 @@ describe("Error Recovery and Resilience Integration Tests", () => {
 
       // Simulate transient errors then success
       let callCount = 0;
-      mockUserModel.findById.mockImplementation(() => {
+      mockUserModel.findById.mockImplementation(async () => {
         callCount++;
         if (callCount === 1) {
-          return Promise.reject(new Error("TransientTransactionError"));
+          return await Promise.reject(new Error("TransientTransactionError"));
         }
         return {
           session: jest.fn().mockResolvedValue(callCount === 2 ? user1 : user2),
         };
       });
 
-      mockUserModel.findOneAndUpdate.mockImplementation(() => {
+      mockUserModel.findOneAndUpdate.mockImplementation(async () => {
         if (Math.random() > 0.7) {
-          return Promise.reject(new Error("TransientTransactionError"));
+          return await Promise.reject(new Error("TransientTransactionError"));
         }
-        return Promise.resolve({ ...user1, balance: 1100, version: 2 });
+        return await Promise.resolve({ ...user1, balance: 1100, version: 2 });
       });
 
       mockTransactionModel.create.mockResolvedValue([
@@ -478,8 +463,6 @@ describe("Error Recovery and Resilience Integration Tests", () => {
     });
   });
 
-  // ==================== SERVICE FAILURE RECOVERY (6 tests) ====================
-
   describe("2. Service Failure Recovery", () => {
     it("should fail gracefully when auth service fails", async () => {
       mockUserModel.findById.mockResolvedValue(null);
@@ -587,8 +570,6 @@ describe("Error Recovery and Resilience Integration Tests", () => {
       expect(balance.balance).toBe(1000);
     });
   });
-
-  // ==================== CACHE CONSISTENCY AFTER RECOVERY (4 tests) ====================
 
   describe("3. Cache Consistency After Recovery", () => {
     it("should keep DB as source of truth when Redis cache fails", async () => {
@@ -711,8 +692,6 @@ describe("Error Recovery and Resilience Integration Tests", () => {
       expect(mockBidCacheService.warmupBalances).toHaveBeenCalled();
     });
   });
-
-  // ==================== TRANSACTION ROLLBACK SCENARIOS (5 tests) ====================
 
   describe("4. Transaction Rollback Scenarios", () => {
     it("should rollback when bid placement partially succeeds", async () => {
@@ -895,8 +874,6 @@ describe("Error Recovery and Resilience Integration Tests", () => {
     });
   });
 
-  // ==================== DATA CONSISTENCY AFTER ERRORS (4 tests) ====================
-
   describe("5. Data Consistency After Errors", () => {
     it("should not corrupt balance after failed operation", async () => {
       const mockUser = {
@@ -1031,8 +1008,6 @@ describe("Error Recovery and Resilience Integration Tests", () => {
     });
   });
 
-  // ==================== TIMEOUT AND RETRY HANDLING (3 tests) ====================
-
   describe("6. Timeout and Retry Handling", () => {
     it("should retry request with backoff after timeout", async () => {
       const mockUser = {
@@ -1043,10 +1018,12 @@ describe("Error Recovery and Resilience Integration Tests", () => {
       };
 
       let attempts = 0;
-      mockUserModel.findById.mockImplementation(() => {
+      mockUserModel.findById.mockImplementation(async () => {
         attempts++;
         if (attempts < 3) {
-          return Promise.reject(new Error("operation exceeded time limit"));
+          return await Promise.reject(
+            new Error("operation exceeded time limit"),
+          );
         }
         return {
           session: jest.fn().mockResolvedValue(mockUser),
@@ -1104,8 +1081,6 @@ describe("Error Recovery and Resilience Integration Tests", () => {
       expect(mockSession.abortTransaction).toHaveBeenCalled();
     });
   });
-
-  // ==================== PARTIAL FAILURE HANDLING (2 tests) ====================
 
   describe("7. Partial Failure Handling", () => {
     it("should succeed for other users when one user operation fails", async () => {

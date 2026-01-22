@@ -11,7 +11,7 @@ interface CountdownResult {
 }
 
 function calculateTimeLeft(endTime?: string): number {
-  if (!endTime) return 0;
+  if (!endTime) {return 0;}
   const end = new Date(endTime).getTime();
   const now = Date.now();
   return Math.max(0, Math.floor((end - now) / 1000));
@@ -21,7 +21,7 @@ export function useCountdown(endTime?: string): CountdownResult {
   const [timeLeft, setTimeLeft] = useState<number>(() => calculateTimeLeft(endTime));
 
   useEffect(() => {
-    if (!endTime) return;
+    if (!endTime) {return;}
 
     const interval = setInterval(() => {
       const remaining = calculateTimeLeft(endTime);

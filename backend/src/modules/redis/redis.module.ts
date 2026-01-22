@@ -19,12 +19,12 @@ import { redisClient, redlock } from "./constants";
   providers: [
     {
       provide: redisClient,
-      useFactory: (configService: ConfigService) => {
+      useFactory: (configService: ConfigService): Redis => {
         const url =
-          configService.get<string>("REDIS_URL") || "redis://localhost:6379";
+          configService.get<string>("REDIS_URL") ?? "redis://localhost:6379";
         const redis = new Redis(url, {
           maxRetriesPerRequest: 3,
-          retryStrategy: (times) => Math.min(times * 50, 2000),
+          retryStrategy: (times: number): number => Math.min(times * 50, 2000),
         });
         return redis;
       },
@@ -32,7 +32,7 @@ import { redisClient, redlock } from "./constants";
     },
     {
       provide: redlock,
-      useFactory: (redis: Redis) => {
+      useFactory: (redis: Redis): Redlock => {
         return new Redlock([redis], { retryCount: 0 });
       },
       inject: [redisClient],
@@ -47,7 +47,7 @@ export class RedisModule implements OnModuleInit, OnModuleDestroy {
 
   constructor(@Inject(redisClient) private readonly redis: Redis) {}
 
-  async onModuleInit() {
+  public async onModuleInit(): Promise<void> {
     try {
       const pong = await this.redis.ping();
       this.logger.log("Redis connected", pong);
@@ -56,7 +56,7 @@ export class RedisModule implements OnModuleInit, OnModuleDestroy {
     }
   }
 
-  async onModuleDestroy() {
-    await this.redis?.quit();
+  public async onModuleDestroy(): Promise<void> {
+    await this.redis.quit();
   }
 }

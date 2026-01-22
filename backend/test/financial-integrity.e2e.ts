@@ -5,7 +5,6 @@
 import api from '../src/api';
 import {
   createConnection,
-  waitFor,
   waitForLockRelease,
   createAuctionConfig,
 } from './utils/test-helpers';
@@ -47,7 +46,7 @@ async function testBalanceFreezing(): Promise<void> {
   console.log('✓ After bid: balance=700, frozen=300');
 
   // Total should still be 1000
-  const total = balance.balance + balance.frozenBalance;
+  const total = Number(balance.balance) + Number(balance.frozenBalance);
   if (total !== 1000) {
     throw new Error(`Total changed! Expected 1000, got ${total}`);
   }
@@ -96,7 +95,7 @@ async function testIncrementalFreeze(): Promise<void> {
   }
 
   // Total should still be 2000
-  const total = balance.balance + balance.frozenBalance;
+  const total = Number(balance.balance) + Number(balance.frozenBalance);
   if (total !== 2000) {
     throw new Error(`Total changed! Expected 2000, got ${total}`);
   }
@@ -150,8 +149,8 @@ async function testOutbidRefund(): Promise<void> {
   }
 
   // Both users' totals should be 1000
-  const user1Total = user1Balance.balance + user1Balance.frozenBalance;
-  const user2Total = user2Balance.balance + user2Balance.frozenBalance;
+  const user1Total = Number(user1Balance.balance) + Number(user1Balance.frozenBalance);
+  const user2Total = Number(user2Balance.balance) + Number(user2Balance.frozenBalance);
 
   if (user1Total !== 1000) {
     throw new Error(`User1 total changed: ${user1Total}`);
@@ -242,7 +241,7 @@ async function testMultiUserFinancialIntegrity(): Promise<void> {
   let totalInSystem = 0;
   for (let i = 0; i < 5; i++) {
     const balance = await api.functional.api.users.balance.getBalance(users[i]!.conn);
-    totalInSystem += balance.balance + balance.frozenBalance;
+    totalInSystem += Number(balance.balance) + Number(balance.frozenBalance);
     console.log(`  User ${i}: balance=${balance.balance}, frozen=${balance.frozenBalance}`);
   }
 

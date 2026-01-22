@@ -8,7 +8,7 @@ export class BidsService {
   constructor(@InjectModel(Bid.name) private bidModel: Model<BidDocument>) {}
 
   async getByAuction(auctionId: string): Promise<BidDocument[]> {
-    return this.bidModel
+    return await this.bidModel
       .find({ auctionId: new Types.ObjectId(auctionId) })
       .sort({ amount: -1, createdAt: 1 })
       .populate("userId", "username isBot")
@@ -16,7 +16,7 @@ export class BidsService {
   }
 
   async getActiveByAuction(auctionId: string): Promise<BidDocument[]> {
-    return this.bidModel
+    return await this.bidModel
       .find({
         auctionId: new Types.ObjectId(auctionId),
         status: BidStatus.ACTIVE,
@@ -27,7 +27,7 @@ export class BidsService {
   }
 
   async getByUser(userId: string): Promise<BidDocument[]> {
-    return this.bidModel
+    return await this.bidModel
       .find({ userId: new Types.ObjectId(userId) })
       .sort({ createdAt: -1 })
       .populate("auctionId", "title status")
@@ -35,7 +35,7 @@ export class BidsService {
   }
 
   async countByAuction(auctionId: string): Promise<number> {
-    return this.bidModel.countDocuments({
+    return await this.bidModel.countDocuments({
       auctionId: new Types.ObjectId(auctionId),
       status: BidStatus.ACTIVE,
     });

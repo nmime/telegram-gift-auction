@@ -64,8 +64,8 @@ import { AuditModule } from "./modules/audit";
         },
         {
           name: "long",
-          ttl: configService.get<number>("THROTTLE_TTL") || 60000,
-          limit: configService.get<number>("THROTTLE_LIMIT") || 300,
+          ttl: configService.get<number>("THROTTLE_TTL") ?? 60000,
+          limit: configService.get<number>("THROTTLE_LIMIT") ?? 300,
         },
       ],
       inject: [ConfigService],

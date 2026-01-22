@@ -35,11 +35,15 @@ export class TelegramService {
   private readonly maxAuthAge = 86400; // 24 hours
 
   constructor(private readonly configService: ConfigService) {
-    this.botToken = this.configService.get<string>("BOT_TOKEN")!;
+    const token = this.configService.get<string>("BOT_TOKEN");
+    if (token === undefined || token === "") {
+      throw new Error("BOT_TOKEN is not configured");
+    }
+    this.botToken = token;
   }
 
   validateWidgetAuth(payload: TelegramUser): TelegramUser {
-    if (!this.botToken) {
+    if (this.botToken === "") {
       throw new UnauthorizedException("Bot token not configured");
     }
 
@@ -57,10 +61,14 @@ export class TelegramService {
       hash: payload.hash,
     };
 
-    if (payload.last_name) dataCheck.last_name = payload.last_name;
-    if (payload.username) dataCheck.username = payload.username;
-    if (payload.photo_url) dataCheck.photo_url = payload.photo_url;
-    if (payload.language_code) dataCheck.language_code = payload.language_code;
+    if (payload.last_name !== undefined && payload.last_name !== "")
+      dataCheck.last_name = payload.last_name;
+    if (payload.username !== undefined && payload.username !== "")
+      dataCheck.username = payload.username;
+    if (payload.photo_url !== undefined && payload.photo_url !== "")
+      dataCheck.photo_url = payload.photo_url;
+    if (payload.language_code !== undefined && payload.language_code !== "")
+      dataCheck.language_code = payload.language_code;
     if (payload.is_premium !== undefined)
       dataCheck.is_premium = String(payload.is_premium);
 
@@ -75,7 +83,7 @@ export class TelegramService {
   }
 
   validateWebAppInitData(initDataString: string): WebAppInitData {
-    if (!this.botToken) {
+    if (this.botToken === "") {
       throw new UnauthorizedException("Bot token not configured");
     }
 
@@ -98,7 +106,12 @@ export class TelegramService {
     const authDateStr = searchParams.get("auth_date");
     const hash = searchParams.get("hash");
 
-    if (!authDateStr || !hash) {
+    if (
+      authDateStr === null ||
+      authDateStr === "" ||
+      hash === null ||
+      hash === ""
+    ) {
       throw new UnauthorizedException("Missing required fields in init data");
     }
 
@@ -111,16 +124,17 @@ export class TelegramService {
     }
 
     let user: WebAppInitData["user"];
-    if (userStr) {
+    if (userStr !== null && userStr !== "") {
       try {
-        user = JSON.parse(userStr);
+        user = JSON.parse(userStr) as WebAppInitData["user"];
       } catch {
         throw new UnauthorizedException("Invalid user data format");
       }
     }
 
+    const queryId = searchParams.get("query_id");
     return {
-      query_id: searchParams.get("query_id") || undefined,
+      query_id: queryId !== null && queryId !== "" ? queryId : undefined,
       user,
       auth_date: authDate,
       hash,

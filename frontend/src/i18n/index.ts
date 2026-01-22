@@ -7,7 +7,7 @@ import ru from './ru.json';
 const languageKey = 'user_language';
 
 export function mapToSupportedLanguage(langCode: string | undefined): string {
-  if (!langCode) return 'en';
+  if (!langCode) {return 'en';}
   return ['ru', 'uk', 'be'].includes(langCode) ? 'ru' : 'en';
 }
 
@@ -17,12 +17,12 @@ function detectLanguage(): string {
     return storedLang;
   }
 
-  const tgLang = window.Telegram?.WebApp?.initDataUnsafe?.user?.language_code;
+  const tgLang = window.Telegram?.WebApp.initDataUnsafe.user?.language_code;
   if (tgLang) {
     return mapToSupportedLanguage(tgLang);
   }
 
-  const browserLang = navigator.language?.split('-')[0];
+  const browserLang = navigator.language.split('-')[0];
   if (browserLang) {
     return mapToSupportedLanguage(browserLang);
   }
@@ -37,14 +37,14 @@ export function saveLanguagePreference(lang: string): void {
 export function changeLanguage(lang: string): void {
   const supportedLang = ['en', 'ru'].includes(lang) ? lang : 'en';
   saveLanguagePreference(supportedLang);
-  i18n.changeLanguage(supportedLang);
+  void i18n.changeLanguage(supportedLang);
 }
 
 export function getCurrentLanguage(): string {
   return i18n.language || 'en';
 }
 
-i18n
+void i18n
   .use(initReactI18next)
   .init({
     resources: {

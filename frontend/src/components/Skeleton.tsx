@@ -10,7 +10,7 @@ export function Skeleton({
   width,
   height,
   variant = 'rect'
-}: SkeletonProps) {
+}: SkeletonProps): React.JSX.Element {
   const variantClass = {
     text: 'skeleton-text',
     title: 'skeleton-title',
@@ -20,13 +20,13 @@ export function Skeleton({
   }[variant];
 
   const style: React.CSSProperties = {};
-  if (width) style.width = typeof width === 'number' ? `${width}px` : width;
-  if (height) style.height = typeof height === 'number' ? `${height}px` : height;
+  if (width !== undefined) {style.width = typeof width === 'number' ? `${width}px` : width;}
+  if (height !== undefined) {style.height = typeof height === 'number' ? `${height}px` : height;}
 
   return <div className={`skeleton ${variantClass} ${className}`} style={style} />;
 }
 
-export function SkeletonAuctionCard() {
+export function SkeletonAuctionCard(): React.JSX.Element {
   return (
     <div className="skeleton-card">
       <Skeleton variant="title" />
@@ -40,7 +40,7 @@ export function SkeletonAuctionCard() {
   );
 }
 
-export function SkeletonAuctionGrid({ count = 4 }: { count?: number }) {
+export function SkeletonAuctionGrid({ count = 4 }: { count?: number }): React.JSX.Element {
   return (
     <div className="grid grid-cols-2 gap-4">
       {Array.from({ length: count }).map((_, i) => (
@@ -50,7 +50,7 @@ export function SkeletonAuctionGrid({ count = 4 }: { count?: number }) {
   );
 }
 
-export function SkeletonLeaderboardItem() {
+export function SkeletonLeaderboardItem(): React.JSX.Element {
   return (
     <div className="skeleton-leaderboard-item">
       <Skeleton width={30} height={24} />
@@ -63,7 +63,7 @@ export function SkeletonLeaderboardItem() {
   );
 }
 
-export function SkeletonLeaderboard({ count = 5 }: { count?: number }) {
+export function SkeletonLeaderboard({ count = 5 }: { count?: number }): React.JSX.Element {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
       {Array.from({ length: count }).map((_, i) => (
@@ -73,7 +73,7 @@ export function SkeletonLeaderboard({ count = 5 }: { count?: number }) {
   );
 }
 
-export function SkeletonStatBox() {
+export function SkeletonStatBox(): React.JSX.Element {
   return (
     <div className="skeleton-stat-box">
       <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '8px' }}>
@@ -86,7 +86,7 @@ export function SkeletonStatBox() {
   );
 }
 
-export function SkeletonStats({ count = 5 }: { count?: number }) {
+export function SkeletonStats({ count = 5 }: { count?: number }): React.JSX.Element {
   return (
     <div className="round-stats">
       {Array.from({ length: count }).map((_, i) => (
@@ -96,7 +96,7 @@ export function SkeletonStats({ count = 5 }: { count?: number }) {
   );
 }
 
-export function SkeletonTableRow() {
+export function SkeletonTableRow(): React.JSX.Element {
   return (
     <div className="skeleton-table-row">
       <Skeleton variant="text" />
@@ -107,7 +107,7 @@ export function SkeletonTableRow() {
   );
 }
 
-export function SkeletonTable({ rows = 5 }: { rows?: number }) {
+export function SkeletonTable({ rows = 5 }: { rows?: number }): React.JSX.Element {
   return (
     <div>
       {Array.from({ length: rows }).map((_, i) => (
@@ -128,7 +128,7 @@ const rowWidths = [
   ['62%', '52%', '72%', '62%', '58%', '62%'],
 ];
 
-export function SkeletonTransactionsTable({ rows = 8 }: { rows?: number }) {
+export function SkeletonTransactionsTable({ rows = 8 }: { rows?: number }): React.JSX.Element {
   return (
     <div className="skeleton-card">
       <div style={{
@@ -147,7 +147,7 @@ export function SkeletonTransactionsTable({ rows = 8 }: { rows?: number }) {
         <Skeleton variant="text" className="skeleton-text-sm" width="60%" />
       </div>
       {Array.from({ length: rows }).map((_, i) => {
-        const widths = rowWidths[i % rowWidths.length];
+        const widths = rowWidths[i % rowWidths.length] ?? rowWidths[0];
         return (
           <div
             key={i}
@@ -159,12 +159,12 @@ export function SkeletonTransactionsTable({ rows = 8 }: { rows?: number }) {
               borderBottom: '1px solid rgba(255,255,255,0.05)'
             }}
           >
-            <Skeleton variant="text" width={widths[0]} />
-            <Skeleton variant="text" width={widths[1]} />
-            <Skeleton variant="text" width={widths[2]} />
-            <Skeleton variant="text" width={widths[3]} />
-            <Skeleton variant="text" width={widths[4]} />
-            <Skeleton variant="text" width={widths[5]} />
+            <Skeleton variant="text" width={widths?.[0] ?? '60%'} />
+            <Skeleton variant="text" width={widths?.[1] ?? '60%'} />
+            <Skeleton variant="text" width={widths?.[2] ?? '60%'} />
+            <Skeleton variant="text" width={widths?.[3] ?? '60%'} />
+            <Skeleton variant="text" width={widths?.[4] ?? '60%'} />
+            <Skeleton variant="text" width={widths?.[5] ?? '60%'} />
           </div>
         );
       })}
@@ -172,7 +172,7 @@ export function SkeletonTransactionsTable({ rows = 8 }: { rows?: number }) {
   );
 }
 
-export function SkeletonBidForm() {
+export function SkeletonBidForm(): React.JSX.Element {
   return (
     <div className="skeleton-card">
       <Skeleton variant="title" width="40%" />
@@ -187,7 +187,7 @@ export function SkeletonBidForm() {
   );
 }
 
-export function SkeletonRoundInfo() {
+export function SkeletonRoundInfo(): React.JSX.Element {
   return (
     <div className="skeleton-card">
       <Skeleton variant="title" width="30%" />
@@ -200,7 +200,7 @@ export function SkeletonRoundInfo() {
   );
 }
 
-export function SkeletonAuctionPage() {
+export function SkeletonAuctionPage(): React.JSX.Element {
   return (
     <div>
       {/* Header */}

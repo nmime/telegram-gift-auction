@@ -1,5 +1,9 @@
 # Testing
 
+[← Back to README](../README.md) · [Architecture](./architecture.md) · [API](./api.md) · [Concurrency](./concurrency.md) · [Deployment](./deployment.md)
+
+---
+
 ## Load Test Suite
 
 The system includes a comprehensive load test suite that validates behavior under stress conditions.
@@ -159,6 +163,65 @@ Fast Bid:  ENABLED (Ultra-fast Redis path)
 | **Massive Concurrent (150 bids)** | 18.5 req/s, p99=2.6s | 438 req/s, p99=12ms | **24x faster** |
 | **E2E Concurrent Throughput** | — | 5,556 bids/sec | — |
 | **Raw Lua Script Throughput** | — | 58,824 ops/sec | — |
+
+---
+
+## Artillery Load Tests (v2.0.27)
+
+Production-grade load testing with Artillery for realistic traffic simulation.
+
+### Quick Start
+
+```bash
+cd backend
+
+# HTTP Tests
+pnpm run load-test:smoke     # Quick 10s validation
+pnpm run load-test           # Standard load test
+pnpm run load-test:stress    # Extreme stress test
+pnpm run load-test:edge      # Edge cases validation
+
+# WebSocket Tests
+npx artillery run test/artillery/websocket-test.yml     # Standard WS
+npx artillery run test/artillery/websocket-stress.yml   # 16K emit/s
+npx artillery run test/artillery/websocket-extreme.yml  # 63K emit/s
+```
+
+### Performance Results (Single Process)
+
+| Protocol | Peak | Sustained | Latency | Grade |
+|----------|------|-----------|---------|-------|
+| **WebSocket** | **62,951 emit/s** | 43,056/s | 0ms | **A+** |
+| **HTTP (raw)** | 600 req/s | 140 req/s | 18ms | A |
+| **HTTP (rate limited)** | 138 req/s | 138 req/s | 18ms | A |
+
+### WebSocket Extreme Results
+
+```
+╔══════════════════════════════════════════════════════════════╗
+║  🚀 PEAK:       62,951 emit/sec                             ║
+║  ⚡ SUSTAINED:  43,056 emit/sec                              ║
+║  📊 TOTAL:      2,581,008 emits in 90 seconds               ║
+║  ⏱️  LATENCY:   0ms (sub-millisecond)                        ║
+╚══════════════════════════════════════════════════════════════╝
+```
+
+### Test Files
+
+```
+test/artillery/
+├── load-test.yml           # HTTP load test
+├── stress-test.yml         # HTTP stress test
+├── edge-cases.yml          # Validation tests
+├── websocket-test.yml      # WebSocket standard
+├── websocket-stress.yml    # WebSocket 16K/s
+├── websocket-extreme.yml   # WebSocket 63K/s
+├── functions.js            # HTTP helpers
+├── websocket-functions.js  # WS helpers
+└── BENCHMARK_REPORT.md     # Full report
+```
+
+Full benchmark details: [`backend/test/artillery/BENCHMARK_REPORT.md`](../backend/test/artillery/BENCHMARK_REPORT.md)
 
 ---
 

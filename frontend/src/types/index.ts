@@ -191,10 +191,10 @@ export interface RoundCompleteEvent {
   auctionId: string;
   roundNumber: number;
   winnersCount: number;
-  winners: Array<{
+  winners: {
     amount: number;
     itemNumber: number;
-  }>;
+  }[];
 }
 
 export interface AuctionCompleteEvent {

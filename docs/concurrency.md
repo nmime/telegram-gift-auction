@@ -1,5 +1,9 @@
 # Concurrency & Safety
 
+[← Back to README](../README.md) · [Architecture](./architecture.md) · [API](./api.md) · [Testing](./testing.md) · [Deployment](./deployment.md)
+
+---
+
 ## The Problem
 
 Auction systems face extreme concurrency challenges:

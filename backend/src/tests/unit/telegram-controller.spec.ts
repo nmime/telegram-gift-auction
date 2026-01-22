@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { Test, TestingModule } from "@nestjs/testing";
+import { Test, type TestingModule } from "@nestjs/testing";
 import { ConfigService } from "@nestjs/config";
 import { TelegramController } from "@/modules/telegram/telegram.controller";
 import { TelegramBotService } from "@/modules/telegram/telegram-bot.service";
@@ -242,12 +242,14 @@ describe("TelegramController", () => {
       const secretToken = "test_webhook_secret_token_12345";
 
       // Simulate multiple rapid requests
-      const promises = Array.from({ length: 10 }, () =>
-        controller.handleWebhook(
-          mockRequest as FastifyRequest,
-          mockReply as FastifyReply,
-          secretToken,
-        ),
+      const promises = Array.from(
+        { length: 10 },
+        async () =>
+          await controller.handleWebhook(
+            mockRequest as FastifyRequest,
+            mockReply as FastifyReply,
+            secretToken,
+          ),
       );
 
       await Promise.all(promises);

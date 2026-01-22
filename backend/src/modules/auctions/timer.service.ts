@@ -38,82 +38,21 @@ export class TimerService implements OnModuleDestroy {
     private readonly eventsGateway: EventsGateway,
   ) {
     // Generate unique instance ID
-    this.instanceId = `timer-${process.pid}-${Date.now()}`;
+    this.instanceId = `timer-${String(process.pid)}-${String(Date.now())}`;
     this.startLeaderElection();
   }
 
-  onModuleDestroy() {
+  onModuleDestroy(): void {
     this.stopAll();
-    if (this.leaderHeartbeatInterval) {
+    if (this.leaderHeartbeatInterval !== null) {
       clearInterval(this.leaderHeartbeatInterval);
       this.leaderHeartbeatInterval = null;
     }
     // Release leadership if we have it
     if (this.isLeader) {
-      this.redis.del(this.LEADER_KEY).catch(() => {});
-    }
-  }
-
-  /**
-   * Start the leader election process
-   * Uses Redis SET NX to acquire leadership
-   */
-  private startLeaderElection() {
-    // Try to become leader immediately
-    this.tryBecomeLeader();
-
-    // Periodically try to acquire/maintain leadership
-    this.leaderHeartbeatInterval = setInterval(
-      () => {
-        this.tryBecomeLeader();
-      },
-      (this.LEADER_TTL_SECONDS - 1) * 1000,
-    );
-  }
-
-  private async tryBecomeLeader(): Promise<boolean> {
-    try {
-      // Try to acquire leadership with SET NX EX
-      const result = await this.redis.set(
-        this.LEADER_KEY,
-        this.instanceId,
-        "EX",
-        this.LEADER_TTL_SECONDS,
-        "NX",
-      );
-
-      if (result === "OK") {
-        if (!this.isLeader) {
-          this.logger.log("Acquired timer service leadership", {
-            instanceId: this.instanceId,
-          });
-          this.isLeader = true;
-        }
-        return true;
-      }
-
-      // Check if we already have leadership
-      const currentLeader = await this.redis.get(this.LEADER_KEY);
-      if (currentLeader === this.instanceId) {
-        // Refresh our leadership
-        await this.redis.expire(this.LEADER_KEY, this.LEADER_TTL_SECONDS);
-        return true;
-      }
-
-      // Someone else is leader
-      if (this.isLeader) {
-        this.logger.warn("Lost timer service leadership", {
-          instanceId: this.instanceId,
-          newLeader: currentLeader,
-        });
-        this.isLeader = false;
-        // Stop all our timers since we're no longer leader
-        this.stopAll();
-      }
-      return false;
-    } catch (err) {
-      this.logger.error("Leader election error", err);
-      return false;
+      this.redis.del(this.LEADER_KEY).catch(() => {
+        // Intentionally ignore errors during cleanup
+      });
     }
   }
 
@@ -163,7 +102,7 @@ export class TimerService implements OnModuleDestroy {
    */
   updateTimer(auctionId: string, newEndTime: Date): void {
     const state = this.timers.get(auctionId);
-    if (state) {
+    if (state !== undefined) {
       state.endTime = newEndTime;
       this.logger.debug("Updated timer end time", { auctionId, newEndTime });
       // Broadcast updated time immediately
@@ -176,10 +115,87 @@ export class TimerService implements OnModuleDestroy {
    */
   stopTimer(auctionId: string): void {
     const state = this.timers.get(auctionId);
-    if (state) {
+    if (state !== undefined) {
       clearInterval(state.interval);
       this.timers.delete(auctionId);
       this.logger.debug("Stopped timer", { auctionId });
+    }
+  }
+
+  /**
+   * Check if timer is running for an auction
+   */
+  isTimerRunning(auctionId: string): boolean {
+    return this.timers.has(auctionId);
+  }
+
+  /**
+   * Get current leader status
+   */
+  isCurrentLeader(): boolean {
+    return this.isLeader;
+  }
+
+  /**
+   * Start the leader election process
+   * Uses Redis SET NX to acquire leadership
+   */
+  private startLeaderElection(): void {
+    // Try to become leader immediately
+    void this.tryBecomeLeader();
+
+    // Periodically try to acquire/maintain leadership
+    this.leaderHeartbeatInterval = setInterval(
+      () => {
+        void this.tryBecomeLeader();
+      },
+      (this.LEADER_TTL_SECONDS - 1) * 1000,
+    );
+  }
+
+  private async tryBecomeLeader(): Promise<boolean> {
+    try {
+      // Try to acquire leadership with SET NX EX
+      const result = await this.redis.set(
+        this.LEADER_KEY,
+        this.instanceId,
+        "EX",
+        this.LEADER_TTL_SECONDS,
+        "NX",
+      );
+
+      if (result === "OK") {
+        if (!this.isLeader) {
+          this.logger.log("Acquired timer service leadership", {
+            instanceId: this.instanceId,
+          });
+          this.isLeader = true;
+        }
+        return true;
+      }
+
+      // Check if we already have leadership
+      const currentLeader = await this.redis.get(this.LEADER_KEY);
+      if (currentLeader === this.instanceId) {
+        // Refresh our leadership
+        await this.redis.expire(this.LEADER_KEY, this.LEADER_TTL_SECONDS);
+        return true;
+      }
+
+      // Someone else is leader
+      if (this.isLeader) {
+        this.logger.warn("Lost timer service leadership", {
+          instanceId: this.instanceId,
+          newLeader: currentLeader,
+        });
+        this.isLeader = false;
+        // Stop all our timers since we're no longer leader
+        this.stopAll();
+      }
+      return false;
+    } catch (err: unknown) {
+      this.logger.error("Leader election error", err);
+      return false;
     }
   }
 
@@ -222,19 +238,5 @@ export class TimerService implements OnModuleDestroy {
       isUrgent: timeLeftSeconds > 0 && timeLeftSeconds <= 60,
       serverTime: now.toISOString(),
     });
-  }
-
-  /**
-   * Check if timer is running for an auction
-   */
-  isTimerRunning(auctionId: string): boolean {
-    return this.timers.has(auctionId);
-  }
-
-  /**
-   * Get current leader status
-   */
-  isCurrentLeader(): boolean {
-    return this.isLeader;
   }
 }

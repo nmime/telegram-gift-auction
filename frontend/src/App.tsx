@@ -13,7 +13,7 @@ import TransactionsPage from './pages/TransactionsPage';
 import BalancePage from './pages/BalancePage';
 import ProfilePage from './pages/ProfilePage';
 
-function App() {
+function App(): React.JSX.Element {
   const { user, loading } = useAuth();
 
   if (loading) {
