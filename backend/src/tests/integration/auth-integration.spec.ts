@@ -45,12 +45,14 @@ describe("Authentication Integration Tests", () => {
   let mongoConnection: Connection;
 
   beforeAll(async () => {
-    // Start in-memory MongoDB with replica set enabled for transaction support
-    mongoServer = await MongoMemoryServer.create({
-      instance: {
-        replSet: "rs0",
-      },
-    });
+    // Start in-memory MongoDB for integration testing
+    // Use replica set if running in CI, single instance locally for resource efficiency
+    const mongoConfig: any = {};
+    if (process.env.CI) {
+      mongoConfig.instance = { replSet: process.env.MONGOMS_REPLSET || "rs0" };
+    }
+
+    mongoServer = await MongoMemoryServer.create(mongoConfig);
     const mongoUri = mongoServer.getUri();
 
     const moduleFixture: TestingModule = await Test.createTestingModule({

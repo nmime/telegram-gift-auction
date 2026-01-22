@@ -123,7 +123,9 @@ jobs:
         timeout-minutes: 20
 
       - name: Run integration tests
-        run: pnpm test -- --testPathPattern=integration --bail --maxWorkers=1
+        run: |
+          export MONGOMS_REPLSET=rs0
+          pnpm test -- --testPathPatterns=integration --bail --maxWorkers=1
         env:
           CI: true
           NODE_OPTIONS: --max-old-space-size=4096
