@@ -81,7 +81,19 @@ describe("Bidding Integration Tests", () => {
 
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [
-        ConfigModule.forRoot({ isGlobal: true }),
+        ConfigModule.forRoot({
+          isGlobal: true,
+          load: [
+            () => ({
+              JWT_SECRET: "test-secret-key-for-integration-tests",
+              JWT_EXPIRES_IN: "24h",
+              BOT_TOKEN: "123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11",
+              MONGODB_URI: mongoUri,
+              REDIS_URL: "redis://localhost:6379/15",
+              NODE_ENV: "test",
+            }),
+          ],
+        }),
         I18nModule.forRoot({
           fallbackLanguage: "en",
           loaderOptions: {
