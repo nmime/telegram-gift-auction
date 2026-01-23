@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Artillery Report: multi-core-http-max</title>
+  <title>Artillery Report: multi-core-websocket-max</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0d1117; color: #c9d1d9; line-height: 1.6; }
@@ -34,56 +34,60 @@
 <body>
   <div class="container">
     <h1>📊 Artillery Load Test Report</h1>
-    <p class="timestamp">Test: <strong>multi-core-http-max</strong> | Generated: 2026-01-23T18:32:22.825Z</p>
+    <p class="timestamp">Test: <strong>multi-core-websocket-max</strong> | Generated: 2026-01-23T18:32:22.836Z</p>
 
     <h2>Summary</h2>
     <div class="summary">
       
     <div class="card">
-      <div class="card-title">Total Requests</div>
-      <div class="card-value">1,882,214</div>
+      <div class="card-title">Total Emits</div>
+      <div class="card-value">12,034,948</div>
     </div>
     <div class="card">
-      <div class="card-title">Success Rate (2xx)</div>
-      <div class="card-value success">99.9%</div>
-      <div class="metric-bar"><div class="metric-fill" style="width: 99.9%"></div></div>
+      <div class="card-title">Emit Rate</div>
+      <div class="card-value">0<span class="card-unit">/sec</span></div>
     </div>
     <div class="card">
-      <div class="card-title">Mean Response Time</div>
-      <div class="card-value">669.5<span class="card-unit">ms</span></div>
+      <div class="card-title">Success Rate</div>
+      <div class="card-value warning">79.9%</div>
+      <div class="metric-bar"><div class="metric-fill" style="width: 79.9%"></div></div>
     </div>
     <div class="card">
-      <div class="card-title">P95 Response Time</div>
-      <div class="card-value">3395.5<span class="card-unit">ms</span></div>
+      <div class="card-title">Mean Latency</div>
+      <div class="card-value">0.00<span class="card-unit">ms</span></div>
     </div>
     <div class="card">
-      <div class="card-title">P99 Response Time</div>
-      <div class="card-value">7709.8<span class="card-unit">ms</span></div>
+      <div class="card-title">P99 Latency</div>
+      <div class="card-value">0.00<span class="card-unit">ms</span></div>
     </div>
     <div class="card">
       <div class="card-title">VUsers Completed</div>
-      <div class="card-value">15,682<span class="card-unit">/ 15,700</span></div>
+      <div class="card-value">23,974<span class="card-unit">/ 30,000</span></div>
     </div>
   
     </div>
 
     
-    <h2>HTTP Status Codes</h2>
-    <table>
-      <tr><th>Status Code</th><th>Count</th><th>Percentage</th></tr>
-      <tr><td><span class="success">200 OK</span></td><td>941,064</td><td>50.0%</td></tr><tr><td><span class="warning">400 Bad Request</span></td><td>941,102</td><td>50.0%</td></tr><tr><td><span class="warning">401 Unauthorized</span></td><td>30</td><td>0.0%</td></tr>
-    </table>
-
-    <h2>Response Time Distribution</h2>
+    <h2>WebSocket Performance</h2>
     <table>
       <tr><th>Metric</th><th>Value</th></tr>
-      <tr><td>Min</td><td>0ms</td></tr>
-      <tr><td>Max</td><td>29909ms</td></tr>
-      <tr><td>Mean</td><td>669.50ms</td></tr>
-      <tr><td>Median (P50)</td><td>320.6ms</td></tr>
-      <tr><td>P90</td><td>889.1ms</td></tr>
-      <tr><td>P95</td><td>3395.5ms</td></tr>
-      <tr><td>P99</td><td>7709.8ms</td></tr>
+      <tr><td>Total Emits</td><td>12,034,948</td></tr>
+      <tr><td>Emit Rate</td><td>0/sec</td></tr>
+      <tr><td>Min Latency</td><td>0ms</td></tr>
+      <tr><td>Max Latency</td><td>93.6ms</td></tr>
+      <tr><td>Mean Latency</td><td>0.000ms</td></tr>
+      <tr><td>P95 Latency</td><td>0ms</td></tr>
+      <tr><td>P99 Latency</td><td>0ms</td></tr>
+    </table>
+
+    <h2>Session Statistics</h2>
+    <table>
+      <tr><th>Metric</th><th>Value</th></tr>
+      <tr><td>VUsers Created</td><td>30,000</td></tr>
+      <tr><td>VUsers Completed</td><td>23,974</td></tr>
+      <tr><td>VUsers Failed</td><td>6,026</td></tr>
+      <tr><td>Mean Session Length</td><td>16.6ms</td></tr>
+      <tr><td>P95 Session Length</td><td>53ms</td></tr>
     </table>
   
 

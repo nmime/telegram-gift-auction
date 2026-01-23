@@ -20,13 +20,13 @@
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
 │  SINGLE-CORE                                                        │
-│    HTTP:       3,362 req/sec peak, 197 req/s standard load          │
+│    HTTP:       2,779 req/sec peak, 197 req/s standard load          │
 │    WebSocket:  200,018 emit/sec peak, 175,970/sec sustained         │
 │    Latency:    1.5ms mean, 5ms p99                                  │
 │                                                                     │
-│  CLUSTER MODE (12 cores)                                            │
-│    HTTP:       13,812 req/sec peak (~4.1x improvement)              │
-│    WebSocket:  ~2.4M emit/sec theoretical                           │
+│  CLUSTER MODE (12 cores, sticky sessions)                           │
+│    HTTP:       7,216 req/sec peak, 99.96% success (+160%)           │
+│    WebSocket:  251,640 emit/sec peak, 12M emits, 80% success (+26%) │
 │                                                                     │
 │  Grade: A+ (production-ready)                                       │
 └─────────────────────────────────────────────────────────────────────┘

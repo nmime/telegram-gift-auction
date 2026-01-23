@@ -1,6 +1,8 @@
 import cluster from "node:cluster";
 import os from "node:os";
+import http from "node:http";
 import { NestFactory } from "@nestjs/core";
+import { setupMaster, setupWorker } from "@socket.io/sticky";
 import {
   FastifyAdapter,
   type NestFastifyApplication,
@@ -181,16 +183,34 @@ async function bootstrap(): Promise<void> {
     logger.log("AsyncAPI docs available at /api/async-docs");
   }
 
-  await app.listen(port, "0.0.0.0");
+  // Check if running in cluster worker mode
+  const isClusterWorker =
+    cluster.isWorker &&
+    (process.env.CLUSTER_WORKERS ?? "0").toLowerCase() !== "0";
 
-  // Create Socket.IO server manually after HTTP server is listening
-  const httpServer = app.getHttpServer();
+  // Get the underlying HTTP server from Fastify
+  // In cluster mode, workers don't bind to port - they receive connections via IPC from master
+  let httpServer: http.Server;
+
+  if (isClusterWorker) {
+    // Worker mode: Initialize app without binding to external port
+    // The master process handles incoming connections and routes them via IPC
+    await app.init();
+    httpServer = app.getHttpServer() as http.Server;
+    logger.log(`Worker ${String(cluster.worker?.id)} initialized (sticky session mode)`);
+  } else {
+    // Single process or master: Bind to port normally
+    await app.listen(port, "0.0.0.0");
+    httpServer = app.getHttpServer() as http.Server;
+  }
+
   const io = new Server(httpServer, {
     cors: {
       origin: corsOrigin,
       methods: ["GET", "POST"],
       credentials: true,
     },
+    // Both transports enabled - sticky sessions handle HTTP polling affinity
     transports: ["websocket", "polling"],
     path: "/socket.io/",
     // Performance optimizations for high throughput (63K+ emit/sec target)
@@ -202,6 +222,12 @@ async function bootstrap(): Promise<void> {
     connectTimeout: 45000, // Connection timeout
     allowEIO3: true, // Allow Engine.IO v3 clients
   });
+
+  // In cluster worker mode, set up to receive connections from master via IPC
+  if (isClusterWorker) {
+    setupWorker(io);
+    logger.log(`Worker ${String(cluster.worker?.id)} sticky session handler attached`);
+  }
 
   // Inject Socket.IO server into the EventsGateway
   const eventsGateway = app.get(EventsGateway);
@@ -247,9 +273,17 @@ async function bootstrap(): Promise<void> {
 }
 
 /**
- * Cluster mode for high-throughput scenarios
- * Each worker runs a full NestJS instance, sharing the same port
- * Socket.IO Redis adapter handles cross-worker message broadcasting
+ * Cluster mode with sticky sessions for high-throughput scenarios
+ *
+ * Architecture:
+ * - Primary process: Creates sticky HTTP server that routes connections by client IP
+ * - Worker processes: Receive connections via IPC, run full NestJS instance with Socket.IO
+ * - Redis adapter: Handles cross-worker message broadcasting (rooms, events)
+ *
+ * Sticky sessions ensure:
+ * - HTTP long-polling clients always reach the same worker (session affinity)
+ * - WebSocket upgrade requests go to the correct worker
+ * - Consistent routing based on client IP hash
  */
 function startCluster(): void {
   const clusterWorkersEnv = process.env.CLUSTER_WORKERS ?? "0";
@@ -273,18 +307,36 @@ function startCluster(): void {
   }
 
   const actualWorkers = Math.min(numWorkers, os.cpus().length);
+  const port = parseInt(process.env.PORT ?? "4000", 10);
 
   if (cluster.isPrimary) {
     logger.log(
-      `Primary ${String(process.pid)} starting ${String(actualWorkers)} workers...`,
+      `Primary ${String(process.pid)} starting ${String(actualWorkers)} workers with sticky sessions...`,
     );
+
+    // Create the sticky session HTTP server in primary process
+    // This server receives ALL incoming connections and routes them to workers
+    // based on client IP hash, ensuring session affinity for HTTP long-polling
+    const httpServer = http.createServer();
+
+    // Set up sticky session routing (IP-based affinity)
+    setupMaster(httpServer, {
+      loadBalancingMethod: "least-connection", // Options: "random", "round-robin", "least-connection"
+    });
+
+    // Listen on the external port - workers do NOT bind to this port
+    httpServer.listen(port, "0.0.0.0", () => {
+      logger.log(
+        `Sticky session master listening on port ${String(port)} (routing to ${String(actualWorkers)} workers)`,
+      );
+    });
 
     // Fork workers
     for (let i = 0; i < actualWorkers; i++) {
       cluster.fork();
     }
 
-    // Handle worker exit
+    // Handle worker exit with automatic restart
     cluster.on("exit", (worker, code, signal) => {
       const reason = signal !== "" ? signal : String(code);
       logger.warn(
@@ -295,11 +347,15 @@ function startCluster(): void {
 
     // Handle worker online
     cluster.on("online", (worker) => {
-      logger.log(`Worker ${String(worker.process.pid)} is online`);
+      logger.log(
+        `Worker ${String(worker.process.pid)} (id: ${String(worker.id)}) is online`,
+      );
     });
   } else {
-    // Workers run the application
-    logger.log(`Worker ${String(process.pid)} starting...`);
+    // Workers run the application - they receive connections via IPC from master
+    logger.log(
+      `Worker ${String(process.pid)} (id: ${String(cluster.worker?.id)}) starting...`,
+    );
     void bootstrap();
   }
 }
