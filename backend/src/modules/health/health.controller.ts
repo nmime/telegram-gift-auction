@@ -1,6 +1,6 @@
 import { Controller, Get } from "@nestjs/common";
 
-interface IHealthResponse {
+export interface IHealthResponse {
   status: "ok";
   timestamp: string;
 }

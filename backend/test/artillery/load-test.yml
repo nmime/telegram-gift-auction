@@ -178,7 +178,7 @@ scenarios:
       # Calculate bid amount
       - function: "calculateBidAmount"
 
-      # Place bid (fast-bid endpoint)
+      # Place bid (high-performance Redis path)
       - post:
           url: "/api/auctions/{{ targetAuctionId }}/bid"
           headers:
@@ -233,7 +233,7 @@ scenarios:
           expect:
             - statusCode: 200
 
-      # Rapid bid loop (fast-bid endpoint)
+      # Rapid bid loop (high-performance Redis path)
       - loop:
           - function: "generateBidAmount"
           - post:
@@ -246,10 +246,10 @@ scenarios:
         count: 10
 
   # ============================================================
-  # SCENARIO 3: Fast Bid Endpoint (Redis-based)
-  # Tests the optimized fast-bid endpoint
+  # SCENARIO 3: High-Performance Bid Load Test
+  # Tests the optimized bid endpoint with higher deposit/frequency
   # ============================================================
-  - name: "Fast Bid Load Test"
+  - name: "High-Performance Bid Load Test"
     weight: 20
     flow:
       - function: "generateUsername"
@@ -276,7 +276,7 @@ scenarios:
           expect:
             - statusCode: 200
 
-      # Fast bid loop - higher frequency
+      # High-performance bid loop - higher frequency
       - loop:
           - function: "generateBidAmount"
           - post:

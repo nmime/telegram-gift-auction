@@ -19,7 +19,7 @@ Multi-round auction system API inspired by Telegram Gift Auctions.
 - **Real-time updates** via WebSocket
 - **Financial integrity** with atomic transactions
 - **JWT authentication** with rate limiting
-- **Ultra-fast bidding** via Redis Lua scripts (~3,000 rps × number of CPUs)
+- **High-performance bidding** via Redis Lua scripts (3,362 rps single-core, 13,812 rps cluster)
 
 ## Authentication
 This API uses JWT Bearer token authentication. Call \`POST /api/auth/login\` to obtain a token.

@@ -11,14 +11,15 @@ import type { Primitive, Resolved } from "typia";
 import typia from "typia";
 
 import type {
+  IFastBidResponse,
   IPlaceBid,
-  IPlaceBidResponse,
 } from "../../../../modules/auctions/dto";
 
 /**
- * Place or increase bid
+ * Place or increase bid (high-performance Redis path)
  *
  * Places a new bid or increases an existing bid on an active auction.
+ * Uses Redis-cached fast path for maximum throughput.
  *
  * **Rules:**
  * - Minimum bid amount must be met
@@ -30,7 +31,7 @@ import type {
  * @param body Bid amount
  * @tag auctions
  * @security bearer
- * @returns Placed bid and updated auction
+ * @returns Bid result with rank
  *
  * @controller AuctionsController.placeBid
  * @path POST /auctions/:id/bid
@@ -62,7 +63,7 @@ export async function placeBid(
 }
 export namespace placeBid {
   export type Body = Primitive<IPlaceBid>;
-  export type Output = Primitive<IPlaceBidResponse>;
+  export type Output = Primitive<IFastBidResponse>;
 
   export const METADATA = {
     method: "POST",
@@ -80,8 +81,8 @@ export namespace placeBid {
 
   export const path = (id: string) =>
     `/auctions/${encodeURIComponent(id?.toString() ?? "null")}/bid`;
-  export const random = (): Resolved<Primitive<IPlaceBidResponse>> =>
-    typia.random<Primitive<IPlaceBidResponse>>();
+  export const random = (): Resolved<Primitive<IFastBidResponse>> =>
+    typia.random<Primitive<IFastBidResponse>>();
   export const simulate = (
     connection: IConnection,
     id: string,

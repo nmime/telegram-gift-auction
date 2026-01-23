@@ -6,6 +6,8 @@
 //================================================================
 export * as users from "./users/index";
 export * as transactions from "./transactions/index";
+export * as health from "./health/index";
 export * as bids from "./bids/index";
 export * as auth from "./auth/index";
+export * as api from "./api/index";
 export * as auctions from "./auctions/index";

@@ -177,7 +177,7 @@ export interface IPlaceBidResponse {
 }
 
 /**
- * Fast bid response (simplified for high-performance bidding)
+ * High-performance bid response (simplified for optimal throughput)
  */
 export interface IFastBidResponse {
   /** Whether the bid was successful */
