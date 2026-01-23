@@ -33,9 +33,55 @@ interface SwaggerDocument extends OpenAPIObject {
 
 async function bootstrap(): Promise<void> {
   const isProduction = process.env.NODE_ENV === "production";
+  const corsOriginEnv = process.env.CORS_ORIGIN ?? "*";
+
+  // CRITICAL FIX: Create Socket.IO server BEFORE Fastify initializes.
+  // This prevents "Cannot read properties of undefined (reading 'length')" errors
+  // when Fastify 5.x tries to route Socket.IO HTTP polling requests with missing preParsing hooks.
+  //
+  // The issue: When Socket.IO is attached AFTER Fastify, there's a race condition where
+  // HTTP polling requests (/socket.io/?EIO=4&...) can reach Fastify's router before
+  // Engine.IO's request interceptor is set up. By creating a shared HTTP server and
+  // attaching Socket.IO first, Engine.IO is ready to intercept requests from the start.
+  //
+  // Flow after fix:
+  // 1. Create shared HTTP server
+  // 2. Create Socket.IO and attach to server (Engine.IO now intercepts /socket.io/*)
+  // 3. Create Fastify with serverFactory pointing to our shared server
+  // 4. Engine.IO intercepts socket.io requests; Fastify handles everything else
+  const sharedHttpServer = http.createServer();
+
+  const io = new Server(sharedHttpServer, {
+    cors: {
+      origin: corsOriginEnv,
+      methods: ["GET", "POST"],
+      credentials: true,
+    },
+    transports: ["websocket", "polling"],
+    path: "/socket.io/",
+    pingInterval: 25000,
+    pingTimeout: 20000,
+    maxHttpBufferSize: 1e6,
+    perMessageDeflate: false,
+    httpCompression: false,
+    connectTimeout: 45000,
+    allowEIO3: true,
+  });
+
+  // serverFactory provides Fastify with our shared server where Socket.IO is already attached
+  const serverFactory = (
+    handler: http.RequestListener,
+    _opts: Record<string, unknown>,
+  ): http.Server => {
+    // Store Fastify's handler - Engine.IO will call this for non-socket.io requests
+    // because Engine.IO wraps the existing 'request' listeners when attaching
+    sharedHttpServer.on("request", handler);
+    return sharedHttpServer;
+  };
+
   const app = await NestFactory.create<NestFastifyApplication>(
     AppModule,
-    new FastifyAdapter(),
+    new FastifyAdapter({ serverFactory }),
     isProduction ? { logger: new JsonLoggerService() } : {},
   );
 
@@ -46,10 +92,9 @@ async function bootstrap(): Promise<void> {
     contentSecurityPolicy: false, // Disabled for Swagger UI compatibility
   });
 
-  // CORS configuration
-  const corsOrigin = configService.get<string>("CORS_ORIGIN") ?? "*";
+  // CORS configuration (uses corsOriginEnv from earlier - same as Socket.IO)
   app.enableCors({
-    origin: corsOrigin,
+    origin: corsOriginEnv,
     credentials: true,
   });
 
@@ -188,40 +233,17 @@ async function bootstrap(): Promise<void> {
     cluster.isWorker &&
     (process.env.CLUSTER_WORKERS ?? "0").toLowerCase() !== "0";
 
-  // Get the underlying HTTP server from Fastify
+  // Initialize Fastify and start listening
   // In cluster mode, workers don't bind to port - they receive connections via IPC from master
-  let httpServer: http.Server;
-
   if (isClusterWorker) {
     // Worker mode: Initialize app without binding to external port
     // The master process handles incoming connections and routes them via IPC
     await app.init();
-    httpServer = app.getHttpServer() as http.Server;
     logger.log(`Worker ${String(cluster.worker?.id)} initialized (sticky session mode)`);
   } else {
     // Single process or master: Bind to port normally
     await app.listen(port, "0.0.0.0");
-    httpServer = app.getHttpServer() as http.Server;
   }
-
-  const io = new Server(httpServer, {
-    cors: {
-      origin: corsOrigin,
-      methods: ["GET", "POST"],
-      credentials: true,
-    },
-    // Both transports enabled - sticky sessions handle HTTP polling affinity
-    transports: ["websocket", "polling"],
-    path: "/socket.io/",
-    // Performance optimizations for high throughput (63K+ emit/sec target)
-    pingInterval: 25000, // Reduce ping overhead (default: 25000)
-    pingTimeout: 20000, // Allow more time before disconnect (default: 20000)
-    maxHttpBufferSize: 1e6, // 1MB buffer (default: 1e6)
-    perMessageDeflate: false, // Disable compression for raw speed
-    httpCompression: false, // Disable HTTP compression
-    connectTimeout: 45000, // Connection timeout
-    allowEIO3: true, // Allow Engine.IO v3 clients
-  });
 
   // In cluster worker mode, set up to receive connections from master via IPC
   if (isClusterWorker) {
