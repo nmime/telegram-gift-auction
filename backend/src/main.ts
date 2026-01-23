@@ -15,6 +15,7 @@ import {
 import { getAllSchemas } from "./modules/events/asyncapi.schemas";
 import { Server } from "socket.io";
 import helmet from "@fastify/helmet";
+import fastifyStatic from "@fastify/static";
 import { AppModule } from "./app.module";
 import { EventsGateway } from "./modules/events";
 import { JsonLoggerService } from "./common";
@@ -51,6 +52,17 @@ async function bootstrap(): Promise<void> {
   });
 
   app.setGlobalPrefix("api");
+
+  // Serve Artillery load test reports at /api/reports/
+  const reportsPath = path.join(__dirname, "..", "..", "test", "artillery", "reports");
+  if (fs.existsSync(reportsPath)) {
+    await app.register(fastifyStatic, {
+      root: reportsPath,
+      prefix: "/api/reports/",
+      decorateReply: false, // Avoid conflict with other static handlers
+    });
+    logger.log("Artillery reports available at /api/reports/");
+  }
 
   const port = configService.get<number>("PORT") ?? 4000;
   const nodeEnv = configService.get<string>("NODE_ENV");
@@ -174,6 +186,14 @@ async function bootstrap(): Promise<void> {
     },
     transports: ["websocket", "polling"],
     path: "/socket.io/",
+    // Performance optimizations for high throughput (63K+ emit/sec target)
+    pingInterval: 25000, // Reduce ping overhead (default: 25000)
+    pingTimeout: 20000, // Allow more time before disconnect (default: 20000)
+    maxHttpBufferSize: 1e6, // 1MB buffer (default: 1e6)
+    perMessageDeflate: false, // Disable compression for raw speed
+    httpCompression: false, // Disable HTTP compression
+    connectTimeout: 45000, // Connection timeout
+    allowEIO3: true, // Allow Engine.IO v3 clients
   });
 
   // Inject Socket.IO server into the EventsGateway
@@ -211,6 +231,7 @@ async function bootstrap(): Promise<void> {
   logger.log("Server running", {
     port,
     docs: `http://localhost:${String(port)}/api/docs`,
+    reports: `http://localhost:${String(port)}/api/reports/`,
     workerId: String(workerId ?? "primary"),
   });
 }

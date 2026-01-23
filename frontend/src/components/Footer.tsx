@@ -47,6 +47,14 @@ export default function Footer(): React.JSX.Element {
           {t('footer.asyncApiDocs')}
         </a>
         <a
+          href="https://telegram-gift-auction.funfiesta.games/api/reports/"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="footer-link"
+        >
+          {t('footer.benchmarks')}
+        </a>
+        <a
           href="https://github.com/nmime/telegram-gift-auction"
           target="_blank"
           rel="noopener noreferrer"

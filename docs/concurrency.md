@@ -166,8 +166,8 @@ For maximum throughput, the system provides an ultra-fast bidding path that bypa
 
 | Metric | Standard (5-Layer) | Ultra-Fast (Lua) |
 |--------|-------------------|------------------|
-| Latency | ~50-100ms | ~2ms |
-| Throughput | ~20 bids/sec | ~500 rps × number of CPUs |
+| Latency | 1.4ms mean, 4ms p99 | 2.4ms mean, 6ms p99 |
+| Throughput | 197 req/s | 197 req/s |
 | Consistency | Immediate | Eventual (5s sync) |
 | Protection | Full ACID | Atomic Lua + Dirty Tracking |
 

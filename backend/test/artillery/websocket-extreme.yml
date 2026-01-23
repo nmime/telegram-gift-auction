@@ -1,41 +1,42 @@
 # Artillery WebSocket EXTREME Stress Test
-# Find the absolute breaking point
+# Target: 63,000+ emit/sec peak
 # Run: npx artillery run test/artillery/websocket-extreme.yml
 
 config:
   target: "http://localhost:4000"
   phases:
-    # Aggressive ramp
+    # Aggressive ramp to peak
     - name: "Aggressive ramp"
-      duration: 15
-      arrivalRate: 100
-      rampTo: 500
-    # Extreme sustained
+      duration: 20
+      arrivalRate: 200
+      rampTo: 800
+    # Extreme sustained at higher rate
     - name: "Extreme load"
-      duration: 30
-      arrivalRate: 500
-    # Nuclear option
+      duration: 40
+      arrivalRate: 800
+    # Nuclear burst for peak measurement
     - name: "Nuclear burst"
       duration: 15
-      arrivalRate: 1000
+      arrivalRate: 1500
 
   processor: "./websocket-functions.js"
 
   engines:
     socketio:
       transports: ["websocket"]
+      reconnection: false
 
-  # Increase connection pool
+  # Increase connection pool for extreme load
   http:
-    pool: 500
-    timeout: 30
+    pool: 1000
+    timeout: 60
 
 before:
   flow:
     - function: "setupWsTest"
 
 scenarios:
-  # Maximum throughput - 100 rapid emits per VU
+  # Maximum throughput - 150 rapid emits per VU for higher peak
   - name: "Extreme Throughput"
     engine: socketio
     weight: 100
@@ -47,7 +48,7 @@ scenarios:
       - emit:
           channel: "join-auction"
           data: "{{ auctionId }}"
-      # 100 rapid-fire emits per user
+      # 150 rapid-fire emits per user for 63K+ peak
       - loop:
           - function: "generateWsBidAmount"
           - emit:
@@ -55,4 +56,4 @@ scenarios:
               data:
                 auctionId: "{{ auctionId }}"
                 amount: "{{ bidAmount }}"
-        count: 100
+        count: 150

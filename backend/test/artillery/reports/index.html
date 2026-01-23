@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Artillery Load Test Reports</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0d1117; color: #c9d1d9; line-height: 1.6; padding: 40px 20px; }
+    .container { max-width: 800px; margin: 0 auto; }
+    h1 { color: #58a6ff; margin-bottom: 10px; font-size: 2em; }
+    .subtitle { color: #8b949e; margin-bottom: 30px; }
+    .reports { display: grid; gap: 15px; }
+    .report-card { background: #161b22; border: 1px solid #30363d; border-radius: 8px; padding: 20px; text-decoration: none; transition: border-color 0.2s, transform 0.2s; }
+    .report-card:hover { border-color: #58a6ff; transform: translateY(-2px); }
+    .report-title { color: #58a6ff; font-size: 1.2em; font-weight: 600; margin-bottom: 5px; }
+    .report-type { display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 0.75em; font-weight: 500; margin-bottom: 10px; }
+    .type-http { background: #388bfd20; color: #388bfd; }
+    .type-ws { background: #3fb95020; color: #3fb950; }
+    .report-desc { color: #8b949e; font-size: 0.9em; }
+    .footer { margin-top: 40px; padding-top: 20px; border-top: 1px solid #21262d; color: #6e7681; font-size: 0.85em; text-align: center; }
+    a { color: #58a6ff; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🎯 Artillery Load Test Reports</h1>
+    <p class="subtitle">Telegram Gift Auction System - Performance Benchmarks</p>
+
+    <div class="reports">
+      
+        <a href="edge-cases.html" class="report-card">
+          <span class="report-type type-http">HTTP</span>
+          <div class="report-title">Edge Cases</div>
+          <div class="report-desc">Validation testing for error handling, auth, and edge cases</div>
+        </a>
+      
+        <a href="load-test.html" class="report-card">
+          <span class="report-type type-http">HTTP</span>
+          <div class="report-title">Load Test</div>
+          <div class="report-desc">Standard HTTP load test with multiple user journeys and bid scenarios</div>
+        </a>
+      
+        <a href="websocket-extreme.html" class="report-card">
+          <span class="report-type type-ws">WebSocket</span>
+          <div class="report-title">Websocket Extreme</div>
+          <div class="report-desc">Extreme WebSocket load test pushing limits (118K+ emit/sec peak)</div>
+        </a>
+      
+        <a href="websocket-standard.html" class="report-card">
+          <span class="report-type type-ws">WebSocket</span>
+          <div class="report-title">Websocket Standard</div>
+          <div class="report-desc">Standard WebSocket/Socket.IO connection and bid flow testing</div>
+        </a>
+      
+        <a href="websocket-stress.html" class="report-card">
+          <span class="report-type type-ws">WebSocket</span>
+          <div class="report-title">Websocket Stress</div>
+          <div class="report-desc">High-throughput WebSocket stress test (11K+ emit/sec)</div>
+        </a>
+      
+    </div>
+
+    <div class="footer">
+      <p>Generated: 2026-01-23T07:58:41.290Z</p>
+      <p><a href="/api/docs">API Docs</a> · <a href="/api/async-docs">WebSocket Docs</a> · <a href="../BENCHMARK_REPORT.md">Benchmark Report</a></p>
+    </div>
+  </div>
+</body>
+</html>

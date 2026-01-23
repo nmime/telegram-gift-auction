@@ -66,15 +66,7 @@ scenarios:
     weight: 50
     flow:
       - function: "generateUsername"
-      - post:
-          url: "/api/auth/login"
-          json:
-            username: "{{ username }}"
-          capture:
-            - json: "$.accessToken"
-              as: "token"
-          expect:
-            - statusCode: 200
+      - function: "loginUser"
 
       - post:
           url: "/api/users/deposit"
@@ -82,6 +74,11 @@ scenarios:
             Authorization: "Bearer {{ token }}"
           json:
             amount: "{{ depositAmount }}"
+          expect:
+            - statusCode:
+                - 200
+                - 201
+                - 409
 
       - get:
           url: "/api/auctions"
@@ -90,6 +87,8 @@ scenarios:
           capture:
             - json: "$[0].id"
               as: "auctionId"
+          expect:
+            - statusCode: 200
 
       # Rapid concurrent bids
       - loop:
@@ -111,13 +110,7 @@ scenarios:
     weight: 30
     flow:
       - function: "generateUsername"
-      - post:
-          url: "/api/auth/login"
-          json:
-            username: "{{ username }}"
-          capture:
-            - json: "$.accessToken"
-              as: "token"
+      - function: "loginUser"
 
       - post:
           url: "/api/users/deposit"
@@ -125,6 +118,11 @@ scenarios:
             Authorization: "Bearer {{ token }}"
           json:
             amount: "{{ depositAmount }}"
+          expect:
+            - statusCode:
+                - 200
+                - 201
+                - 409
 
       - get:
           url: "/api/auctions"
@@ -133,12 +131,14 @@ scenarios:
           capture:
             - json: "$[0].id"
               as: "auctionId"
+          expect:
+            - statusCode: 200
 
       # Burst of requests with no delay
       - loop:
           - function: "generateBidAmount"
           - post:
-              url: "/api/auctions/{{ auctionId }}/bid"
+              url: "/api/auctions/{{ auctionId }}/fast-bid"
               headers:
                 Authorization: "Bearer {{ token }}"
               json:
@@ -153,13 +153,7 @@ scenarios:
     weight: 20
     flow:
       - function: "generateUsername"
-      - post:
-          url: "/api/auth/login"
-          json:
-            username: "{{ username }}"
-          capture:
-            - json: "$.accessToken"
-              as: "token"
+      - function: "loginUser"
 
       - post:
           url: "/api/users/deposit"
@@ -167,6 +161,11 @@ scenarios:
             Authorization: "Bearer {{ token }}"
           json:
             amount: "{{ depositAmount }}"
+          expect:
+            - statusCode:
+                - 200
+                - 201
+                - 409
 
       - get:
           url: "/api/auctions"
@@ -175,6 +174,8 @@ scenarios:
           capture:
             - json: "$[0].id"
               as: "auctionId"
+          expect:
+            - statusCode: 200
 
       - loop:
           # Read operation
@@ -186,7 +187,7 @@ scenarios:
           # Write operation
           - function: "generateBidAmount"
           - post:
-              url: "/api/auctions/{{ auctionId }}/bid"
+              url: "/api/auctions/{{ auctionId }}/fast-bid"
               headers:
                 Authorization: "Bearer {{ token }}"
               json:

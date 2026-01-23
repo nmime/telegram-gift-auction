@@ -38,8 +38,8 @@ export class AuditMiddleware implements NestMiddleware {
         : {};
 
     // Hook into response finish event
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- res.raw.on may be undefined in some Fastify test scenarios
-    if (res.raw.on !== undefined) {
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- res.raw may be undefined in some Fastify test scenarios
+    if (res.raw !== undefined && res.raw.on !== undefined) {
       res.raw.on("finish", () => {
         // Only log mutations (POST, PUT, DELETE, PATCH)
         if (!["POST", "PUT", "DELETE", "PATCH"].includes(method)) {

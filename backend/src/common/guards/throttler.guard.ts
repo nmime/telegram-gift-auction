@@ -1,11 +1,12 @@
-import { Injectable, type ExecutionContext } from "@nestjs/common";
+import { Injectable, Inject, type ExecutionContext } from "@nestjs/common";
 import {
   ThrottlerGuard,
-  type ThrottlerModuleOptions,
-  type ThrottlerStorage,
+  ThrottlerModuleOptions,
+  ThrottlerStorage,
 } from "@nestjs/throttler";
-import type { Reflector } from "@nestjs/core";
-import type { ConfigService } from "@nestjs/config";
+import { THROTTLER_OPTIONS } from "@nestjs/throttler/dist/throttler.constants";
+import { Reflector } from "@nestjs/core";
+import { ConfigService } from "@nestjs/config";
 import type { FastifyRequest } from "fastify";
 
 export const localhostIps = [
@@ -62,14 +63,14 @@ export class CustomThrottlerGuard extends ThrottlerGuard {
   private readonly isDevelopment: boolean;
 
   constructor(
-    options: ThrottlerModuleOptions,
+    @Inject(THROTTLER_OPTIONS) options: ThrottlerModuleOptions,
     storageService: ThrottlerStorage,
     reflector: Reflector,
-    configService: ConfigService,
+    private readonly configService: ConfigService,
   ) {
     super(options, storageService, reflector);
     this.isDevelopment =
-      configService.get<string>("NODE_ENV") === "development";
+      this.configService.get<string>("NODE_ENV") === "development";
   }
 
   override async canActivate(context: ExecutionContext): Promise<boolean> {

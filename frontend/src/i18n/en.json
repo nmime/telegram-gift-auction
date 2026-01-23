@@ -179,6 +179,7 @@
     "miniApp": "Mini App",
     "apiDocs": "API Docs",
     "asyncApiDocs": "AsyncAPI Docs",
+    "benchmarks": "Benchmarks",
     "madeWith": "Made with",
     "by": "by"
   }

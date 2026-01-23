@@ -108,7 +108,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: /tmp/mongodb-memory-server
-          key: mongodb-memory-server-${{ runner.os }}-${{ hashFiles('**/package-lock.json') }}
+          key: mongodb-memory-server-${{ runner.os }}-${{ hashFiles('**/pnpm-lock.yaml') }}
           restore-keys: |
             mongodb-memory-server-${{ runner.os }}-
 

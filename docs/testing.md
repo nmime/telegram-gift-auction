@@ -183,26 +183,26 @@ pnpm run load-test:edge      # Edge cases validation
 
 # WebSocket Tests
 npx artillery run test/artillery/websocket-test.yml     # Standard WS
-npx artillery run test/artillery/websocket-stress.yml   # 16K emit/s
-npx artillery run test/artillery/websocket-extreme.yml  # 63K emit/s
+npx artillery run test/artillery/websocket-stress.yml   # 11K emit/s
+npx artillery run test/artillery/websocket-extreme.yml  # 118K emit/s
 ```
 
 ### Performance Results (Single Process)
 
 | Protocol | Peak | Sustained | Latency | Grade |
 |----------|------|-----------|---------|-------|
-| **WebSocket** | **62,951 emit/s** | 43,056/s | 0ms | **A+** |
-| **HTTP (raw)** | 600 req/s | 140 req/s | 18ms | A |
-| **HTTP (rate limited)** | 138 req/s | 138 req/s | 18ms | A |
+| **WebSocket** | **118,805 emit/s** | 80,000/s | 0ms | **A+** |
+| **HTTP** | 197 req/s | 197 req/s | 1.5ms mean, 5ms p99 | **A+** |
 
 ### WebSocket Extreme Results
 
 ```
 ╔══════════════════════════════════════════════════════════════╗
-║  🚀 PEAK:       62,951 emit/sec                             ║
-║  ⚡ SUSTAINED:  43,056 emit/sec                              ║
-║  📊 TOTAL:      2,581,008 emits in 90 seconds               ║
+║  🚀 PEAK:       118,805 emit/sec                            ║
+║  ⚡ SUSTAINED:  80,000 emit/sec                              ║
+║  📊 TOTAL:      5,057,952 emits in 92 seconds               ║
 ║  ⏱️  LATENCY:   0ms (sub-millisecond)                        ║
+║  ✅ SUCCESS:    51.6% (33,276/64,500 VUs)                   ║
 ╚══════════════════════════════════════════════════════════════╝
 ```
 
@@ -214,8 +214,8 @@ test/artillery/
 ├── stress-test.yml         # HTTP stress test
 ├── edge-cases.yml          # Validation tests
 ├── websocket-test.yml      # WebSocket standard
-├── websocket-stress.yml    # WebSocket 16K/s
-├── websocket-extreme.yml   # WebSocket 63K/s
+├── websocket-stress.yml    # WebSocket 11K/s
+├── websocket-extreme.yml   # WebSocket 118K/s
 ├── functions.js            # HTTP helpers
 ├── websocket-functions.js  # WS helpers
 └── BENCHMARK_REPORT.md     # Full report

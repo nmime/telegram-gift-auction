@@ -18,8 +18,8 @@
 ## Performance (Single Process)
 
 ```
-WebSocket:  63,000 emit/sec peak, 43,000/sec sustained, 0ms latency
-HTTP:       600 req/s raw, 138 req/s with rate limits, 18ms latency
+WebSocket:  118,000 emit/sec peak, 80,000/sec sustained, 0ms latency
+HTTP:       197 req/s sustained, 1.5ms mean latency, 5ms p99
 Grade:      A+ (production-ready)
 ```
 

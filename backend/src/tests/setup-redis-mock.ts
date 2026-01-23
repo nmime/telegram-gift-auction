@@ -41,10 +41,10 @@ vi.mock("@nestia/core", () => {
   const TypedQuery = () => Query();
 
   // TypedParam decorator - falls back to NestJS Param
-  const TypedParam = (key?: string) => Param(key);
+  const TypedParam = (key?: string) => (key ? Param(key) : Param());
 
-  // TypedHeader decorator - falls back to NestJS Header
-  const TypedHeader = (key: string) => Header(key);
+  // TypedHeader decorator - returns a parameter decorator that extracts header value
+  const TypedHeader = (key: string, _defaultValue?: string) => Headers(key);
 
   // TypedHeaders decorator - falls back to NestJS Headers
   const TypedHeaders = () => Headers();
