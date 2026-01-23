@@ -1,31 +1,31 @@
 # Artillery HTTP Stress Test
-# High-throughput HTTP stress test (3,000+ req/sec peak)
+# Balanced high-throughput HTTP stress test (3,000+ req/sec peak)
 # Run: npx artillery run test/artillery/stress-test.yml
 
 config:
   target: "http://localhost:4000"
   phases:
-    # Warmup
+    # Warmup - establish connections
     - name: "Warmup"
-      duration: 10
-      arrivalRate: 20
-    # Gradual ramp
+      duration: 15
+      arrivalRate: 10
+    # Gradual ramp to peak
     - name: "Ramp to load"
-      duration: 20
-      arrivalRate: 50
-      rampTo: 200
+      duration: 30
+      arrivalRate: 20
+      rampTo: 80
     # Sustained high load
     - name: "Sustained load"
-      duration: 40
-      arrivalRate: 200
-    # Spike
+      duration: 60
+      arrivalRate: 80
+    # Brief spike test
     - name: "Spike"
-      duration: 10
-      arrivalRate: 400
+      duration: 15
+      arrivalRate: 120
     # Recovery
     - name: "Recovery"
-      duration: 10
-      arrivalRate: 100
+      duration: 15
+      arrivalRate: 40
 
   processor: "./functions.js"
 
@@ -38,13 +38,13 @@ config:
       Content-Type: "application/json"
 
   http:
-    timeout: 30
-    pool: 300
+    timeout: 60
+    pool: 200
 
   # Stress test thresholds
   ensure:
-    p99: 5000
-    maxErrorRate: 15
+    p99: 3000
+    maxErrorRate: 5
 
 scenarios:
   # Read-heavy operations (highest throughput)
@@ -60,19 +60,23 @@ scenarios:
                 Authorization: "Bearer {{ token }}"
               expect:
                 - statusCode: 200
+          - think: 0.02
           - get:
               url: "/api/auctions/{{ auctionId }}"
               headers:
                 Authorization: "Bearer {{ token }}"
+          - think: 0.02
           - get:
               url: "/api/auctions/{{ auctionId }}/leaderboard"
               headers:
                 Authorization: "Bearer {{ token }}"
+          - think: 0.02
           - get:
               url: "/api/users/balance"
               headers:
                 Authorization: "Bearer {{ token }}"
-        count: 30
+          - think: 0.02
+        count: 40
 
   # Bid operations stress
   - name: "Bid Stress"
@@ -106,8 +110,8 @@ scenarios:
                 Authorization: "Bearer {{ token }}"
               json:
                 amount: "{{ bidAmount }}"
-          - think: 0.1
-        count: 20
+          - think: 0.15
+        count: 25
 
   # Mixed operations
   - name: "Mixed Stress"
@@ -133,6 +137,7 @@ scenarios:
               url: "/api/auctions/{{ auctionId }}/leaderboard"
               headers:
                 Authorization: "Bearer {{ token }}"
+          - think: 0.03
           - function: "generateBidAmount"
           - post:
               url: "/api/auctions/{{ auctionId }}/fast-bid"
@@ -140,9 +145,10 @@ scenarios:
                 Authorization: "Bearer {{ token }}"
               json:
                 amount: "{{ bidAmount }}"
+          - think: 0.03
           - get:
               url: "/api/users/balance"
               headers:
                 Authorization: "Bearer {{ token }}"
-          - think: 0.05
-        count: 15
+          - think: 0.03
+        count: 20

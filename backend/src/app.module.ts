@@ -18,6 +18,7 @@ import { RedisModule } from "./modules/redis";
 import { TelegramModule } from "./modules/telegram";
 import { NotificationsModule } from "./modules/notifications";
 import { AuditModule } from "./modules/audit";
+import { HealthModule } from "./modules/health";
 
 @Module({
   imports: [
@@ -80,6 +81,7 @@ import { AuditModule } from "./modules/audit";
     TelegramModule,
     NotificationsModule,
     AuditModule,
+    HealthModule,
   ],
   providers: [
     {
