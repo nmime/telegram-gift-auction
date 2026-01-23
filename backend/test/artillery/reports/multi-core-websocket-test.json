@@ -1,0 +1,308 @@
+{
+  "aggregate": {
+    "counters": {
+      "vusers.created_by_name.Bid Monitoring": 901,
+      "vusers.created": 3145,
+      "errors.Error: xhr post error": 3079,
+      "vusers.failed": 3145,
+      "vusers.created_by_name.WebSocket Connection Flow": 1321,
+      "errors.Error: xhr poll error": 66,
+      "vusers.created_by_name.WebSocket Bidding": 923
+    },
+    "rates": {},
+    "firstCounterAt": 1769189177138,
+    "lastCounterAt": 1769189316353,
+    "firstMetricAt": 1769189177138,
+    "lastMetricAt": 1769189316353,
+    "period": 1769189310000,
+    "summaries": {},
+    "histograms": {}
+  },
+  "intermediate": [
+    {
+      "counters": {
+        "vusers.created_by_name.Bid Monitoring": 4,
+        "vusers.created": 6,
+        "errors.Error: xhr post error": 4,
+        "vusers.failed": 6,
+        "vusers.created_by_name.WebSocket Connection Flow": 1,
+        "errors.Error: xhr poll error": 2,
+        "vusers.created_by_name.WebSocket Bidding": 1
+      },
+      "rates": {},
+      "firstCounterAt": 1769189177138,
+      "lastCounterAt": 1769189179195,
+      "firstMetricAt": 1769189177138,
+      "lastMetricAt": 1769189179195,
+      "period": "1769189170000",
+      "summaries": {},
+      "histograms": {}
+    },
+    {
+      "counters": {
+        "vusers.created_by_name.Bid Monitoring": 7,
+        "vusers.created": 31,
+        "errors.Error: xhr post error": 27,
+        "vusers.failed": 31,
+        "vusers.created_by_name.WebSocket Bidding": 6,
+        "vusers.created_by_name.WebSocket Connection Flow": 18,
+        "errors.Error: xhr poll error": 4
+      },
+      "rates": {},
+      "firstCounterAt": 1769189180136,
+      "lastCounterAt": 1769189189401,
+      "firstMetricAt": 1769189180136,
+      "lastMetricAt": 1769189189401,
+      "period": "1769189180000",
+      "summaries": {},
+      "histograms": {}
+    },
+    {
+      "counters": {
+        "vusers.created_by_name.WebSocket Bidding": 20,
+        "vusers.created": 91,
+        "errors.Error: xhr post error": 86,
+        "vusers.failed": 91,
+        "vusers.created_by_name.WebSocket Connection Flow": 47,
+        "vusers.created_by_name.Bid Monitoring": 24,
+        "errors.Error: xhr poll error": 5
+      },
+      "rates": {},
+      "firstCounterAt": 1769189190139,
+      "lastCounterAt": 1769189199657,
+      "firstMetricAt": 1769189190139,
+      "lastMetricAt": 1769189199657,
+      "period": "1769189190000",
+      "summaries": {},
+      "histograms": {}
+    },
+    {
+      "counters": {
+        "vusers.created_by_name.WebSocket Bidding": 42,
+        "vusers.created": 145,
+        "errors.Error: xhr post error": 144,
+        "vusers.failed": 145,
+        "vusers.created_by_name.WebSocket Connection Flow": 52,
+        "vusers.created_by_name.Bid Monitoring": 51,
+        "errors.Error: xhr poll error": 1
+      },
+      "rates": {},
+      "firstCounterAt": 1769189200144,
+      "lastCounterAt": 1769189209904,
+      "firstMetricAt": 1769189200144,
+      "lastMetricAt": 1769189209904,
+      "period": "1769189200000",
+      "summaries": {},
+      "histograms": {}
+    },
+    {
+      "counters": {
+        "vusers.created_by_name.Bid Monitoring": 59,
+        "vusers.created": 190,
+        "errors.Error: xhr post error": 187,
+        "vusers.failed": 189,
+        "vusers.created_by_name.WebSocket Connection Flow": 83,
+        "vusers.created_by_name.WebSocket Bidding": 48,
+        "errors.Error: xhr poll error": 2
+      },
+      "rates": {},
+      "firstCounterAt": 1769189210148,
+      "lastCounterAt": 1769189219998,
+      "firstMetricAt": 1769189210148,
+      "lastMetricAt": 1769189219998,
+      "period": "1769189210000",
+      "summaries": {},
+      "histograms": {}
+    },
+    {
+      "counters": {
+        "vusers.created_by_name.WebSocket Bidding": 59,
+        "vusers.created": 200,
+        "errors.Error: xhr post error": 195,
+        "vusers.failed": 200,
+        "vusers.created_by_name.WebSocket Connection Flow": 80,
+        "vusers.created_by_name.Bid Monitoring": 61,
+        "errors.Error: xhr poll error": 5
+      },
+      "rates": {},
+      "firstCounterAt": 1769189220006,
+      "lastCounterAt": 1769189229998,
+      "firstMetricAt": 1769189220006,
+      "lastMetricAt": 1769189229998,
+      "period": "1769189220000",
+      "summaries": {},
+      "histograms": {}
+    },
+    {
+      "counters": {
+        "vusers.created_by_name.WebSocket Connection Flow": 84,
+        "vusers.created": 200,
+        "errors.Error: xhr post error": 195,
+        "vusers.failed": 200,
+        "vusers.created_by_name.Bid Monitoring": 55,
+        "vusers.created_by_name.WebSocket Bidding": 61,
+        "errors.Error: xhr poll error": 5
+      },
+      "rates": {},
+      "firstCounterAt": 1769189230007,
+      "lastCounterAt": 1769189239998,
+      "firstMetricAt": 1769189230007,
+      "lastMetricAt": 1769189239998,
+      "period": "1769189230000",
+      "summaries": {},
+      "histograms": {}
+    },
+    {
+      "counters": {
+        "vusers.created_by_name.WebSocket Bidding": 59,
+        "vusers.created": 200,
+        "errors.Error: xhr post error": 194,
+        "vusers.failed": 200,
+        "vusers.created_by_name.WebSocket Connection Flow": 81,
+        "vusers.created_by_name.Bid Monitoring": 60,
+        "errors.Error: xhr poll error": 6
+      },
+      "rates": {},
+      "firstCounterAt": 1769189240007,
+      "lastCounterAt": 1769189249998,
+      "firstMetricAt": 1769189240007,
+      "lastMetricAt": 1769189249998,
+      "period": "1769189240000",
+      "summaries": {},
+      "histograms": {}
+    },
+    {
+      "counters": {
+        "vusers.created_by_name.Bid Monitoring": 61,
+        "vusers.created": 200,
+        "errors.Error: xhr post error": 193,
+        "vusers.failed": 200,
+        "vusers.created_by_name.WebSocket Connection Flow": 88,
+        "errors.Error: xhr poll error": 7,
+        "vusers.created_by_name.WebSocket Bidding": 51
+      },
+      "rates": {},
+      "firstCounterAt": 1769189250006,
+      "lastCounterAt": 1769189259998,
+      "firstMetricAt": 1769189250006,
+      "lastMetricAt": 1769189259998,
+      "period": "1769189250000",
+      "summaries": {},
+      "histograms": {}
+    },
+    {
+      "counters": {
+        "vusers.created_by_name.WebSocket Bidding": 70,
+        "vusers.created": 200,
+        "errors.Error: xhr post error": 197,
+        "vusers.failed": 200,
+        "vusers.created_by_name.WebSocket Connection Flow": 81,
+        "vusers.created_by_name.Bid Monitoring": 49,
+        "errors.Error: xhr poll error": 3
+      },
+      "rates": {},
+      "firstCounterAt": 1769189260004,
+      "lastCounterAt": 1769189269998,
+      "firstMetricAt": 1769189260004,
+      "lastMetricAt": 1769189269998,
+      "period": "1769189260000",
+      "summaries": {},
+      "histograms": {}
+    },
+    {
+      "counters": {
+        "vusers.created_by_name.WebSocket Connection Flow": 135,
+        "vusers.created": 309,
+        "errors.Error: xhr post error": 303,
+        "vusers.failed": 308,
+        "vusers.created_by_name.WebSocket Bidding": 92,
+        "vusers.created_by_name.Bid Monitoring": 82,
+        "errors.Error: xhr poll error": 5
+      },
+      "rates": {},
+      "firstCounterAt": 1769189270006,
+      "lastCounterAt": 1769189279999,
+      "firstMetricAt": 1769189270006,
+      "lastMetricAt": 1769189279999,
+      "period": "1769189270000",
+      "summaries": {},
+      "histograms": {}
+    },
+    {
+      "counters": {
+        "vusers.created_by_name.WebSocket Connection Flow": 207,
+        "vusers.created": 500,
+        "errors.Error: xhr post error": 492,
+        "vusers.failed": 500,
+        "vusers.created_by_name.WebSocket Bidding": 163,
+        "errors.Error: xhr poll error": 8,
+        "vusers.created_by_name.Bid Monitoring": 130
+      },
+      "rates": {},
+      "firstCounterAt": 1769189280008,
+      "lastCounterAt": 1769189289999,
+      "firstMetricAt": 1769189280008,
+      "lastMetricAt": 1769189289999,
+      "period": "1769189280000",
+      "summaries": {},
+      "histograms": {}
+    },
+    {
+      "counters": {
+        "vusers.created_by_name.WebSocket Bidding": 138,
+        "vusers.created": 500,
+        "errors.Error: xhr post error": 491,
+        "vusers.failed": 500,
+        "vusers.created_by_name.Bid Monitoring": 151,
+        "vusers.created_by_name.WebSocket Connection Flow": 211,
+        "errors.Error: xhr poll error": 9
+      },
+      "rates": {},
+      "firstCounterAt": 1769189290006,
+      "lastCounterAt": 1769189299999,
+      "firstMetricAt": 1769189290006,
+      "lastMetricAt": 1769189299999,
+      "period": "1769189290000",
+      "summaries": {},
+      "histograms": {}
+    },
+    {
+      "counters": {
+        "vusers.created_by_name.WebSocket Connection Flow": 139,
+        "vusers.created": 338,
+        "errors.Error: xhr post error": 337,
+        "vusers.failed": 340,
+        "vusers.created_by_name.Bid Monitoring": 97,
+        "vusers.created_by_name.WebSocket Bidding": 102,
+        "errors.Error: xhr poll error": 3
+      },
+      "rates": {},
+      "firstCounterAt": 1769189300005,
+      "lastCounterAt": 1769189309353,
+      "firstMetricAt": 1769189300005,
+      "lastMetricAt": 1769189309353,
+      "period": "1769189300000",
+      "summaries": {},
+      "histograms": {}
+    },
+    {
+      "counters": {
+        "vusers.created_by_name.WebSocket Bidding": 11,
+        "vusers.created": 35,
+        "errors.Error: xhr post error": 34,
+        "vusers.failed": 35,
+        "vusers.created_by_name.Bid Monitoring": 10,
+        "vusers.created_by_name.WebSocket Connection Flow": 14,
+        "errors.Error: xhr poll error": 1
+      },
+      "rates": {},
+      "firstCounterAt": 1769189310149,
+      "lastCounterAt": 1769189316353,
+      "firstMetricAt": 1769189310149,
+      "lastMetricAt": 1769189316353,
+      "period": "1769189310000",
+      "summaries": {},
+      "histograms": {}
+    }
+  ]
+}
