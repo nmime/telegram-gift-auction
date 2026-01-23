@@ -106,43 +106,7 @@ Get auction details including user's current bid.
 
 ### POST /auctions/:id/bid
 
-Place or increase a bid.
-
-**Request:**
-```json
-{
-  "amount": 500
-}
-```
-
-**Response:**
-```json
-{
-  "bid": {
-    "id": "507f1f77bcf86cd799439012",
-    "amount": 500,
-    "round": 1,
-    "status": "active",
-    "rank": 3,
-    "carriedOver": false,
-    "originalRound": 1
-  },
-  "balanceAfter": 500,
-  "frozenBalanceAfter": 500
-}
-```
-
-**Error Responses:**
-- `400` - Invalid amount
-- `402` - Insufficient balance
-- `409` - Amount already taken
-- `429` - Cooldown active
-
-### POST /auctions/:id/fast-bid
-
-Place bid via high-performance Redis path (~2.4ms mean latency, 6ms p99).
-
-Falls back to standard bid if cache is not warmed.
+Place or increase a bid. Uses high-performance Redis path (~1.4ms mean latency).
 
 **Request:**
 ```json
@@ -169,6 +133,12 @@ Falls back to standard bid if cache is not warmed.
   "error": "INSUFFICIENT_BALANCE"
 }
 ```
+
+**Error Responses:**
+- `400` - Invalid amount
+- `402` - Insufficient balance
+- `409` - Amount already taken
+- `429` - Cooldown active
 
 ### GET /auctions/:id/leaderboard
 

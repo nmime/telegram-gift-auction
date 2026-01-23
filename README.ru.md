@@ -113,8 +113,7 @@ frozenBalance  = заблокировано в активных ставках
 |----------|----------|
 | `POST /api/auth/telegram/webapp` | Mini App аутентификация |
 | `GET /api/auctions` | Список аукционов |
-| `POST /api/auctions/:id/bid` | Разместить ставку (стандарт) |
-| `POST /api/auctions/:id/fast-bid` | Разместить ставку (Redis, высокая производительность) |
+| `POST /api/auctions/:id/bid` | Разместить ставку (Redis, высокая производительность) |
 | `GET /api/auctions/:id/leaderboard` | Текущий рейтинг |
 | `GET /api/users/balance` | Получить баланс |
 

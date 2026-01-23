@@ -13,14 +13,11 @@ The system includes a comprehensive load test suite that validates behavior unde
 ```bash
 cd backend
 
-# Standard bid mode
+# Standard load test
 npm run load-test
 
-# Fast bid mode (Ultra-fast Redis path)
-npm run load-test -- --fast
-
 # Heavy stress test
-npm run load-test -- --fast --users 100 --deposit 100000 --stress-duration 10000
+npm run load-test -- --users 100 --deposit 100000 --stress-duration 10000
 ```
 
 ### Test Scenarios
@@ -131,38 +128,6 @@ The suite includes 11 test scenarios:
   ALL TESTS PASSED
 ══════════════════════════════════════════════════
 ```
-
-### Sample Output (Fast Bid Mode)
-
-```
-══════════════════════════════════════════════════
-   AUCTION SYSTEM LOAD TEST SUITE v1.0.0
-══════════════════════════════════════════════════
-Fast Bid:  ENABLED (Ultra-fast Redis path)
-══════════════════════════════════════════════════
-
-✓ Concurrent Bid Storm: 50/50 @ 2,452 req/s, p99=19ms
-✓ Rapid Sequential Bids: 20/20, avg=2ms
-✓ High-Frequency Stress: 88 bids @ 17.4 req/s
-✓ Massive Concurrent Stress: 150/150 @ 438 req/s, p99=12ms
-✓ Same-User Race Condition: 0/10 succeeded (expected <10)
-✓ Bid Ordering Verification: ordering=correct
-✓ Financial Integrity: VALID (diff=0.00)
-
-══════════════════════════════════════════════════
-  ALL TESTS PASSED
-══════════════════════════════════════════════════
-```
-
-### Performance Comparison
-
-| Metric | Standard Bid | Ultra-Fast Bid | Improvement |
-|--------|-------------|----------------|-------------|
-| **Concurrent Storm (50 users)** | 11.5 req/s, p99=4.3s | 2,452 req/s, p99=19ms | **213x faster** |
-| **Sequential Bids** | avg 16ms | avg 2ms | **8x faster** |
-| **Massive Concurrent (150 bids)** | 18.5 req/s, p99=2.6s | 438 req/s, p99=12ms | **24x faster** |
-| **E2E Concurrent Throughput** | — | 5,556 bids/sec | — |
-| **Raw Lua Script Throughput** | — | 58,824 ops/sec | — |
 
 ---
 
@@ -447,7 +412,7 @@ const socket = await connectAndJoin(WS_URL, token, auctionId);
 | Unit Tests | Vitest | 680 | ✅ |
 | Integration Tests | Vitest + MongoDB Memory Server | 177 | ✅ |
 | E2E Tests | Nestia | 7 suites | ✅ |
-| Load Tests | Artillery | 4 configs | ✅ |
+| Load Tests | Artillery | 5 configs | ✅ |
 
 ### Coverage Goals
 

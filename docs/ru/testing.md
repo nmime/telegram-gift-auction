@@ -13,14 +13,11 @@
 ```bash
 cd backend
 
-# Стандартный режим
+# Стандартный нагрузочный тест
 npm run load-test
 
-# Быстрый режим (Ультра-быстрый Redis путь)
-npm run load-test -- --fast
-
 # Тяжёлый стресс-тест
-npm run load-test -- --fast --users 100 --deposit 100000 --stress-duration 10000
+npm run load-test -- --users 100 --deposit 100000 --stress-duration 10000
 ```
 
 ### Тестовые сценарии
@@ -133,38 +130,6 @@ npm run load-test -- --fast --users 100 --deposit 100000 --stress-duration 10000
   ALL TESTS PASSED
 ══════════════════════════════════════════════════
 ```
-
-### Пример вывода (Быстрый режим)
-
-```
-══════════════════════════════════════════════════
-   AUCTION SYSTEM LOAD TEST SUITE v1.0.0
-══════════════════════════════════════════════════
-Fast Bid:  ENABLED (Ультра-быстрый Redis путь)
-══════════════════════════════════════════════════
-
-✓ Concurrent Bid Storm: 50/50 @ 2,452 req/s, p99=19ms
-✓ Rapid Sequential Bids: 20/20, avg=2ms
-✓ High-Frequency Stress: 88 bids @ 17.4 req/s
-✓ Massive Concurrent Stress: 150/150 @ 438 req/s, p99=12ms
-✓ Same-User Race Condition: 0/10 succeeded (expected <10)
-✓ Bid Ordering Verification: ordering=correct
-✓ Financial Integrity: VALID (diff=0.00)
-
-══════════════════════════════════════════════════
-  ALL TESTS PASSED
-══════════════════════════════════════════════════
-```
-
-### Сравнение производительности
-
-| Метрика | Стандартная ставка | Ультра-быстрая | Улучшение |
-|---------|-------------------|----------------|-----------|
-| **Concurrent Storm (50 юзеров)** | 11.5 req/s, p99=4.3s | 2,452 req/s, p99=19ms | **213x быстрее** |
-| **Последовательные ставки** | avg 16ms | avg 2ms | **8x быстрее** |
-| **Массовая конкурентность (150)** | 18.5 req/s, p99=2.6s | 438 req/s, p99=12ms | **24x быстрее** |
-| **E2E конкурентная пропускная способность** | — | 5,556 ставок/сек | — |
-| **Raw Lua Script пропускная способность** | — | 58,824 ops/sec | — |
 
 ---
 
@@ -456,7 +421,7 @@ const socket = await connectAndJoin(WS_URL, token, auctionId);
 | Юнит-тесты | Vitest | 680 | ✅ |
 | Интеграционные | Vitest + MongoDB Memory Server | 177 | ✅ |
 | E2E-тесты | Nestia | 7 наборов | ✅ |
-| Нагрузочные | Artillery | 6 конфигов | ✅ |
+| Нагрузочные | Artillery | 5 конфигов | ✅ |
 
 ### Цели покрытия
 

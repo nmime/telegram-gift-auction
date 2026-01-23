@@ -119,14 +119,14 @@ async refreshLeadership(): Promise<boolean> {
 
 If leader crashes, key expires after 5 seconds, and another server becomes leader automatically.
 
-## Ultra-Fast Bid Path (Redis Lua Script)
+## High-Performance Bid Path (Redis Lua Script)
 
-For maximum throughput, the system provides an ultra-fast bidding path that bypasses the 5-layer protection model in favor of a single atomic Lua script:
+The `/bid` endpoint uses a high-performance Redis Lua script for maximum throughput:
 
 ```
 ┌─────────────────────────────────────────────────────────┐
 │                    HTTP Request                          │
-│                POST /auctions/:id/fast-bid               │
+│                  POST /auctions/:id/bid                  │
 └─────────────────────────────────────────────────────────┘
                            │
                            ▼
@@ -162,23 +162,18 @@ For maximum throughput, the system provides an ultra-fast bidding path that bypa
 └─────────────────────────────────────────────────────────┘
 ```
 
-### Performance Comparison
+### Performance
 
-| Metric | Standard (5-Layer) | Ultra-Fast (Lua) |
-|--------|-------------------|------------------|
-| Latency | 1.4ms mean, 4ms p99 | 2.4ms mean, 6ms p99 |
-| Throughput | 197 req/s | 197 req/s |
-| Consistency | Immediate | Eventual (5s sync) |
-| Protection | Full ACID | Atomic Lua + Dirty Tracking |
-
-### When to Use Each Path
-
-- **Standard Path** (`POST /auctions/:id/bid`): When strong consistency is required, low-traffic auctions
-- **Ultra-Fast Path** (`POST /auctions/:id/fast-bid`): High-traffic scenarios, when 5-second eventual consistency is acceptable
+| Metric | Value |
+|--------|-------|
+| Latency | 1.4ms mean, 4ms p99 |
+| Peak Throughput | 3,362 req/s (single-core), 13,812 req/s (12-core) |
+| Consistency | Eventual (5s sync to MongoDB) |
+| Protection | Atomic Lua + Dirty Tracking |
 
 ---
 
-## Standard Bid Flow (5-Layer Protection)
+## Bid Flow Details
 
 ```typescript
 POST /api/auctions/:id/bid { amount: 1000 }

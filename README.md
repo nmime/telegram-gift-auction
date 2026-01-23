@@ -42,7 +42,7 @@ Full benchmarks: [BENCHMARK_REPORT.md](./backend/test/artillery/BENCHMARK_REPORT
 |---------|-------------|
 | **Multi-round auctions** | Items distributed across rounds (e.g., 3+5+2), partial winners each round |
 | **5-layer concurrency** | Redlock → Redis cooldown → MongoDB transactions → optimistic locking → unique indexes |
-| **Ultra-fast bidding** | Single Redis Lua script (~2ms), WebSocket bids bypass HTTP entirely |
+| **High-performance bidding** | Redis Lua script (~1.4ms mean), WebSocket real-time updates |
 | **Anti-sniping** | Configurable window with automatic round extensions |
 | **Financial integrity** | Frozen balances, atomic operations, complete audit trail |
 | **Telegram native** | Login Widget, Mini App auth, bot notifications (GrammyJS) |
@@ -113,8 +113,7 @@ Refund:      frozenBalance -= X, balance += X
 |----------|-------------|
 | `POST /api/auth/telegram/webapp` | Mini App authentication |
 | `GET /api/auctions` | List auctions |
-| `POST /api/auctions/:id/bid` | Place bid (standard) |
-| `POST /api/auctions/:id/fast-bid` | Place bid (Redis, high-perf) |
+| `POST /api/auctions/:id/bid` | Place bid (Redis high-performance) |
 | `GET /api/auctions/:id/leaderboard` | Current rankings |
 | `GET /api/users/balance` | Get balance |
 

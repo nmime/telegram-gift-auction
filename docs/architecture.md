@@ -59,8 +59,8 @@ Full benchmarks: [BENCHMARK_REPORT.md](../backend/test/artillery/BENCHMARK_REPOR
 │  │  ├─ removeBid() [ZREM]    └─ getHistory()       └─ bid()     │  │
 │  │  └─ getTop() [ZRANGE]                                        │  │
 │  │                                                               │  │
-│  │  BidCacheService (Ultra-Fast Path)                           │  │
-│  │  ├─ placeBidUltraFast()   [Single Lua script]                │  │
+│  │  BidCacheService (High-Performance Path)                     │  │
+│  │  ├─ placeBidFast()        [Single Lua script]                │  │
 │  │  ├─ warmupAuctionCache()                                     │  │
 │  │  └─ getAuctionMeta()                                         │  │
 │  │                                                               │  │
@@ -320,9 +320,9 @@ socket.on('bid-response', ({ success, amount, previousAmount, error }) => {
 // - Async anti-sniping check (non-blocking)
 ```
 
-### BidCacheService (Ultra-Fast Path)
+### BidCacheService (High-Performance Path)
 
-High-performance Redis-based bidding (~2.4ms latency, ~200 rps sustained):
+High-performance Redis-based bidding (~1.4ms latency, 3,362 rps single-core):
 
 ```typescript
 // Single Lua script does ALL validation + bid placement atomically:
@@ -335,7 +335,7 @@ High-performance Redis-based bidding (~2.4ms latency, ~200 rps sustained):
 // - Mark as dirty for background sync
 // - Return ALL auction meta (eliminates extra Redis call)
 
-const result = await bidCacheService.placeBidUltraFast(
+const result = await bidCacheService.placeBidFast(
   auctionId,
   userId,
   amount
@@ -388,14 +388,14 @@ Financial operations require atomicity. If balance deduction succeeds but bid cr
 
 2-3x better throughput — critical for high-concurrency auction scenarios.
 
-### Why Single Lua Script for Ultra-Fast Bidding?
+### Why Single Lua Script for High-Performance Bidding?
 
 MongoDB transactions add latency under concurrent load. A single Lua script in Redis:
-- Executes atomically in ~2ms (including network)
+- Executes atomically in ~0.02ms
 - Eliminates network round-trips (HGETALL + validation + update in one call)
 - Does ALL validation + bid placement in one call
 - Returns all auction meta (no extra Redis call needed for anti-sniping/notifications)
-- Enables ~200 rps sustained with sub-3ms p95 latency
+- Enables 3,362 rps single-core with 1.4ms mean latency
 
 ### Why Background Sync Instead of Write-Through?
 
