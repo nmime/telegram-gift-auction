@@ -1,6 +1,6 @@
 # Развертывание
 
-[← К README](../../README.ru.md) · [Архитектура](./architecture.md) · [API](./api.md) · [Конкурентность](./concurrency.md) · [Тестирование](./testing.md)
+[← К README](../../README.ru.md) · [Архитектура](./architecture.md) · [API](./api.md) · [Механика аукционов](./auction-mechanics.md) · [Конкурентность](./concurrency.md) · [Тестирование](./testing.md)
 
 ---
 

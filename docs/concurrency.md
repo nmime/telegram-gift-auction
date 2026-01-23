@@ -1,6 +1,6 @@
 # Concurrency & Safety
 
-[← Back to README](../README.md) · [Architecture](./architecture.md) · [API](./api.md) · [Testing](./testing.md) · [Deployment](./deployment.md)
+[← Back to README](../README.md) · [Architecture](./architecture.md) · [API](./api.md) · [Auction Mechanics](./auction-mechanics.md) · [Testing](./testing.md) · [Deployment](./deployment.md)
 
 ---
 

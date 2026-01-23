@@ -2,24 +2,7 @@ import { Injectable, Inject, Logger, OnModuleInit } from "@nestjs/common";
 import Redis from "ioredis";
 import { redisClient } from "./constants";
 
-/**
- * High-performance Redis-based bid caching system
- *
- * Achieves ~3,000 rps × number of CPUs by:
- * 1. Using Lua scripts for atomic operations (single round-trip)
- * 2. Storing balances and bids in Redis during active auction
- * 3. Syncing to MongoDB periodically (background) and at round end
- *
- * Redis Key Structure:
- * - auction:{auctionId}:balance:{userId} → HASH {available, frozen}
- * - auction:{auctionId}:bid:{userId} → HASH {amount, createdAt, version}
- * - auction:{auctionId}:dirty-users → SET of userIds with changes
- * - auction:{auctionId}:dirty-bids → SET of userIds with bid changes
- * - leaderboard:{auctionId} → ZSET (existing, from LeaderboardService)
- * - auction:{auctionId}:meta → HASH {minBid, status, currentRound, roundEndTime}
- */
-
-// Score encoding for leaderboard (same as LeaderboardService)
+// Score encoding for leaderboard
 const maxTimestamp = 9999999999999;
 const timestampMultiplier = 1e13;
 
@@ -44,10 +27,6 @@ export interface PlaceBidResult {
   rank?: number;
 }
 
-/**
- * Ultra-fast bid result with all meta fields included
- * Eliminates need for separate getAuctionMeta call
- */
 export interface UltraFastBidResult extends PlaceBidResult {
   needsWarmup?: boolean;
   roundEndTime?: number;
@@ -67,29 +46,11 @@ export interface CacheSyncData {
 export class BidCacheService implements OnModuleInit {
   private readonly logger = new Logger(BidCacheService.name);
 
-  // Lua script SHA hashes (loaded on init)
   private placeBidSha = "";
   private placeBidUltraFastSha = "";
   private getBidInfoSha = "";
   private getBalanceSha = "";
 
-  /**
-   * Lua script for atomic bid placement
-   *
-   * KEYS[1] = balance key (auction:{auctionId}:balance:{userId})
-   * KEYS[2] = bid key (auction:{auctionId}:bid:{userId})
-   * KEYS[3] = leaderboard key (leaderboard:{auctionId})
-   * KEYS[4] = meta key (auction:{auctionId}:meta)
-   * KEYS[5] = dirty-users set (auction:{auctionId}:dirty-users)
-   * KEYS[6] = dirty-bids set (auction:{auctionId}:dirty-bids)
-   *
-   * ARGV[1] = userId
-   * ARGV[2] = requested amount
-   * ARGV[3] = current timestamp (ms)
-   * ARGV[4] = minBidAmount
-   *
-   * Returns: [success(0/1), errorCode, newAmount, previousAmount, frozenDelta, isNewBid(0/1), rank]
-   */
   private readonly PLACE_BID_SCRIPT = `
     local balanceKey = KEYS[1]
     local bidKey = KEYS[2]
@@ -156,23 +117,6 @@ export class BidCacheService implements OnModuleInit {
     return {1, "OK", requestedAmount, currentAmount, additionalNeeded, isNewBid, rank}
   `;
 
-  /**
-   * Ultra-fast Lua script that includes ALL validation (no separate checks needed)
-   *
-   * KEYS[1] = balance key
-   * KEYS[2] = bid key
-   * KEYS[3] = leaderboard key
-   * KEYS[4] = meta key
-   * KEYS[5] = dirty-users set
-   * KEYS[6] = dirty-bids set
-   *
-   * ARGV[1] = userId
-   * ARGV[2] = requested amount
-   * ARGV[3] = current timestamp (ms)
-   *
-   * Returns: [success(0/1), errorCode, newAmount, previousAmount, frozenDelta, isNewBid(0/1), rank,
-   *           roundEndTime, antiSnipingWindowMs, antiSnipingExtensionMs, maxExtensions, itemsInRound, currentRound]
-   */
   private readonly PLACE_BID_ULTRA_FAST_SCRIPT = `
     local balanceKey = KEYS[1]
     local bidKey = KEYS[2]
@@ -273,9 +217,6 @@ export class BidCacheService implements OnModuleInit {
     return {1, "OK", requestedAmount, currentAmount, additionalNeeded, isNewBid, rank, roundEndTime, antiSnipingWindowMs, antiSnipingExtensionMs, maxExtensions, itemsInRound, currentRound}
   `;
 
-  /**
-   * Lua script to get bid info with rank
-   */
   private readonly GET_BID_INFO_SCRIPT = `
     local bidKey = KEYS[1]
     local leaderboardKey = KEYS[2]
@@ -292,9 +233,6 @@ export class BidCacheService implements OnModuleInit {
     return {amount, createdAt, rank}
   `;
 
-  /**
-   * Lua script to get balance
-   */
   private readonly GET_BALANCE_SCRIPT = `
     local balanceKey = KEYS[1]
     local available = tonumber(redis.call('HGET', balanceKey, 'available') or '0')
@@ -305,7 +243,6 @@ export class BidCacheService implements OnModuleInit {
   constructor(@Inject(redisClient) private readonly redis: Redis) {}
 
   public async onModuleInit(): Promise<void> {
-    // Pre-load Lua scripts for better performance (production only)
     try {
       this.placeBidSha = (await this.redis.script(
         "LOAD",
@@ -325,8 +262,6 @@ export class BidCacheService implements OnModuleInit {
       )) as string;
       this.logger.log("Lua scripts loaded successfully (4 scripts)");
     } catch (error) {
-      // In test environment with ioredis-mock, script command is not supported
-      // This is safe to ignore as the scripts will be loaded inline when needed
       const errorMsg = error instanceof Error ? error.message : String(error);
       if (
         errorMsg.includes("Unsupported command") ||
@@ -342,10 +277,6 @@ export class BidCacheService implements OnModuleInit {
     }
   }
 
-  /**
-   * Initialize cache for an auction with all participant balances
-   * Call this when auction starts or when a user joins
-   */
   public async warmupUserBalance(
     auctionId: string,
     userId: string,
@@ -356,9 +287,6 @@ export class BidCacheService implements OnModuleInit {
     await this.redis.hset(key, "available", available, "frozen", frozen);
   }
 
-  /**
-   * Batch warmup for multiple users
-   */
   public async warmupBalances(
     auctionId: string,
     users: { id: string; balance: number; frozenBalance: number }[],
@@ -384,9 +312,6 @@ export class BidCacheService implements OnModuleInit {
     );
   }
 
-  /**
-   * Warmup existing bids for an auction
-   */
   public async warmupBids(
     auctionId: string,
     bids: {
@@ -400,7 +325,6 @@ export class BidCacheService implements OnModuleInit {
     const pipeline = this.redis.pipeline();
     const leaderboardKeyStr = this.leaderboardKey(auctionId);
 
-    // Clear existing leaderboard
     pipeline.del(leaderboardKeyStr);
 
     for (const bid of bids) {
@@ -417,7 +341,6 @@ export class BidCacheService implements OnModuleInit {
         0,
       );
 
-      // Add to leaderboard with encoded score
       const invertedTimestamp = maxTimestamp - timestamp;
       const score = bid.amount * timestampMultiplier + invertedTimestamp;
       pipeline.zadd(leaderboardKeyStr, score, bid.userId);
@@ -429,9 +352,6 @@ export class BidCacheService implements OnModuleInit {
     );
   }
 
-  /**
-   * Set auction metadata (call on auction start and round changes)
-   */
   public async setAuctionMeta(
     auctionId: string,
     meta: {
@@ -469,10 +389,6 @@ export class BidCacheService implements OnModuleInit {
     );
   }
 
-  /**
-   * Get cached auction metadata (avoids MongoDB query)
-   * Returns null if cache not warmed
-   */
   public async getAuctionMeta(auctionId: string): Promise<{
     minBidAmount: number;
     status: string;
@@ -502,9 +418,6 @@ export class BidCacheService implements OnModuleInit {
     };
   }
 
-  /**
-   * Update round end time (for anti-sniping extensions)
-   */
   public async updateRoundEndTime(
     auctionId: string,
     newEndTime: number,
@@ -513,11 +426,6 @@ export class BidCacheService implements OnModuleInit {
     await this.redis.hset(key, "roundEndTime", newEndTime);
   }
 
-  /**
-   * Place a bid using Lua script (atomic, ~1-2ms)
-   *
-   * @returns PlaceBidResult with success status and details
-   */
   public async placeBid(
     auctionId: string,
     userId: string,
@@ -564,7 +472,6 @@ export class BidCacheService implements OnModuleInit {
         };
       }
 
-      // Map error codes to messages
       const errorMessages: Record<string, string> = {
         MIN_BID: `Minimum bid is ${String(minBidAmount)}`,
         BID_TOO_LOW: "Bid must be higher than current bid",
@@ -577,7 +484,6 @@ export class BidCacheService implements OnModuleInit {
         previousAmount,
       };
     } catch (error) {
-      // Script not loaded, reload and retry
       const err = error as Error;
       if (err.message.includes("NOSCRIPT")) {
         this.logger.warn("Lua script not found, reloading...");
@@ -588,22 +494,6 @@ export class BidCacheService implements OnModuleInit {
     }
   }
 
-  /**
-   * Ultra-fast bid placement - single Redis call does ALL validation
-   * No separate cache check, no MongoDB query, no balance check
-   * Target: <1ms latency
-   *
-   * Error codes returned:
-   * - NOT_WARMED: Cache not initialized for this auction
-   * - NOT_ACTIVE: Auction is not in active status
-   * - ROUND_ENDED: Round has ended or is about to end
-   * - USER_NOT_WARMED: User balance not in cache (need to warm up)
-   * - MIN_BID: Amount below minimum
-   * - BID_TOO_LOW: Amount not higher than current bid
-   * - INSUFFICIENT_BALANCE: Not enough available balance
-   *
-   * Returns all auction meta fields to eliminate separate getAuctionMeta call
-   */
   public async placeBidUltraFast(
     auctionId: string,
     userId: string,
@@ -659,7 +549,6 @@ export class BidCacheService implements OnModuleInit {
         };
       }
 
-      // Map error codes
       const errorCode = String(errorOrOk);
       const errorMessages: Record<string, string> = {
         NOT_WARMED: "Cache not warmed",
@@ -695,9 +584,6 @@ export class BidCacheService implements OnModuleInit {
     }
   }
 
-  /**
-   * Get user's bid info with rank
-   */
   public async getBidInfo(
     auctionId: string,
     userId: string,
@@ -730,9 +616,6 @@ export class BidCacheService implements OnModuleInit {
     }
   }
 
-  /**
-   * Get user's cached balance for an auction
-   */
   public async getBalance(
     auctionId: string,
     userId: string,
@@ -758,23 +641,14 @@ export class BidCacheService implements OnModuleInit {
     }
   }
 
-  /**
-   * Get all dirty (modified) user IDs for sync
-   */
   public async getDirtyUserIds(auctionId: string): Promise<string[]> {
     return await this.redis.smembers(this.dirtyUsersKey(auctionId));
   }
 
-  /**
-   * Get all dirty bid user IDs for sync
-   */
   public async getDirtyBidUserIds(auctionId: string): Promise<string[]> {
     return await this.redis.smembers(this.dirtyBidsKey(auctionId));
   }
 
-  /**
-   * Get all cached data for sync to MongoDB
-   */
   public async getSyncData(auctionId: string): Promise<CacheSyncData> {
     const dirtyUsers = await this.getDirtyUserIds(auctionId);
     const dirtyBids = await this.getDirtyBidUserIds(auctionId);
@@ -782,7 +656,6 @@ export class BidCacheService implements OnModuleInit {
     const balances = new Map<string, CachedBalance>();
     const bids = new Map<string, CachedBid>();
 
-    // Fetch balances
     if (dirtyUsers.length > 0) {
       const pipeline = this.redis.pipeline();
       for (const usrId of dirtyUsers) {
@@ -802,7 +675,6 @@ export class BidCacheService implements OnModuleInit {
       }
     }
 
-    // Fetch bids
     if (dirtyBids.length > 0) {
       const pipeline = this.redis.pipeline();
       for (const usrId of dirtyBids) {
@@ -826,9 +698,6 @@ export class BidCacheService implements OnModuleInit {
     return { balances, bids };
   }
 
-  /**
-   * Clear dirty flags after successful sync
-   */
   public async clearDirtyFlags(auctionId: string): Promise<void> {
     await this.redis.del(
       this.dirtyUsersKey(auctionId),
@@ -836,9 +705,6 @@ export class BidCacheService implements OnModuleInit {
     );
   }
 
-  /**
-   * Clear specific dirty users after partial sync
-   */
   public async clearDirtyUsers(
     auctionId: string,
     userIds: string[],
@@ -847,9 +713,6 @@ export class BidCacheService implements OnModuleInit {
     await this.redis.srem(this.dirtyUsersKey(auctionId), ...userIds);
   }
 
-  /**
-   * Clear specific dirty bids after partial sync
-   */
   public async clearDirtyBids(
     auctionId: string,
     userIds: string[],
@@ -858,9 +721,6 @@ export class BidCacheService implements OnModuleInit {
     await this.redis.srem(this.dirtyBidsKey(auctionId), ...userIds);
   }
 
-  /**
-   * Get top N from leaderboard (delegates to existing LeaderboardService pattern)
-   */
   public async getTopBidders(
     auctionId: string,
     count: number,
@@ -902,16 +762,10 @@ export class BidCacheService implements OnModuleInit {
     return entries;
   }
 
-  /**
-   * Get total number of bidders
-   */
   public async getTotalBidders(auctionId: string): Promise<number> {
     return await this.redis.zcard(this.leaderboardKey(auctionId));
   }
 
-  /**
-   * Remove users from leaderboard (e.g., after winning)
-   */
   public async removeFromLeaderboard(
     auctionId: string,
     userIds: string[],
@@ -920,9 +774,6 @@ export class BidCacheService implements OnModuleInit {
     await this.redis.zrem(this.leaderboardKey(auctionId), ...userIds);
   }
 
-  /**
-   * Clear all cache data for an auction
-   */
   public async clearAuctionCache(auctionId: string): Promise<void> {
     const pattern = this.auctionKeysPattern(auctionId);
     const leaderboardKeyStr = this.leaderboardKey(auctionId);
@@ -943,7 +794,6 @@ export class BidCacheService implements OnModuleInit {
     } while (cursor !== "0");
 
     if (keysToDelete.length > 0) {
-      // Delete in batches to avoid blocking
       const batchSize = 1000;
       for (let i = 0; i < keysToDelete.length; i += batchSize) {
         const batch = keysToDelete.slice(i, i + batchSize);
@@ -956,9 +806,6 @@ export class BidCacheService implements OnModuleInit {
     );
   }
 
-  /**
-   * Check if auction cache is warmed up
-   */
   public async isCacheWarmed(auctionId: string): Promise<boolean> {
     const metaKeyStr = this.metaKey(auctionId);
     const exists = await this.redis.exists(metaKeyStr);

@@ -3,3 +3,4 @@ export * from "./types";
 export * from "./errors";
 export * from "./logger";
 export * from "./middleware";
+export * from "./cluster";

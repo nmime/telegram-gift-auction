@@ -1,6 +1,6 @@
 # Конкурентность и безопасность
 
-[← К README](../../README.ru.md) · [Архитектура](./architecture.md) · [API](./api.md) · [Тестирование](./testing.md) · [Деплой](./deployment.md)
+[← К README](../../README.ru.md) · [Архитектура](./architecture.md) · [API](./api.md) · [Механика аукционов](./auction-mechanics.md) · [Тестирование](./testing.md) · [Деплой](./deployment.md)
 
 ---
 

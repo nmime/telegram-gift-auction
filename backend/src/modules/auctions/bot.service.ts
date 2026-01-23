@@ -18,6 +18,7 @@ import {
   BidStatus,
 } from "@/schemas";
 import { AuctionsService } from "./auctions.service";
+import { isPrimaryWorker, getWorkerId } from "@/common";
 
 interface BotState {
   auctionId: string;
@@ -39,6 +40,13 @@ export class BotService implements OnModuleInit, OnModuleDestroy {
   ) {}
 
   async onModuleInit(): Promise<void> {
+    if (!isPrimaryWorker()) {
+      const workerId = getWorkerId();
+      this.logger.log(
+        `Worker ${String(workerId)}: Skipping bot restore (handled by primary worker)`,
+      );
+      return;
+    }
     await this.restoreBotsForActiveAuctions();
   }
 
@@ -47,6 +55,13 @@ export class BotService implements OnModuleInit, OnModuleDestroy {
   }
 
   async startBots(auctionId: string, botCount: number): Promise<void> {
+    if (!isPrimaryWorker()) {
+      this.logger.debug(
+        `Worker ${String(getWorkerId())}: Delegating bot start to primary worker`,
+      );
+      return;
+    }
+
     if (this.activeBots.has(auctionId)) {
       return;
     }

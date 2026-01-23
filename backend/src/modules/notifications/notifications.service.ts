@@ -7,8 +7,9 @@ import Redis from "ioredis";
 import { TelegramBotService } from "@/modules/telegram";
 import { User, UserDocument } from "@/schemas";
 import { redisClient } from "@/modules/redis/constants";
+import { shouldRunBackgroundWorker, getWorkerId } from "@/common";
 
-export interface RoundWinNotificationData {
+interface RoundWinNotificationData {
   auctionId: string;
   auctionTitle: string;
   roundNumber: number;
@@ -16,7 +17,7 @@ export interface RoundWinNotificationData {
   itemNumber: number;
 }
 
-export interface OutbidNotificationData {
+interface OutbidNotificationData {
   auctionId: string;
   auctionTitle: string;
   yourBid: number;
@@ -25,7 +26,7 @@ export interface OutbidNotificationData {
   minBidToWin: number;
 }
 
-export interface AuctionCompleteNotificationData {
+interface AuctionCompleteNotificationData {
   auctionId: string;
   auctionTitle: string;
   totalWins: number;
@@ -58,10 +59,8 @@ export class NotificationsService implements OnModuleInit {
     const queueConnection = this.redis.duplicate({
       maxRetriesPerRequest: null,
     });
-    const workerConnection = this.redis.duplicate({
-      maxRetriesPerRequest: null,
-    });
 
+    // Queue can be created on all workers (needed for adding jobs)
     this.notificationQueue = new Queue<TelegramNotificationJob>(
       NotificationsService.QUEUE_NAME,
       {
@@ -78,7 +77,18 @@ export class NotificationsService implements OnModuleInit {
       },
     );
 
-    // Create worker with rate limiting (25 jobs per second, 10 concurrent)
+    if (!shouldRunBackgroundWorker(1)) {
+      const workerId = getWorkerId();
+      this.logger.log(
+        `Worker ${String(workerId)}: Queue initialized (processing handled by primary worker)`,
+      );
+      return;
+    }
+
+    const workerConnection = this.redis.duplicate({
+      maxRetriesPerRequest: null,
+    });
+
     this.worker = new Worker<TelegramNotificationJob>(
       NotificationsService.QUEUE_NAME,
       async (job) => {
@@ -105,8 +115,9 @@ export class NotificationsService implements OnModuleInit {
       this.logger.error("Notification worker error:", err);
     });
 
+    const workerId = getWorkerId();
     this.logger.log(
-      `Notification queue initialized (${String(NotificationsService.RATE_LIMIT)}/sec rate limit, Redis-backed)`,
+      `Worker ${String(workerId ?? "single")}: Notification queue initialized (${String(NotificationsService.RATE_LIMIT)}/sec rate limit, Redis-backed)`,
     );
   }
 

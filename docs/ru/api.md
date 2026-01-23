@@ -1,6 +1,6 @@
 # Справочник API
 
-[← К README](../../README.ru.md) · [Архитектура](./architecture.md) · [Конкурентность](./concurrency.md) · [Тестирование](./testing.md) · [Деплой](./deployment.md)
+[← К README](../../README.ru.md) · [Архитектура](./architecture.md) · [Механика аукционов](./auction-mechanics.md) · [Конкурентность](./concurrency.md) · [Тестирование](./testing.md) · [Деплой](./deployment.md)
 
 ---
 

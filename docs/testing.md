@@ -1,6 +1,6 @@
 # Testing
 
-[← Back to README](../README.md) · [Architecture](./architecture.md) · [API](./api.md) · [Concurrency](./concurrency.md) · [Deployment](./deployment.md)
+[← Back to README](../README.md) · [Architecture](./architecture.md) · [API](./api.md) · [Auction Mechanics](./auction-mechanics.md) · [Concurrency](./concurrency.md) · [Deployment](./deployment.md)
 
 ---
 
@@ -144,7 +144,7 @@ cd backend
 pnpm run load-test:smoke     # Quick 10s validation
 pnpm run load-test           # Standard load test
 pnpm run load-test:stress    # Stress test (via -e stress environment)
-pnpm run load-test:http-max  # Max throughput (3.3K-13.8K req/s)
+pnpm run load-test:http-max  # Max throughput (1.6K-2.8K req/s)
 pnpm run load-test:edge      # Edge cases validation
 
 # WebSocket Tests
@@ -159,14 +159,14 @@ pnpm run load-test:ws-max    # Max throughput (200K emit/s)
 | Protocol | Peak | Sustained | Latency | Grade |
 |----------|------|-----------|---------|-------|
 | **WebSocket** | **200,018 emit/s** | 175,970/s | 0ms | **A+** |
-| **HTTP** | **3,362 req/s** | 3,100/s | 1.5ms mean, 5ms p99 | **A+** |
+| **HTTP** | **2,779 req/s** | 1,623/s | 1.3ms mean (normal), 693ms (max load) | **A** |
 
 #### Cluster Mode (12 cores)
 
-| Protocol | Peak | Improvement |
-|----------|------|-------------|
-| **HTTP** | **13,812 req/s** | ~4.1x |
-| **WebSocket** | ~2.4M emit/s | theoretical |
+| Protocol | Peak | Notes |
+|----------|------|-------|
+| **HTTP** | **3,352 req/s** | Rate limiting active in tests |
+| **WebSocket** | ~2.4M emit/s | Theoretical (requires sticky sessions) |
 
 Enable cluster mode: `CLUSTER_WORKERS=auto` in `.env`
 
@@ -180,10 +180,10 @@ Enable cluster mode: `CLUSTER_WORKERS=auto` in `.env`
 ║    📊 TOTAL:      11,305,542 emits in 67 seconds            ║
 ║    ⏱️  LATENCY:   0ms (sub-millisecond)                      ║
 ║                                                              ║
-║  HTTP (12-core cluster)                                      ║
-║    🚀 PEAK:       13,812 req/sec                            ║
-║    ⚡ SUSTAINED:  12,000-13,000 req/sec                      ║
-║    📈 IMPROVEMENT: ~4.1x over single-core                    ║
+║  HTTP (single-core)                                          ║
+║    🚀 PEAK:       2,779 req/sec (nuclear test)              ║
+║    ⚡ SUSTAINED:  1,623 req/sec (max-throughput test)        ║
+║    📊 TOTAL:      282,599 requests in ~167 seconds          ║
 ╚══════════════════════════════════════════════════════════════╝
 ```
 
@@ -192,7 +192,7 @@ Enable cluster mode: `CLUSTER_WORKERS=auto` in `.env`
 ```
 test/artillery/
 ├── load-test.yml                # HTTP load test (smoke/load/stress/soak envs)
-├── http-max-throughput.yml      # HTTP max throughput (3.3K-13.8K req/s)
+├── http-max-throughput.yml      # HTTP max throughput (1.6K-2.8K req/s)
 ├── edge-cases.yml               # Validation and error handling
 ├── websocket-test.yml           # WebSocket standard (100% success)
 ├── websocket-max-throughput.yml # WebSocket max (200K emit/s peak)

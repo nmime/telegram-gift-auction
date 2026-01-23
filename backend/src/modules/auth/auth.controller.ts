@@ -18,16 +18,6 @@ export class AuthController {
     private readonly telegramService: TelegramService,
   ) {}
 
-  /**
-   * Login via Telegram Login Widget
-   *
-   * Authenticates a user using data from Telegram Login Widget.
-   * Creates a new user if not exists.
-   *
-   * @tag auth
-   * @param body Telegram widget auth data
-   * @returns Login response with user data and access token
-   */
   @TypedRoute.Post("telegram/widget")
   async loginWithTelegramWidget(
     @TypedBody() body: ITelegramWidgetAuth,
@@ -36,16 +26,6 @@ export class AuthController {
     return await this.authService.loginWithTelegramWidget(validatedUser);
   }
 
-  /**
-   * Login via Telegram Mini App
-   *
-   * Authenticates a user using initData from Telegram Mini App (TWA).
-   * Creates a new user if not exists.
-   *
-   * @tag auth
-   * @param body Telegram Mini App auth data
-   * @returns Login response with user data and access token
-   */
   @TypedRoute.Post("telegram/webapp")
   async loginWithTelegramMiniApp(
     @TypedBody() body: ITelegramWebAppAuth,
@@ -56,30 +36,12 @@ export class AuthController {
     return await this.authService.loginWithTelegramMiniApp(validatedData);
   }
 
-  /**
-   * Logout user
-   *
-   * Logs out the user. Client should discard the JWT token.
-   *
-   * @tag auth
-   * @security bearer
-   * @returns Logout success status
-   */
   @TypedRoute.Post("logout")
   @UseGuards(AuthGuard)
   logout(): ILogoutResponse {
     return { success: true };
   }
 
-  /**
-   * Get current user
-   *
-   * Returns the currently authenticated user based on JWT token.
-   *
-   * @tag auth
-   * @security bearer
-   * @returns Current user data
-   */
   @TypedRoute.Get("me")
   @UseGuards(AuthGuard)
   async me(@Req() req: AuthenticatedRequest): Promise<IUserResponse | null> {

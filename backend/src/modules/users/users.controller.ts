@@ -14,15 +14,6 @@ import {
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
-  /**
-   * Get user balance
-   *
-   * Returns the current available and frozen balance for the authenticated user.
-   *
-   * @tag users
-   * @security bearer
-   * @returns User balance information
-   */
   @TypedRoute.Get("balance")
   async getBalance(
     @Req() req: AuthenticatedRequest,
@@ -30,16 +21,6 @@ export class UsersController {
     return await this.usersService.getBalance(req.user.sub);
   }
 
-  /**
-   * Deposit funds
-   *
-   * Adds the specified amount to the user's available balance.
-   *
-   * @tag users
-   * @security bearer
-   * @param body Deposit amount
-   * @returns Updated balance
-   */
   @TypedRoute.Post("deposit")
   async deposit(
     @Req() req: AuthenticatedRequest,
@@ -52,16 +33,6 @@ export class UsersController {
     };
   }
 
-  /**
-   * Withdraw funds
-   *
-   * Removes the specified amount from the user's available balance.
-   *
-   * @tag users
-   * @security bearer
-   * @param body Withdrawal amount
-   * @returns Updated balance
-   */
   @TypedRoute.Post("withdraw")
   async withdraw(
     @Req() req: AuthenticatedRequest,
@@ -74,16 +45,6 @@ export class UsersController {
     };
   }
 
-  /**
-   * Update user language preference
-   *
-   * Sets the user's preferred language for the app and notifications.
-   *
-   * @tag users
-   * @security bearer
-   * @param body Language code
-   * @returns Updated language code
-   */
   @TypedRoute.Put("language")
   async updateLanguage(
     @Req() req: AuthenticatedRequest,

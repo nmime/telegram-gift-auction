@@ -9,17 +9,6 @@ import { ITransactionResponse, ITransactionQuery } from "./dto";
 export class TransactionsController {
   constructor(private readonly transactionsService: TransactionsService) {}
 
-  /**
-   * Get transaction history
-   *
-   * Returns a paginated list of transactions for the authenticated user,
-   * ordered by most recent first.
-   *
-   * @tag transactions
-   * @security bearer
-   * @param query Pagination parameters
-   * @returns List of transactions
-   */
   @TypedRoute.Get()
   async getTransactions(
     @Req() req: AuthenticatedRequest,

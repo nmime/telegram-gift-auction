@@ -11,7 +11,7 @@
 
 ---
 
-· [Architecture](./docs/architecture.md) · [API](./docs/api.md) · [Testing](./docs/testing.md) · [Deployment](./docs/deployment.md)
+· [Architecture](./docs/architecture.md) · [API](./docs/api.md) · [Auction Mechanics](./docs/auction-mechanics.md) · [Concurrency](./docs/concurrency.md) · [Testing](./docs/testing.md) · [Deployment](./docs/deployment.md)
 
 ---
 

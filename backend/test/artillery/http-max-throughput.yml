@@ -1,5 +1,5 @@
 # Artillery HTTP Maximum Throughput Test
-# Pure read operations for maximum req/sec (3,000+ req/sec peak)
+# Pure read operations for maximum req/sec (1.6K-2.8K req/sec)
 # Run: npx artillery run test/artillery/http-max-throughput.yml
 
 config:

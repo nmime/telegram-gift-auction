@@ -7,7 +7,6 @@ import { AsyncApi, AsyncApiPub, AsyncApiSub } from "@nmime/nestjs-asyncapi";
 import type { AuctionDocument, BidDocument } from "@/schemas";
 import { redisClient, BidCacheService } from "@/modules/redis";
 import type { PlaceBidPayload } from "./events.dto";
-// Stub classes for nestjs-asyncapi decorators (actual schemas from typia)
 import {
   AuthPayload,
   AuthResponse,
@@ -44,19 +43,15 @@ export class EventsGateway {
     this.logger.log("EventsGateway constructor called");
   }
 
-  // ========== PUBLIC METHODS ==========
-
   setServer(server: Server): void {
     this.server = server;
     this.logger.log("Socket.IO server set");
 
-    // Set up Redis adapter for scaling
     const pubClient = this.redis.duplicate();
     const subClient = this.redis.duplicate();
     server.adapter(createAdapter(pubClient, subClient));
     this.logger.log("Socket.IO Redis adapter initialized");
 
-    // Set up connection handlers
     server.on("connection", (client: Socket) => this.handleConnection(client));
   }
 
@@ -209,8 +204,6 @@ export class EventsGateway {
     this.server.to(`auction:${auctionId}`).emit("countdown", data);
   }
 
-  // ========== PRIVATE METHODS ==========
-
   private handleConnection(client: AuthenticatedSocket): void {
     this.logger.log("Client connected", client.id);
 
@@ -222,7 +215,6 @@ export class EventsGateway {
       this.handleLeaveAuction(client, auctionId),
     );
 
-    // Auth-required event: authenticate and place bid
     client.on("auth", (token: string) => this.handleAuth(client, token));
     client.on(
       "place-bid",
@@ -231,10 +223,6 @@ export class EventsGateway {
     );
   }
 
-  /**
-   * Authenticate socket connection with JWT token
-   * Must be called before place-bid
-   */
   @AsyncApiSub({
     channel: "auth",
     summary: "Authenticate WebSocket connection",
@@ -269,10 +257,6 @@ export class EventsGateway {
     }
   }
 
-  /**
-   * Ultra-fast WebSocket bid placement
-   * Skips HTTP overhead for maximum throughput (~3,000 rps x number of CPUs)
-   */
   @AsyncApiSub({
     channel: "place-bid",
     summary: "Place a bid via WebSocket",
@@ -291,7 +275,6 @@ export class EventsGateway {
     client: AuthenticatedSocket,
     payload: PlaceBidPayload,
   ): Promise<void> {
-    // Check authentication
     if (client.userId === undefined) {
       client.emit("bid-response", {
         success: false,
@@ -302,7 +285,6 @@ export class EventsGateway {
 
     const { auctionId, amount } = payload;
 
-    // Validate payload
     if (
       typeof auctionId !== "string" ||
       auctionId === "" ||
@@ -318,7 +300,6 @@ export class EventsGateway {
     }
 
     try {
-      // Use ultra-fast Redis path directly
       const result = await this.bidCacheService.placeBidUltraFast(
         auctionId,
         client.userId,
@@ -326,7 +307,6 @@ export class EventsGateway {
       );
 
       if (result.success) {
-        // Emit response to bidder
         client.emit("bid-response", {
           success: true,
           amount: result.newAmount,
@@ -334,7 +314,6 @@ export class EventsGateway {
           isNewBid: result.isNewBid,
         });
 
-        // Broadcast new bid to auction room
         const newAmount = result.newAmount ?? 0;
         this.emitNewBid(auctionId, {
           amount: newAmount,
@@ -342,7 +321,6 @@ export class EventsGateway {
           isIncrease: result.isNewBid !== true,
         });
 
-        // Async anti-sniping check (don't block response)
         if (result.roundEndTime !== undefined && result.roundEndTime > 0) {
           this.checkAntiSniping(auctionId, result);
         }
@@ -362,10 +340,6 @@ export class EventsGateway {
     }
   }
 
-  /**
-   * Async anti-sniping check - extends round if bid is in sniping window
-   * This is fire-and-forget to not block the bid response
-   */
   private checkAntiSniping(
     auctionId: string,
     result: {
@@ -384,12 +358,9 @@ export class EventsGateway {
       result.antiSnipingExtensionMs === undefined ||
       result.antiSnipingExtensionMs <= 0
     ) {
-      return; // Not in anti-sniping window
+      return;
     }
 
-    // Anti-sniping extension is handled by AuctionsService
-    // This would require injecting AuctionsService which creates circular dep
-    // For now, log that anti-sniping should be checked
     this.logger.debug("Bid in anti-sniping window", {
       auctionId,
       roundEndTime: result.roundEndTime,

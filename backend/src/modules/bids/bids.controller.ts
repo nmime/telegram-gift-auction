@@ -35,15 +35,6 @@ function isObjectId(value: unknown): value is Types.ObjectId {
 export class BidsController {
   constructor(private readonly bidsService: BidsService) {}
 
-  /**
-   * Get all my bids
-   *
-   * Returns all bids placed by the authenticated user across all auctions.
-   *
-   * @tag bids
-   * @security bearer
-   * @returns List of user bids
-   */
   @TypedRoute.Get("my")
   async getMyBids(@Req() req: AuthenticatedRequest): Promise<IBidResponse[]> {
     const bids = await this.bidsService.getByUser(req.user.sub);

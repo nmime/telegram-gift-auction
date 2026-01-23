@@ -35,17 +35,14 @@ export class AuthService {
   async loginWithTelegramWidget(
     telegramUser: TelegramUser,
   ): Promise<AuthResponse> {
-    // Find user by Telegram ID or create new
     let user = await this.userModel.findOne({ telegramId: telegramUser.id });
 
     if (user === null) {
-      // Generate username from Telegram data
       const username =
         telegramUser.username !== undefined && telegramUser.username !== ""
           ? telegramUser.username
           : `tg_${String(telegramUser.id)}`;
 
-      // Check if username already exists (for non-Telegram users)
       const existingByUsername = await this.userModel.findOne({ username });
       const finalUsername =
         existingByUsername !== null
@@ -62,7 +59,6 @@ export class AuthService {
         isPremium: telegramUser.is_premium ?? false,
       });
     } else {
-      // Update all Telegram fields on each login
       user.firstName = telegramUser.first_name;
       user.lastName = telegramUser.last_name;
       user.photoUrl = telegramUser.photo_url;

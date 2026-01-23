@@ -11,6 +11,7 @@ import { I18nService } from "nestjs-i18n";
 import { Bot, Context, webhookCallback } from "grammy";
 import type { FastifyRequest, FastifyReply } from "fastify";
 import { User, UserDocument } from "@/schemas";
+import { isPrimaryWorker, getWorkerId } from "@/common";
 
 interface BotContext extends Context {
   lang: string;
@@ -45,29 +46,31 @@ export class TelegramBotService implements OnModuleInit, OnModuleDestroy {
     this.setupHandlers();
   }
 
-  // ========== PUBLIC METHODS ==========
-
   async onModuleInit(): Promise<void> {
     if (this.botToken === "") {
       this.logger.warn("BOT_TOKEN not configured, skipping bot initialization");
       return;
     }
 
+    if (!isPrimaryWorker()) {
+      const workerId = getWorkerId();
+      this.logger.log(
+        `Worker ${String(workerId)}: Skipping Telegram setup (handled by primary worker)`,
+      );
+      return;
+    }
+
     try {
-      // Get bot info
       const me = await this.bot.api.getMe();
       this.logger.log(`Bot initialized: @${me.username}`);
 
-      // Set bot commands for private chats
       await this.setupBotCommands();
 
       if (this.nodeEnv === "production") {
-        // In production, auto-set webhook
         const webhookUrl = `${this.miniAppUrl}/api/telegram/webhook`;
         await this.setWebhook(webhookUrl);
         this.logger.log("Production mode: Webhook configured automatically");
       } else {
-        // In development, use long polling
         this.logger.log("Development mode: Starting long polling...");
         await this.startPolling();
       }
@@ -126,8 +129,6 @@ export class TelegramBotService implements OnModuleInit, OnModuleDestroy {
     return this.bot;
   }
 
-  // ========== PRIVATE METHODS ==========
-
   private t(key: string, lang: string, args?: Record<string, unknown>): string {
     return this.i18n.t(key, { lang, args });
   }
@@ -156,7 +157,6 @@ export class TelegramBotService implements OnModuleInit, OnModuleDestroy {
     const webAppUrl = this.configService.get<string>("MINI_APP_URL") ?? "";
     const isHttps = webAppUrl.startsWith("https://");
 
-    // Handle /start command
     this.bot.command("start", async (ctx) => {
       const lang = ctx.lang;
 
@@ -168,7 +168,6 @@ export class TelegramBotService implements OnModuleInit, OnModuleDestroy {
 
       const message = `${title}\n\n${description}\n\n${notifications}\n\n${openApp}`;
 
-      // Telegram requires HTTPS for all inline button URLs
       if (isHttps) {
         await ctx.reply(message, {
           parse_mode: "HTML",
@@ -179,7 +178,6 @@ export class TelegramBotService implements OnModuleInit, OnModuleDestroy {
           },
         });
       } else {
-        // Development mode: send link as text since Telegram doesn't allow HTTP URLs
         await ctx.reply(`${message}\n\n${webAppUrl}`, { parse_mode: "HTML" });
       }
     });
@@ -277,18 +275,15 @@ export class TelegramBotService implements OnModuleInit, OnModuleDestroy {
     const privateScope = { type: "all_private_chats" as const };
 
     try {
-      // Set English commands as default for all languages
       await this.bot.api.setMyCommands(getCommands("en"), {
         scope: privateScope,
       });
 
-      // Set English commands explicitly
       await this.bot.api.setMyCommands(getCommands("en"), {
         scope: privateScope,
         language_code: "en",
       });
 
-      // Set Russian commands
       await this.bot.api.setMyCommands(getCommands("ru"), {
         scope: privateScope,
         language_code: "ru",
@@ -304,10 +299,8 @@ export class TelegramBotService implements OnModuleInit, OnModuleDestroy {
     if (this.isRunning) return;
 
     try {
-      // Delete any existing webhook first
       await this.bot.api.deleteWebhook();
 
-      // Start polling
       void this.bot.start({
         onStart: () => {
           this.isRunning = true;

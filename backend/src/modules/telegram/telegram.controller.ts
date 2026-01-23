@@ -16,19 +16,12 @@ export class TelegramController {
     this.webhookSecret = this.configService.get<string>("WEBHOOK_SECRET") ?? "";
   }
 
-  /**
-   * Handle Telegram webhook
-   *
-   * @internal
-   * @ignore
-   */
   @TypedRoute.Post("webhook")
   async handleWebhook(
     @Req() request: FastifyRequest,
     @Res() reply: FastifyReply,
     @Headers("x-telegram-bot-api-secret-token") secretToken?: string,
   ): Promise<{ error: string } | undefined> {
-    // Validate secret token in production
     if (this.webhookSecret !== "" && secretToken !== this.webhookSecret) {
       this.logger.warn("Invalid webhook secret token");
       return await reply.status(401).send({ error: "Unauthorized" });

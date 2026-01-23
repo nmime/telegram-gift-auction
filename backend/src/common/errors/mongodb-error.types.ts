@@ -1,16 +1,16 @@
-export enum MongoErrorCode {
+enum MongoErrorCode {
   DuplicateKey = 11000,
   WriteConflict = 112,
   TransactionAborted = 251,
 }
 
-export interface MongoDBError extends Error {
+interface MongoDBError extends Error {
   code?: number;
   codeName?: string;
   hasErrorLabel?(label: string): boolean;
 }
 
-export function isMongoDBError(error: unknown): error is MongoDBError {
+function isMongoDBError(error: unknown): error is MongoDBError {
   if (!(error instanceof Error)) return false;
   const mongoError = error as MongoDBError;
   return (

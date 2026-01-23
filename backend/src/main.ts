@@ -54,7 +54,13 @@ async function bootstrap(): Promise<void> {
   app.setGlobalPrefix("api");
 
   // Serve Artillery load test reports at /api/reports/
-  const reportsPath = path.join(__dirname, "..", "test", "artillery", "reports");
+  const reportsPath = path.join(
+    __dirname,
+    "..",
+    "test",
+    "artillery",
+    "reports",
+  );
   const reportsAvailable = fs.existsSync(reportsPath);
   if (reportsAvailable) {
     await app.register(fastifyStatic, {
@@ -69,19 +75,16 @@ async function bootstrap(): Promise<void> {
   const nodeEnv = configService.get<string>("NODE_ENV");
   const miniAppUrl = configService.get<string>("MINI_APP_URL");
 
-  // Server URL: use MINI_APP_URL in production, localhost in development
   const serverUrl =
     nodeEnv === "production" && miniAppUrl !== undefined && miniAppUrl !== ""
       ? miniAppUrl
       : `http://localhost:${String(port)}`;
 
-  // Load pre-generated swagger.json (generated at build time via npx nestia swagger)
   const swaggerPath = path.join(__dirname, "..", "swagger.json");
   if (fs.existsSync(swaggerPath)) {
     const document: SwaggerDocument = JSON.parse(
       fs.readFileSync(swaggerPath, "utf-8"),
     ) as SwaggerDocument;
-    // Update server URL dynamically
     document.servers = [{ url: serverUrl }];
 
     SwaggerModule.setup("api/docs", app, document, {
@@ -99,12 +102,10 @@ async function bootstrap(): Promise<void> {
     );
   }
 
-  // AsyncAPI documentation for WebSocket events
   const asyncApiHtmlPath = path.join(__dirname, "..", "asyncapi.html");
   const asyncApiYamlPath = path.join(__dirname, "..", "asyncapi.yaml");
 
   if (fs.existsSync(asyncApiHtmlPath) && fs.existsSync(asyncApiYamlPath)) {
-    // Serve pre-generated static files (production or development with pre-built docs)
     const httpAdapter = app.getHttpAdapter();
     const html = fs.readFileSync(asyncApiHtmlPath, "utf-8");
     const yamlContent = fs.readFileSync(asyncApiYamlPath, "utf-8");

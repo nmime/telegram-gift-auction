@@ -15,14 +15,15 @@
 
 | Test Type | VUs Created | VUs Completed | Success Rate | Key Finding |
 |-----------|-------------|---------------|--------------|-------------|
-| HTTP Load | 500+ | 500+ | ~75% | **197 req/s, 1.5ms mean latency** |
-| **HTTP Max Throughput** | 15,700 | 2,515 | 16%* | **3,362 req/sec peak** |
-| Edge Cases | 300 | 243 | 81% | Validation working correctly |
+| HTTP Load | 3,145 | 1,879 | ~60% | **197 req/s, 1.5ms mean latency** |
+| **HTTP Max Throughput** | 2,001 | 2,000 | 99.9% | **1,623 req/sec sustained** |
+| **HTTP Nuclear** | 5,000 | 5,000 | 100% | **2,779 req/sec peak** |
+| Edge Cases | 300 | 247 | 82% | Validation working correctly |
 | **WebSocket Standard** | 3,145 | 3,145 | **100%** | Sub-millisecond latency |
-| **WebSocket Stress** | 13,500 | 13,500 | **100%** | **11,519 emit/sec** |
+| **WebSocket Stress** | 13,500 | 13,500 | **100%** | **11,261 emit/sec** |
 | **WebSocket Max Throughput** | 30,000 | 22,521 | **75%** | **200,018 emit/sec peak** |
 
-*HTTP max throughput test pushes single-core to limits; failures are expected under extreme load.
+*Note: HTTP tests hit rate limiting under extreme load which is expected behavior for localhost development testing.
 
 ---
 
@@ -57,18 +58,18 @@
 - **400:** 9,190 (validation errors - expected)
 - **409:** 2,809 (concurrent conflicts - expected)
 
-### HTTP Maximum Throughput Results (3,362 req/sec peak)
+### HTTP Maximum Throughput Results (2,779 req/sec peak)
 
 The stress test pushes HTTP throughput to single-core limits:
 
 ```
 ╔══════════════════════════════════════════════════════════════╗
-║  🚀 PEAK THROUGHPUT:    3,362 req/sec                        ║
-║  ⚡ SUSTAINED:          3,100+ req/sec                        ║
-║  📊 TOTAL REQUESTS:     659,411 in 90 seconds                ║
-║  ⏱️  MEAN LATENCY:       1.4ms (p99: 20.5s under extreme load)║
-║  ✅ READ OPS:           311,065 successful (200)             ║
-║  ✅ BID OPS:            87,455 successful (201)              ║
+║  🚀 PEAK THROUGHPUT:    2,779 req/sec (nuclear test)         ║
+║  ⚡ SUSTAINED:          1,623 req/sec (max-throughput test)  ║
+║  📊 TOTAL REQUESTS:     282,599 in ~167 seconds              ║
+║  ⏱️  MEAN LATENCY:       693.7ms (p99: 2.8s under max load)  ║
+║  ✅ READ OPS:           81,399 successful (200)              ║
+║  ✅ BID OPS:            119,800 successful (201)             ║
 ╚══════════════════════════════════════════════════════════════╝
 ```
 
@@ -88,8 +89,8 @@ The stress test pushes HTTP throughput to single-core limits:
 
 | Test | VUs | Emit Rate | Mean Latency | Success Rate |
 |------|-----|-----------|--------------|--------------|
-| Standard | 3,145 | 44/sec | 0ms | **100%** |
-| Stress | 13,500 | **11,519/sec** | 0ms | **100%** |
+| Standard | 3,145 | 46/sec | 0ms | **100%** |
+| Stress | 13,500 | **11,261/sec** | 0ms | **100%** |
 | Max Throughput | 30,000 | **175,970/sec** sustained | 0ms | 75% |
 | Max Throughput (peak) | - | **200,018/sec** | 0ms | - |
 
@@ -109,15 +110,15 @@ The stress test pushes HTTP throughput to single-core limits:
 | Load Level | Arrival Rate | Status | Throughput |
 |------------|--------------|--------|------------|
 | Standard | 2-50/s | ✅ **STABLE** | 100% success |
-| Stress | 50-200/s | ✅ **STABLE** | 11,500+ emit/s, 100% success |
-| Max Throughput | 500/s | ✅ **HIGH LOAD** | 175,970+ emit/s sustained |
+| Stress | 50-200/s | ✅ **STABLE** | 11,261 emit/s, 100% success |
+| Max Throughput | 500/s | ✅ **HIGH LOAD** | 175,970 emit/s sustained |
 | Max Throughput (peak) | 500/s | ⚡ **PEAK** | 200,018 emit/s |
 
 ### WebSocket Key Findings
 
-1. **Sub-millisecond latency** maintained up to 200,000 emit/sec
-2. **100% success** up to 200 arrivals/second
-3. **11+ million messages** processed in 67-second max throughput test
+1. **Sub-millisecond latency** maintained up to 200,018 emit/sec
+2. **100% success** up to 200 arrivals/second (13,500 VUs)
+3. **11.3 million messages** processed in 67-second max throughput test
 4. **Single-core limit** reached around 200K emit/sec
 
 ---
@@ -141,18 +142,18 @@ The stress test pushes HTTP throughput to single-core limits:
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │  SINGLE-CORE (1 worker):                                    │
-│    Peak Throughput:   3,362 req/sec                         │
-│    Sustained Rate:    3,100+ req/sec (read-heavy)           │
+│    Peak Throughput:   2,779 req/sec (nuclear test)          │
+│    Sustained Rate:    1,623 req/sec (max-throughput test)   │
 │                                                             │
 │  CLUSTER MODE (12 workers):                                 │
-│    Peak Throughput:   13,812 req/sec (~4.1x improvement)    │
-│    Sustained Rate:    12,000-13,000 req/sec                 │
+│    Peak Throughput:   3,352 req/sec (rate-limiting active)  │
+│    Note: Heavy rate limiting (97%+ 429s) in cluster test    │
 │                                                             │
 │  Standard Load:       197 req/s sustained                   │
-│  Mean Latency:        1.5ms                                 │
-│  P95 Latency:         3ms                                   │
-│  P99 Latency:         5ms                                   │
-│  Bid Endpoint:        1.4ms mean, 4ms p99 (Redis fast path) │
+│  Mean Latency:        1.3ms (edge cases), 693ms (max load)  │
+│  P95 Latency:         3ms (normal), 1.9s (max load)         │
+│  P99 Latency:         5ms (normal), 2.8s (max load)         │
+│  Bid Endpoint:        975ms mean under max load (Redis)     │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -167,7 +168,7 @@ The stress test pushes HTTP throughput to single-core limits:
 │    Theoretical:         ~2.4M emit/sec (12x linear scaling) │
 │    Note: WebSocket connections need sticky sessions         │
 │                                                             │
-│  Stress (stable):       11,519 emit/sec @ 100% success      │
+│  Stress (stable):       11,261 emit/sec @ 100% success      │
 │  Latency:               0ms (sub-millisecond)               │
 │  Total Capacity:        10M+ messages/minute                │
 └─────────────────────────────────────────────────────────────┘
@@ -179,15 +180,15 @@ The stress test pushes HTTP throughput to single-core limits:
 
 | Metric | Documented | Actual (2026-01-23) | Status |
 |--------|------------|---------------------|--------|
-| HTTP Bid Latency | 18ms mean | **1.4ms mean** | ✅ Much Better |
+| HTTP Bid Latency | 18ms mean | **1.3ms mean** (edge cases) | ✅ Much Better |
 | HTTP Request Rate | 138 req/s | **197 req/s** | ✅ Better |
-| **HTTP Peak (1 core)** | - | **3,362 req/sec** | 🚀 New |
-| **HTTP Peak (12 cores)** | - | **13,812 req/sec** | 🚀 New |
+| **HTTP Peak (1 core)** | - | **2,779 req/sec** | 🚀 Measured |
+| **HTTP Sustained (1 core)** | - | **1,623 req/sec** | 🚀 Measured |
 | WS Peak Emit | 63,000/sec | **200,018/sec** | ✅ 3x Better |
 | WS Sustained | 43,000/sec | **175,970/sec** | ✅ 4x Better |
 | WS Latency | 0ms | **0ms** | ✅ Matches |
 
-**Note:** Results from single-process Node.js on localhost with development rate limiting bypassed. Maximum throughput achieved with optimized test configuration (500 emits/VU, 500 arrivals/sec).
+**Note:** Results from single-process Node.js on localhost. HTTP rate limiting is active in production mode. Maximum WebSocket throughput achieved with optimized test configuration (500 emits/VU, 500 arrivals/sec).
 
 ---
 
@@ -203,7 +204,7 @@ The stress test pushes HTTP throughput to single-core limits:
 ```
 test/artillery/
 ├── load-test.yml                # HTTP load test (smoke/load/stress/soak envs)
-├── http-max-throughput.yml      # HTTP max throughput (3.3K-13.8K req/s)
+├── http-max-throughput.yml      # HTTP max throughput (1.6K-2.8K req/s)
 ├── edge-cases.yml               # Validation and error handling
 ├── websocket-test.yml           # WebSocket standard (100% success)
 ├── websocket-max-throughput.yml # WebSocket max (200K emit/s peak)
@@ -224,7 +225,7 @@ test/artillery/
 pnpm run load-test:smoke     # Quick 10s validation
 pnpm run load-test           # Standard load test
 pnpm run load-test:stress    # Stress test (via -e stress)
-pnpm run load-test:http-max  # Max throughput (3.3K-13.8K req/s)
+pnpm run load-test:http-max  # Max throughput (1.6K-2.8K req/s)
 pnpm run load-test:edge      # Edge cases validation
 
 # WebSocket Tests

@@ -3,7 +3,7 @@ import { InjectModel } from "@nestjs/mongoose";
 import { Model, Types, PipelineStage } from "mongoose";
 import { AuditLog, AuditLogDocument } from "@/schemas";
 
-export interface CreateAuditLogDto {
+interface CreateAuditLogDto {
   userId?: Types.ObjectId | string;
   action: string;
   resource: string;
@@ -17,7 +17,7 @@ export interface CreateAuditLogDto {
   metadata?: Record<string, unknown>;
 }
 
-export interface AuditLogFilter {
+interface AuditLogFilter {
   userId?: Types.ObjectId | string;
   action?: string;
   resource?: string;
@@ -28,14 +28,14 @@ export interface AuditLogFilter {
   skip?: number;
 }
 
-export interface AuditLogSummary {
+interface AuditLogSummary {
   action: string;
   count: number;
   successCount: number;
   failureCount: number;
 }
 
-export interface UserAuditLogSummary {
+interface UserAuditLogSummary {
   userId: Types.ObjectId | null;
   count: number;
   successCount: number;

@@ -1,6 +1,7 @@
 import { Injectable, OnModuleInit, Logger } from "@nestjs/common";
 import { Cron, CronExpression } from "@nestjs/schedule";
 import { AuctionsService } from "./auctions.service";
+import { isPrimaryWorker, getWorkerId } from "@/common";
 
 @Injectable()
 export class AuctionSchedulerService implements OnModuleInit {
@@ -9,11 +10,22 @@ export class AuctionSchedulerService implements OnModuleInit {
   constructor(private readonly auctionsService: AuctionsService) {}
 
   async onModuleInit(): Promise<void> {
+    if (!isPrimaryWorker()) {
+      const workerId = getWorkerId();
+      this.logger.log(
+        `Worker ${String(workerId)}: Skipping scheduler init (handled by primary worker)`,
+      );
+      return;
+    }
     await this.checkExpiredRounds();
   }
 
   @Cron(CronExpression.EVERY_5_SECONDS)
   async checkExpiredRounds(): Promise<void> {
+    if (!isPrimaryWorker()) {
+      return;
+    }
+
     try {
       const activeAuctions = await this.auctionsService.getActiveAuctions();
 

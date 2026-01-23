@@ -1,6 +1,6 @@
 # Auction Mechanics
 
-[← Back to README](../README.md) · [Architecture](./architecture.md) · [API](./api.md) · [Concurrency](./concurrency.md) · [Testing](./testing.md)
+[← Back to README](../README.md) · [Architecture](./architecture.md) · [API](./api.md) · [Concurrency](./concurrency.md) · [Testing](./testing.md) · [Deployment](./deployment.md)
 
 ---
 

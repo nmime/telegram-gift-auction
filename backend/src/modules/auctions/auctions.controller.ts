@@ -15,22 +15,12 @@ import {
 import { IUserBidResponse } from "@/modules/bids";
 import { AuctionStatus, AuctionDocument } from "@/schemas";
 
-/**
- * Auction status query parameter
- */
 export interface IAuctionStatusQuery {
-  /** Filter auctions by status */
   status?: AuctionStatus;
 }
 
-/**
- * Leaderboard pagination query parameters
- */
 export interface ILeaderboardQuery {
-  /** Maximum number of entries to return (default: 50) */
   limit?: number;
-
-  /** Number of entries to skip (default: 0) */
   offset?: number;
 }
 
@@ -41,15 +31,6 @@ export class AuctionsController {
     private readonly botService: BotService,
   ) {}
 
-  /**
-   * List all auctions
-   *
-   * Returns a list of all auctions, optionally filtered by status.
-   *
-   * @tag auctions
-   * @param query Query parameters for filtering
-   * @returns List of auctions
-   */
   @TypedRoute.Get()
   async findAll(
     @TypedQuery() query: IAuctionStatusQuery,
@@ -58,46 +39,17 @@ export class AuctionsController {
     return auctions.map((a) => this.formatAuction(a));
   }
 
-  /**
-   * Financial audit
-   *
-   * Verifies system-wide financial integrity. Checks that frozen balances
-   * match active bids and no money is lost or duplicated.
-   *
-   * @tag auctions
-   * @returns Audit results
-   */
   @TypedRoute.Get("system/audit")
   async auditFinancialIntegrity(): Promise<IAuditResponse> {
     return await this.auctionsService.auditFinancialIntegrity();
   }
 
-  /**
-   * Get auction details
-   *
-   * Returns detailed information about a specific auction including round states.
-   *
-   * @tag auctions
-   * @param id Auction ID
-   * @returns Auction details
-   */
   @TypedRoute.Get(":id")
   async findOne(@TypedParam("id") id: string): Promise<IAuctionResponse> {
     const auction = await this.auctionsService.findById(id);
     return this.formatAuction(auction);
   }
 
-  /**
-   * Create new auction
-   *
-   * Creates a new auction with the specified configuration.
-   * The sum of items across all rounds must equal totalItems.
-   *
-   * @tag auctions
-   * @security bearer
-   * @param body Auction configuration
-   * @returns Created auction
-   */
   @TypedRoute.Post()
   @UseGuards(AuthGuard)
   async create(
@@ -108,16 +60,6 @@ export class AuctionsController {
     return this.formatAuction(auction);
   }
 
-  /**
-   * Start auction
-   *
-   * Starts a pending auction. The first round begins immediately.
-   *
-   * @tag auctions
-   * @security bearer
-   * @param id Auction ID
-   * @returns Started auction
-   */
   @TypedRoute.Post(":id/start")
   @UseGuards(AuthGuard)
   async start(@TypedParam("id") id: string): Promise<IAuctionResponse> {
@@ -130,24 +72,6 @@ export class AuctionsController {
     return this.formatAuction(auction);
   }
 
-  /**
-   * Place or increase bid (high-performance Redis path)
-   *
-   * Places a new bid or increases an existing bid on an active auction.
-   * Uses Redis-cached fast path for maximum throughput.
-   *
-   * **Rules:**
-   * - Minimum bid amount must be met
-   * - If you have an existing bid, the new amount must be greater than your current bid by at least the minimum increment
-   * - Only the difference between your current and new bid is deducted from your balance
-   * - Bids within the anti-sniping window extend the round
-   *
-   * @tag auctions
-   * @security bearer
-   * @param id Auction ID
-   * @param body Bid amount
-   * @returns Bid result with rank
-   */
   @TypedRoute.Post(":id/bid")
   @UseGuards(AuthGuard)
   async placeBid(
@@ -170,16 +94,6 @@ export class AuctionsController {
     };
   }
 
-  /**
-   * Get auction leaderboard
-   *
-   * Returns the current ranking of active bids in current round and past winners.
-   *
-   * @tag auctions
-   * @param id Auction ID
-   * @param query Pagination parameters
-   * @returns Leaderboard with pagination and past winners
-   */
   @TypedRoute.Get(":id/leaderboard")
   async getLeaderboard(
     @TypedParam("id") id: string,
@@ -209,16 +123,6 @@ export class AuctionsController {
     };
   }
 
-  /**
-   * Get my bids
-   *
-   * Returns all bids placed by the authenticated user in this auction.
-   *
-   * @tag auctions
-   * @security bearer
-   * @param id Auction ID
-   * @returns List of user bids
-   */
   @TypedRoute.Get(":id/my-bids")
   @UseGuards(AuthGuard)
   async getMyBids(
@@ -237,15 +141,6 @@ export class AuctionsController {
     }));
   }
 
-  /**
-   * Get minimum winning bid
-   *
-   * Returns the minimum bid amount needed to be in a winning position for the current round.
-   *
-   * @tag auctions
-   * @param id Auction ID
-   * @returns Minimum winning bid amount
-   */
   @TypedRoute.Get(":id/min-winning-bid")
   async getMinWinningBid(
     @TypedParam("id") id: string,

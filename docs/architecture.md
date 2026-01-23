@@ -1,6 +1,6 @@
 # Architecture
 
-[← Back to README](../README.md) · [API](./api.md) · [Concurrency](./concurrency.md) · [Testing](./testing.md) · [Deployment](./deployment.md)
+[← Back to README](../README.md) · [API](./api.md) · [Auction Mechanics](./auction-mechanics.md) · [Concurrency](./concurrency.md) · [Testing](./testing.md) · [Deployment](./deployment.md)
 
 ---
 

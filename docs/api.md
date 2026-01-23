@@ -1,6 +1,6 @@
 # API Reference
 
-[← Back to README](../README.md) · [Architecture](./architecture.md) · [Concurrency](./concurrency.md) · [Testing](./testing.md) · [Deployment](./deployment.md)
+[← Back to README](../README.md) · [Architecture](./architecture.md) · [Auction Mechanics](./auction-mechanics.md) · [Concurrency](./concurrency.md) · [Testing](./testing.md) · [Deployment](./deployment.md)
 
 ---
 
