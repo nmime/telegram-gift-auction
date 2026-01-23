@@ -1,6 +1,6 @@
 import cluster from "node:cluster";
 import os from "node:os";
-import http from "node:http";
+import type http from "node:http";
 import { NestFactory } from "@nestjs/core";
 import {
   FastifyAdapter,
@@ -221,7 +221,9 @@ async function bootstrap(): Promise<void> {
   await app.listen(port, "0.0.0.0");
 
   if (cluster.isWorker) {
-    logger.log(`Worker ${String(cluster.worker?.id)} listening on port ${port}`);
+    logger.log(
+      `Worker ${String(cluster.worker?.id)} listening on port ${String(port)}`,
+    );
   }
 
   // Inject Socket.IO server into the EventsGateway
