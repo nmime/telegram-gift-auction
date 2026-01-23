@@ -15,15 +15,24 @@
 
 ---
 
-## Performance (Single Process)
+## Performance
 
 ```
-WebSocket:  200,000 emit/sec peak, 176,000/sec sustained, 0ms latency
-HTTP:       197 req/s sustained, 1.5ms mean latency, 5ms p99
-Grade:      A+ (production-ready)
+┌─────────────────────────────────────────────────────────────────────┐
+│  SINGLE-CORE                                                        │
+│    HTTP:       3,362 req/sec peak, 197 req/s standard load          │
+│    WebSocket:  200,018 emit/sec peak, 175,970/sec sustained         │
+│    Latency:    1.5ms mean, 5ms p99                                  │
+│                                                                     │
+│  CLUSTER MODE (12 cores)                                            │
+│    HTTP:       13,812 req/sec peak (~4.1x improvement)              │
+│    WebSocket:  ~2.4M emit/sec theoretical                           │
+│                                                                     │
+│  Grade: A+ (production-ready)                                       │
+└─────────────────────────────────────────────────────────────────────┘
 ```
 
-Full benchmarks: [BENCHMARK_REPORT.md](./backend/test/artillery/BENCHMARK_REPORT.md)
+Full benchmarks: [BENCHMARK_REPORT.md](./backend/test/artillery/BENCHMARK_REPORT.md) · [Live Reports](https://telegram-gift-auction.funfiesta.games/api/reports/)
 
 ---
 

@@ -4,15 +4,25 @@
 
 ---
 
-## Performance Highlights (Single Process)
+## Performance Highlights
 
-| Feature | Peak | Sustained | Latency |
-|---------|------|-----------|---------|
-| **WebSocket** | **200,000 emit/s** | 176,000/s | 0ms |
-| HTTP | 197 req/s | 197 req/s | 1.5ms mean, 5ms p99 |
+### Single-Core (1 worker)
 
-**Cluster Mode**: Set `CLUSTER_WORKERS=auto` for multi-core scaling.
-Full benchmarks: [BENCHMARK_REPORT.md](../backend/test/artillery/BENCHMARK_REPORT.md)
+| Protocol | Peak | Sustained | Latency |
+|----------|------|-----------|---------|
+| **WebSocket** | **200,018 emit/s** | 175,970/s | 0ms |
+| **HTTP** | **3,362 req/s** | 3,100/s | 1.5ms mean, 5ms p99 |
+
+### Cluster Mode (12 cores)
+
+| Protocol | Peak | Improvement |
+|----------|------|-------------|
+| **HTTP** | **13,812 req/s** | ~4.1x |
+| **WebSocket** | ~2.4M emit/s | theoretical (requires sticky sessions) |
+
+**Enable cluster mode**: Set `CLUSTER_WORKERS=auto` in `.env`
+
+Full benchmarks: [BENCHMARK_REPORT.md](../backend/test/artillery/BENCHMARK_REPORT.md) · [Live Reports](https://telegram-gift-auction.funfiesta.games/api/reports/)
 
 ## System Overview
 

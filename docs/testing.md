@@ -187,22 +187,38 @@ npx artillery run test/artillery/websocket-stress.yml         # 11K emit/s
 npx artillery run test/artillery/websocket-max-throughput.yml # 200K emit/s
 ```
 
-### Performance Results (Single Process)
+### Performance Results
+
+#### Single-Core (1 worker)
 
 | Protocol | Peak | Sustained | Latency | Grade |
 |----------|------|-----------|---------|-------|
 | **WebSocket** | **200,018 emit/s** | 175,970/s | 0ms | **A+** |
-| **HTTP** | 197 req/s | 197 req/s | 1.5ms mean, 5ms p99 | **A+** |
+| **HTTP** | **3,362 req/s** | 3,100/s | 1.5ms mean, 5ms p99 | **A+** |
 
-### WebSocket Maximum Throughput Results
+#### Cluster Mode (12 cores)
+
+| Protocol | Peak | Improvement |
+|----------|------|-------------|
+| **HTTP** | **13,812 req/s** | ~4.1x |
+| **WebSocket** | ~2.4M emit/s | theoretical |
+
+Enable cluster mode: `CLUSTER_WORKERS=auto` in `.env`
+
+### Maximum Throughput Results
 
 ```
 ╔══════════════════════════════════════════════════════════════╗
-║  🚀 PEAK:       200,018 emit/sec                            ║
-║  ⚡ SUSTAINED:  175,970 emit/sec                             ║
-║  📊 TOTAL:      11,305,542 emits in 67 seconds              ║
-║  ⏱️  LATENCY:   0ms (sub-millisecond)                        ║
-║  ✅ SUCCESS:    75% (22,521/30,000 VUs)                     ║
+║  WEBSOCKET (single-core)                                     ║
+║    🚀 PEAK:       200,018 emit/sec                          ║
+║    ⚡ SUSTAINED:  175,970 emit/sec                           ║
+║    📊 TOTAL:      11,305,542 emits in 67 seconds            ║
+║    ⏱️  LATENCY:   0ms (sub-millisecond)                      ║
+║                                                              ║
+║  HTTP (12-core cluster)                                      ║
+║    🚀 PEAK:       13,812 req/sec                            ║
+║    ⚡ SUSTAINED:  12,000-13,000 req/sec                      ║
+║    📈 IMPROVEMENT: ~4.1x over single-core                    ║
 ╚══════════════════════════════════════════════════════════════╝
 ```
 
@@ -210,16 +226,17 @@ npx artillery run test/artillery/websocket-max-throughput.yml # 200K emit/s
 
 ```
 test/artillery/
-├── load-test.yml              # HTTP load test
-├── stress-test.yml            # HTTP stress test
-├── edge-cases.yml             # Validation tests
-├── websocket-test.yml         # WebSocket standard
-├── websocket-stress.yml       # WebSocket 11K/s
-├── websocket-max-throughput.yml # WebSocket 200K/s
-├── functions.js               # HTTP helpers
-├── websocket-functions.js     # WS helpers
-├── reports/                   # JSON + HTML reports
-└── BENCHMARK_REPORT.md        # Full report
+├── load-test.yml                # HTTP standard load test (197 req/s)
+├── stress-test.yml              # HTTP balanced stress (~1K req/s)
+├── http-max-throughput.yml      # HTTP max throughput (3.3K-13.8K req/s)
+├── edge-cases.yml               # Validation tests
+├── websocket-test.yml           # WebSocket standard
+├── websocket-stress.yml         # WebSocket stress (11K emit/s)
+├── websocket-max-throughput.yml # WebSocket max (200K emit/s)
+├── functions.js                 # HTTP helpers
+├── websocket-functions.js       # WS helpers
+├── reports/                     # JSON + HTML reports
+└── BENCHMARK_REPORT.md          # Full report
 ```
 
 Full benchmark details: [`backend/test/artillery/BENCHMARK_REPORT.md`](../backend/test/artillery/BENCHMARK_REPORT.md)
