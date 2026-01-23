@@ -182,27 +182,27 @@ pnpm run load-test:stress    # Extreme stress test
 pnpm run load-test:edge      # Edge cases validation
 
 # WebSocket Tests
-npx artillery run test/artillery/websocket-test.yml     # Standard WS
-npx artillery run test/artillery/websocket-stress.yml   # 11K emit/s
-npx artillery run test/artillery/websocket-extreme.yml  # 118K emit/s
+npx artillery run test/artillery/websocket-test.yml           # Standard WS
+npx artillery run test/artillery/websocket-stress.yml         # 11K emit/s
+npx artillery run test/artillery/websocket-max-throughput.yml # 200K emit/s
 ```
 
 ### Performance Results (Single Process)
 
 | Protocol | Peak | Sustained | Latency | Grade |
 |----------|------|-----------|---------|-------|
-| **WebSocket** | **118,805 emit/s** | 80,000/s | 0ms | **A+** |
+| **WebSocket** | **200,018 emit/s** | 175,970/s | 0ms | **A+** |
 | **HTTP** | 197 req/s | 197 req/s | 1.5ms mean, 5ms p99 | **A+** |
 
-### WebSocket Extreme Results
+### WebSocket Maximum Throughput Results
 
 ```
 ╔══════════════════════════════════════════════════════════════╗
-║  🚀 PEAK:       118,805 emit/sec                            ║
-║  ⚡ SUSTAINED:  80,000 emit/sec                              ║
-║  📊 TOTAL:      5,057,952 emits in 92 seconds               ║
+║  🚀 PEAK:       200,018 emit/sec                            ║
+║  ⚡ SUSTAINED:  175,970 emit/sec                             ║
+║  📊 TOTAL:      11,305,542 emits in 67 seconds              ║
 ║  ⏱️  LATENCY:   0ms (sub-millisecond)                        ║
-║  ✅ SUCCESS:    51.6% (33,276/64,500 VUs)                   ║
+║  ✅ SUCCESS:    75% (22,521/30,000 VUs)                     ║
 ╚══════════════════════════════════════════════════════════════╝
 ```
 
@@ -210,15 +210,16 @@ npx artillery run test/artillery/websocket-extreme.yml  # 118K emit/s
 
 ```
 test/artillery/
-├── load-test.yml           # HTTP load test
-├── stress-test.yml         # HTTP stress test
-├── edge-cases.yml          # Validation tests
-├── websocket-test.yml      # WebSocket standard
-├── websocket-stress.yml    # WebSocket 11K/s
-├── websocket-extreme.yml   # WebSocket 118K/s
-├── functions.js            # HTTP helpers
-├── websocket-functions.js  # WS helpers
-└── BENCHMARK_REPORT.md     # Full report
+├── load-test.yml              # HTTP load test
+├── stress-test.yml            # HTTP stress test
+├── edge-cases.yml             # Validation tests
+├── websocket-test.yml         # WebSocket standard
+├── websocket-stress.yml       # WebSocket 11K/s
+├── websocket-max-throughput.yml # WebSocket 200K/s
+├── functions.js               # HTTP helpers
+├── websocket-functions.js     # WS helpers
+├── reports/                   # JSON + HTML reports
+└── BENCHMARK_REPORT.md        # Full report
 ```
 
 Full benchmark details: [`backend/test/artillery/BENCHMARK_REPORT.md`](../backend/test/artillery/BENCHMARK_REPORT.md)

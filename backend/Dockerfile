@@ -21,8 +21,8 @@ COPY backend/ ./backend/
 
 WORKDIR /app/backend
 
-# Setup typia to patch TypeScript compiler for Nestia transforms
-RUN pnpm exec typia setup --manager pnpm
+# Patch TypeScript compiler for Nestia/typia transforms (non-interactive)
+RUN pnpm exec ts-patch install
 
 # Build the application and generate API docs
 RUN pnpm build

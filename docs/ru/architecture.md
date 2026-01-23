@@ -8,9 +8,8 @@
 
 | Функция | Пик | Устойчивая | Латентность |
 |---------|-----|------------|-------------|
-| **WebSocket** | **63,000 emit/s** | 43,000/s | 0мс |
-| HTTP (raw) | 600 req/s | 140 req/s | 18мс |
-| HTTP (с лимитами) | 138 req/s | 138 req/s | 18мс |
+| **WebSocket** | **200,000 emit/s** | 176,000/s | 0мс |
+| HTTP | 197 req/s | 197 req/s | 1.5мс mean, 5мс p99 |
 
 **Кластерный режим**: `CLUSTER_WORKERS=auto` для масштабирования на все ядра.
 Полные бенчмарки: [BENCHMARK_REPORT.md](../../backend/test/artillery/BENCHMARK_REPORT.md)

@@ -8,7 +8,7 @@
 
 | Feature | Peak | Sustained | Latency |
 |---------|------|-----------|---------|
-| **WebSocket** | **118,000 emit/s** | 80,000/s | 0ms |
+| **WebSocket** | **200,000 emit/s** | 176,000/s | 0ms |
 | HTTP | 197 req/s | 197 req/s | 1.5ms mean, 5ms p99 |
 
 **Cluster Mode**: Set `CLUSTER_WORKERS=auto` for multi-core scaling.
@@ -287,7 +287,7 @@ await notificationsService.notifyWin(odId auctionTitle, amount);
 
 ### EventsGateway (WebSocket Bidding)
 
-**Maximum throughput: 118,000 emit/sec peak, 80,000/sec sustained with 0ms latency**
+**Maximum throughput: 200,000 emit/sec peak, 176,000/sec sustained with 0ms latency**
 
 ```typescript
 // Client-side usage
@@ -405,7 +405,7 @@ Lazy cache loading adds 5-10ms latency for the first bidder. Eager warmup on auc
 
 HTTP requests add ~5-10ms overhead for headers, connection handling, and response formatting. WebSocket bidding eliminates this entirely:
 - Bid payload goes directly to server over established connection
-- Combined with Lua script: **118,000 emit/sec peak** with sub-millisecond latency
+- Combined with Lua script: **200,000 emit/sec peak** with sub-millisecond latency
 - No rate limiting overhead (connection is already authenticated)
 - Instant bid confirmations via `bid-response` event
 

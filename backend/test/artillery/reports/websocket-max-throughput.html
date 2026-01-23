@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Artillery Report: websocket-extreme</title>
+  <title>Artillery Report: websocket-max-throughput</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0d1117; color: #c9d1d9; line-height: 1.6; }
@@ -34,14 +34,14 @@
 <body>
   <div class="container">
     <h1>📊 Artillery Load Test Report</h1>
-    <p class="timestamp">Test: <strong>websocket-extreme</strong> | Generated: 2026-01-23T07:58:41.288Z</p>
+    <p class="timestamp">Test: <strong>websocket-max-throughput</strong> | Generated: 2026-01-23T08:21:49.310Z</p>
 
     <h2>Summary</h2>
     <div class="summary">
       
     <div class="card">
       <div class="card-title">Total Emits</div>
-      <div class="card-value">4,836,640</div>
+      <div class="card-value">11,305,542</div>
     </div>
     <div class="card">
       <div class="card-title">Emit Rate</div>
@@ -49,8 +49,8 @@
     </div>
     <div class="card">
       <div class="card-title">Success Rate</div>
-      <div class="card-value error">49.3%</div>
-      <div class="metric-bar"><div class="metric-fill" style="width: 49.3%"></div></div>
+      <div class="card-value warning">75.1%</div>
+      <div class="metric-bar"><div class="metric-fill" style="width: 75.1%"></div></div>
     </div>
     <div class="card">
       <div class="card-title">Mean Latency</div>
@@ -62,7 +62,7 @@
     </div>
     <div class="card">
       <div class="card-title">VUsers Completed</div>
-      <div class="card-value">31,820<span class="card-unit">/ 64,500</span></div>
+      <div class="card-value">22,521<span class="card-unit">/ 30,000</span></div>
     </div>
   
     </div>
@@ -71,10 +71,10 @@
     <h2>WebSocket Performance</h2>
     <table>
       <tr><th>Metric</th><th>Value</th></tr>
-      <tr><td>Total Emits</td><td>4,836,640</td></tr>
+      <tr><td>Total Emits</td><td>11,305,542</td></tr>
       <tr><td>Emit Rate</td><td>0/sec</td></tr>
       <tr><td>Min Latency</td><td>0ms</td></tr>
-      <tr><td>Max Latency</td><td>1.9ms</td></tr>
+      <tr><td>Max Latency</td><td>25ms</td></tr>
       <tr><td>Mean Latency</td><td>0.000ms</td></tr>
       <tr><td>P95 Latency</td><td>0ms</td></tr>
       <tr><td>P99 Latency</td><td>0ms</td></tr>
@@ -83,11 +83,11 @@
     <h2>Session Statistics</h2>
     <table>
       <tr><th>Metric</th><th>Value</th></tr>
-      <tr><td>VUsers Created</td><td>64,500</td></tr>
-      <tr><td>VUsers Completed</td><td>31,820</td></tr>
-      <tr><td>VUsers Failed</td><td>32,680</td></tr>
-      <tr><td>Mean Session Length</td><td>200.1ms</td></tr>
-      <tr><td>P95 Session Length</td><td>478.3ms</td></tr>
+      <tr><td>VUsers Created</td><td>30,000</td></tr>
+      <tr><td>VUsers Completed</td><td>22,521</td></tr>
+      <tr><td>VUsers Failed</td><td>7,479</td></tr>
+      <tr><td>Mean Session Length</td><td>1065.5ms</td></tr>
+      <tr><td>P95 Session Length</td><td>5944.6ms</td></tr>
     </table>
   
 

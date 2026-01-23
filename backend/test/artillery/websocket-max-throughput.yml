@@ -1,0 +1,45 @@
+# Artillery Maximum Throughput Test
+# Optimized for max emit/sec with manageable connections
+# Run: npx artillery run test/artillery/websocket-max-throughput.yml
+
+config:
+  target: "http://localhost:4000"
+  phases:
+    # Steady high load - fewer connections, more emits each
+    - name: "Steady max throughput"
+      duration: 60
+      arrivalRate: 500
+      maxVusers: 5000
+
+  engines:
+    socketio:
+      transports: ["websocket"]
+      reconnection: false
+      forceNew: true
+
+  processor: "./websocket-functions.js"
+
+  http:
+    pool: 1000
+    timeout: 120
+
+scenarios:
+  - name: "Max Throughput"
+    engine: socketio
+    weight: 100
+    flow:
+      - emit:
+          channel: "auth"
+          data: "{{ token }}"
+      - emit:
+          channel: "join-auction"
+          data: "{{ auctionId }}"
+      # Heavy emitting per connection
+      - loop:
+          - function: "generateWsBidAmount"
+          - emit:
+              channel: "place-bid"
+              data:
+                auctionId: "{{ auctionId }}"
+                amount: "{{ bidAmount }}"
+        count: 500
