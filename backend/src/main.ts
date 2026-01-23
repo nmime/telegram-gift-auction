@@ -102,8 +102,8 @@ async function bootstrap(): Promise<void> {
   const asyncApiHtmlPath = path.join(__dirname, "..", "..", "asyncapi.html");
   const asyncApiYamlPath = path.join(__dirname, "..", "..", "asyncapi.yaml");
 
-  if (isProduction && fs.existsSync(asyncApiHtmlPath)) {
-    // Production: serve pre-generated static files
+  if (fs.existsSync(asyncApiHtmlPath) && fs.existsSync(asyncApiYamlPath)) {
+    // Serve pre-generated static files (production or development with pre-built docs)
     const httpAdapter = app.getHttpAdapter();
     const html = fs.readFileSync(asyncApiHtmlPath, "utf-8");
     const yamlContent = fs.readFileSync(asyncApiYamlPath, "utf-8");
@@ -140,8 +140,13 @@ async function bootstrap(): Promise<void> {
       },
     );
     logger.log("AsyncAPI docs loaded from pre-generated asyncapi.html");
+  } else if (isProduction) {
+    // Production without pre-generated files: skip AsyncAPI (don't try dynamic generation)
+    logger.warn(
+      'asyncapi.html/yaml not found - AsyncAPI docs disabled. Run "pnpm asyncapi:generate" to generate.',
+    );
   } else {
-    // Development: generate dynamically
+    // Development only: generate dynamically (requires write access to node_modules)
     const wsServerUrl = `ws://localhost:${String(port)}`;
 
     const asyncApiOptions = new AsyncApiDocumentBuilder()

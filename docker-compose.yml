@@ -59,6 +59,7 @@ services:
     env_file:
       - ./backend/.env
     environment:
+      - NODE_ENV=production
       - MONGODB_URI=mongodb://auction:${MONGO_PASSWORD}@mongodb:27017/auction?replicaSet=rs0&authSource=admin
       - REDIS_URL=redis://:${REDIS_PASSWORD}@redis:6379
       - PORT=4000
@@ -70,7 +71,7 @@ services:
     networks:
       - auction-network
     healthcheck:
-      test: ["CMD", "wget", "-q", "--spider", "http://localhost:4000/api/health"]
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:4000/api/health"]
       interval: 5s
       timeout: 5s
       retries: 10

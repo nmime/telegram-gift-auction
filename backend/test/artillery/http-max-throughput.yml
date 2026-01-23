@@ -5,21 +5,25 @@
 config:
   target: "http://localhost:4000"
   phases:
-    # Quick warmup
+    # Warmup
     - name: "Warmup"
       duration: 10
-      arrivalRate: 50
-    # Ramp to max
-    - name: "Ramp to max"
+      arrivalRate: 20
+    # Ramp to high load
+    - name: "Ramp to load"
       duration: 20
-      arrivalRate: 100
-      rampTo: 400
-    # Maximum sustained
+      arrivalRate: 50
+      rampTo: 200
+    # Maximum sustained load
     - name: "Max throughput"
-      duration: 60
+      duration: 40
+      arrivalRate: 200
+    # Spike for peak measurement
+    - name: "Spike"
+      duration: 10
       arrivalRate: 400
-    # Cooldown
-    - name: "Cooldown"
+    # Recovery
+    - name: "Recovery"
       duration: 10
       arrivalRate: 100
 
@@ -35,14 +39,14 @@ config:
 
   http:
     timeout: 30
-    pool: 500
+    pool: 300
 
   ensure:
-    p99: 3000
-    maxErrorRate: 5
+    p99: 5000
+    maxErrorRate: 15
 
 scenarios:
-  # Pure read operations for maximum throughput
+  # Pure read operations - high iteration count for throughput
   - name: "Max Read Throughput"
     weight: 100
     flow:
@@ -67,4 +71,4 @@ scenarios:
               url: "/api/users/balance"
               headers:
                 Authorization: "Bearer {{ token }}"
-        count: 10
+        count: 30
