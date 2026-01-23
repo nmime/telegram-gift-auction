@@ -35,23 +35,61 @@ async function bootstrap(): Promise<void> {
   const isProduction = process.env.NODE_ENV === "production";
   const corsOriginEnv = process.env.CORS_ORIGIN ?? "*";
 
-  // CRITICAL FIX: Create Socket.IO server BEFORE Fastify initializes.
-  // This prevents "Cannot read properties of undefined (reading 'length')" errors
-  // when Fastify 5.x tries to route Socket.IO HTTP polling requests with missing preParsing hooks.
+  // CRITICAL FIX: Use serverFactory to intercept Socket.IO HTTP polling requests
+  // BEFORE they reach Fastify's routing system.
   //
-  // The issue: When Socket.IO is attached AFTER Fastify, there's a race condition where
-  // HTTP polling requests (/socket.io/?EIO=4&...) can reach Fastify's router before
-  // Engine.IO's request interceptor is set up. By creating a shared HTTP server and
-  // attaching Socket.IO first, Engine.IO is ready to intercept requests from the start.
+  // The issue: Fastify 5.x crashes with "Cannot read properties of undefined (reading 'length')"
+  // when Socket.IO HTTP polling requests (/socket.io/?EIO=4&...) hit Fastify's defaultRoute,
+  // which has undefined preParsing hooks.
   //
-  // Flow after fix:
-  // 1. Create shared HTTP server
-  // 2. Create Socket.IO and attach to server (Engine.IO now intercepts /socket.io/*)
-  // 3. Create Fastify with serverFactory pointing to our shared server
-  // 4. Engine.IO intercepts socket.io requests; Fastify handles everything else
-  const sharedHttpServer = http.createServer();
+  // Solution: Create HTTP server with custom routing that:
+  // 1. Checks if request is for /socket.io/*
+  // 2. If yes AND Socket.IO is ready, let Engine.IO handle it
+  // 3. Otherwise, pass to Fastify's handler
+  //
+  // The key insight: We DON'T call Fastify for socket.io requests at all.
+  // Engine.IO handles them via its own request listener on the HTTP server.
 
-  const io = new Server(sharedHttpServer, {
+  let socketIoAttached = false;
+
+  const serverFactory = (
+    fastifyHandler: http.RequestListener,
+    _opts: Record<string, unknown>,
+  ): http.Server => {
+    // Create HTTP server with manual request routing
+    const server = http.createServer((req, res) => {
+      // Socket.IO requests: Don't call Fastify at all
+      // Engine.IO (attached via Socket.IO) handles these via server.on('request')
+      // We just need to NOT call fastifyHandler for these requests
+      if (req.url?.startsWith("/socket.io/") === true) {
+        // If Socket.IO isn't ready yet, return 503
+        if (!socketIoAttached) {
+          res.writeHead(503, { "Content-Type": "text/plain" });
+          res.end("Service starting up");
+          return;
+        }
+        // Don't call fastifyHandler - Engine.IO's listener will handle this
+        // Engine.IO adds its own listener via server.on('request') when new Server() is called
+        return;
+      }
+      // All other requests go to Fastify
+      fastifyHandler(req, res);
+    });
+    return server;
+  };
+
+  const app = await NestFactory.create<NestFastifyApplication>(
+    AppModule,
+    new FastifyAdapter({ serverFactory }),
+    isProduction ? { logger: new JsonLoggerService() } : {},
+  );
+
+  // Get the HTTP server created by serverFactory
+  const httpServer = app.getHttpServer() as http.Server;
+
+  // Create Socket.IO and attach to HTTP server
+  // Engine.IO adds a listener to httpServer.on('request') that handles /socket.io/* requests
+  const io = new Server(httpServer, {
     cors: {
       origin: corsOriginEnv,
       methods: ["GET", "POST"],
@@ -68,22 +106,8 @@ async function bootstrap(): Promise<void> {
     allowEIO3: true,
   });
 
-  // serverFactory provides Fastify with our shared server where Socket.IO is already attached
-  const serverFactory = (
-    handler: http.RequestListener,
-    _opts: Record<string, unknown>,
-  ): http.Server => {
-    // Store Fastify's handler - Engine.IO will call this for non-socket.io requests
-    // because Engine.IO wraps the existing 'request' listeners when attaching
-    sharedHttpServer.on("request", handler);
-    return sharedHttpServer;
-  };
-
-  const app = await NestFactory.create<NestFastifyApplication>(
-    AppModule,
-    new FastifyAdapter({ serverFactory }),
-    isProduction ? { logger: new JsonLoggerService() } : {},
-  );
+  // Mark Socket.IO as ready - now the serverFactory will let requests through to Engine.IO
+  socketIoAttached = true;
 
   const configService = app.get(ConfigService);
 
@@ -239,7 +263,9 @@ async function bootstrap(): Promise<void> {
     // Worker mode: Initialize app without binding to external port
     // The master process handles incoming connections and routes them via IPC
     await app.init();
-    logger.log(`Worker ${String(cluster.worker?.id)} initialized (sticky session mode)`);
+    logger.log(
+      `Worker ${String(cluster.worker?.id)} initialized (sticky session mode)`,
+    );
   } else {
     // Single process or master: Bind to port normally
     await app.listen(port, "0.0.0.0");
@@ -248,7 +274,9 @@ async function bootstrap(): Promise<void> {
   // In cluster worker mode, set up to receive connections from master via IPC
   if (isClusterWorker) {
     setupWorker(io);
-    logger.log(`Worker ${String(cluster.worker?.id)} sticky session handler attached`);
+    logger.log(
+      `Worker ${String(cluster.worker?.id)} sticky session handler attached`,
+    );
   }
 
   // Inject Socket.IO server into the EventsGateway
