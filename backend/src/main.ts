@@ -53,9 +53,11 @@ async function bootstrap(): Promise<void> {
 
   app.setGlobalPrefix("api");
 
-  // Serve Artillery load test reports at /api/reports/
+  // Serve Artillery load test reports at /api/reports/ (only in dev/test environments)
+  // Note: test/ directory is at project root, two levels up from dist/
   const reportsPath = path.join(__dirname, "..", "..", "test", "artillery", "reports");
-  if (fs.existsSync(reportsPath)) {
+  const reportsAvailable = fs.existsSync(reportsPath);
+  if (reportsAvailable) {
     await app.register(fastifyStatic, {
       root: reportsPath,
       prefix: "/api/reports/",
@@ -75,7 +77,7 @@ async function bootstrap(): Promise<void> {
       : `http://localhost:${String(port)}`;
 
   // Load pre-generated swagger.json (generated at build time via npx nestia swagger)
-  const swaggerPath = path.join(__dirname, "..", "..", "swagger.json");
+  const swaggerPath = path.join(__dirname, "..", "swagger.json");
   if (fs.existsSync(swaggerPath)) {
     const document: SwaggerDocument = JSON.parse(
       fs.readFileSync(swaggerPath, "utf-8"),
@@ -99,8 +101,8 @@ async function bootstrap(): Promise<void> {
   }
 
   // AsyncAPI documentation for WebSocket events
-  const asyncApiHtmlPath = path.join(__dirname, "..", "..", "asyncapi.html");
-  const asyncApiYamlPath = path.join(__dirname, "..", "..", "asyncapi.yaml");
+  const asyncApiHtmlPath = path.join(__dirname, "..", "asyncapi.html");
+  const asyncApiYamlPath = path.join(__dirname, "..", "asyncapi.yaml");
 
   if (fs.existsSync(asyncApiHtmlPath) && fs.existsSync(asyncApiYamlPath)) {
     // Serve pre-generated static files (production or development with pre-built docs)
@@ -233,12 +235,15 @@ async function bootstrap(): Promise<void> {
 
   logger.log("Socket.IO server attached to HTTP server");
   const workerId = cluster.isWorker ? cluster.worker?.id : "primary";
-  logger.log("Server running", {
+  const serverInfo: Record<string, string | number> = {
     port,
     docs: `http://localhost:${String(port)}/api/docs`,
-    reports: `http://localhost:${String(port)}/api/reports/`,
     workerId: String(workerId ?? "primary"),
-  });
+  };
+  if (reportsAvailable) {
+    serverInfo.reports = `http://localhost:${String(port)}/api/reports/`;
+  }
+  logger.log("Server running", serverInfo);
 }
 
 /**

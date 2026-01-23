@@ -77,6 +77,7 @@ export class CustomThrottlerGuard extends ThrottlerGuard {
     const request = context.switchToHttp().getRequest<FastifyRequest>();
     const clientIp = getClientIp(request);
 
+    // Bypass rate limiting for localhost in development mode
     if (
       this.isDevelopment &&
       (localhostIps.includes(clientIp) || clientIp === "0.0.0.0")

@@ -141,25 +141,37 @@ The stress test pushes HTTP throughput to single-core limits:
 ### HTTP API
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│  Peak Throughput:   3,362 req/sec                           │
-│  Sustained Rate:    3,100+ req/sec (read-heavy)             │
-│  Standard Load:     197 req/s sustained                     │
-│  Mean Latency:      1.5ms                                   │
-│  P95 Latency:       3ms                                     │
-│  P99 Latency:       5ms                                     │
-│  Bid Endpoint:      1.4ms mean, 4ms p99                     │
-│  Fast-Bid:          2.4ms mean, 6ms p99                     │
+│  SINGLE-CORE (1 worker):                                    │
+│    Peak Throughput:   3,362 req/sec                         │
+│    Sustained Rate:    3,100+ req/sec (read-heavy)           │
+│                                                             │
+│  CLUSTER MODE (12 workers):                                 │
+│    Peak Throughput:   13,812 req/sec (~4.1x improvement)    │
+│    Sustained Rate:    12,000-13,000 req/sec                 │
+│                                                             │
+│  Standard Load:       197 req/s sustained                   │
+│  Mean Latency:        1.5ms                                 │
+│  P95 Latency:         3ms                                   │
+│  P99 Latency:         5ms                                   │
+│  Bid Endpoint:        1.4ms mean, 4ms p99                   │
+│  Fast-Bid:            2.4ms mean, 6ms p99                   │
 └─────────────────────────────────────────────────────────────┘
 ```
 
 ### WebSocket
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│  Peak Throughput:     200,018 emit/sec                      │
-│  Sustained:           175,970 emit/sec                      │
-│  Stress (stable):     11,519 emit/sec @ 100% success        │
-│  Latency:             0ms (sub-millisecond)                 │
-│  Total Capacity:      10M+ messages/minute                  │
+│  SINGLE-CORE (1 worker):                                    │
+│    Peak Throughput:     200,018 emit/sec                    │
+│    Sustained:           175,970 emit/sec                    │
+│                                                             │
+│  CLUSTER MODE (12 workers):                                 │
+│    Theoretical:         ~2.4M emit/sec (12x linear scaling) │
+│    Note: WebSocket connections need sticky sessions         │
+│                                                             │
+│  Stress (stable):       11,519 emit/sec @ 100% success      │
+│  Latency:               0ms (sub-millisecond)               │
+│  Total Capacity:        10M+ messages/minute                │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -172,7 +184,8 @@ The stress test pushes HTTP throughput to single-core limits:
 | HTTP Bid Latency | 18ms mean | **1.4ms mean** | ✅ Much Better |
 | HTTP Fast-Bid Latency | 44ms mean | **2.4ms mean** | ✅ Much Better |
 | HTTP Request Rate | 138 req/s | **197 req/s** | ✅ Better |
-| **HTTP Peak Throughput** | - | **3,362 req/sec** | 🚀 New |
+| **HTTP Peak (1 core)** | - | **3,362 req/sec** | 🚀 New |
+| **HTTP Peak (12 cores)** | - | **13,812 req/sec** | 🚀 New |
 | WS Peak Emit | 63,000/sec | **200,018/sec** | ✅ 3x Better |
 | WS Sustained | 43,000/sec | **175,970/sec** | ✅ 4x Better |
 | WS Latency | 0ms | **0ms** | ✅ Matches |
