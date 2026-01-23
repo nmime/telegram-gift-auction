@@ -1,0 +1,70 @@
+# Artillery HTTP Maximum Throughput Test
+# Pure read operations for maximum req/sec (3,000+ req/sec peak)
+# Run: npx artillery run test/artillery/http-max-throughput.yml
+
+config:
+  target: "http://localhost:4000"
+  phases:
+    # Quick warmup
+    - name: "Warmup"
+      duration: 10
+      arrivalRate: 50
+    # Ramp to max
+    - name: "Ramp to max"
+      duration: 20
+      arrivalRate: 100
+      rampTo: 400
+    # Maximum sustained
+    - name: "Max throughput"
+      duration: 60
+      arrivalRate: 400
+    # Cooldown
+    - name: "Cooldown"
+      duration: 10
+      arrivalRate: 100
+
+  processor: "./functions.js"
+
+  plugins:
+    expect: {}
+    metrics-by-endpoint: {}
+
+  defaults:
+    headers:
+      Content-Type: "application/json"
+
+  http:
+    timeout: 30
+    pool: 500
+
+  ensure:
+    p99: 3000
+    maxErrorRate: 5
+
+scenarios:
+  # Pure read operations for maximum throughput
+  - name: "Max Read Throughput"
+    weight: 100
+    flow:
+      - function: "generateUsername"
+      - function: "loginUser"
+      - loop:
+          - get:
+              url: "/api/auctions"
+              headers:
+                Authorization: "Bearer {{ token }}"
+              expect:
+                - statusCode: 200
+          - get:
+              url: "/api/auctions/{{ auctionId }}"
+              headers:
+                Authorization: "Bearer {{ token }}"
+          - get:
+              url: "/api/auctions/{{ auctionId }}/leaderboard"
+              headers:
+                Authorization: "Bearer {{ token }}"
+          - get:
+              url: "/api/users/balance"
+              headers:
+                Authorization: "Bearer {{ token }}"
+        count: 10

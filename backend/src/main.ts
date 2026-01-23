@@ -1,5 +1,5 @@
-import * as cluster from "cluster";
-import * as os from "os";
+import cluster from "node:cluster";
+import os from "node:os";
 import { NestFactory } from "@nestjs/core";
 import {
   FastifyAdapter,
