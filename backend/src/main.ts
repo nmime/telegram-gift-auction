@@ -61,7 +61,11 @@ async function bootstrap(): Promise<void> {
       // Socket.IO requests: Don't call Fastify at all
       // Engine.IO (attached via Socket.IO) handles these via server.on('request')
       // We just need to NOT call fastifyHandler for these requests
-      if (req.url?.startsWith("/socket.io/") === true) {
+      // Match both /socket.io/ and /socket.io? (query string without trailing slash)
+      const url = req.url ?? "";
+      const isSocketIO =
+        url.startsWith("/socket.io/") || url.startsWith("/socket.io?");
+      if (isSocketIO) {
         // If Socket.IO isn't ready yet, return 503
         if (!socketIoAttached) {
           res.writeHead(503, { "Content-Type": "text/plain" });
