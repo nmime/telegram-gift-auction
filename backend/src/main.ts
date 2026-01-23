@@ -2,7 +2,6 @@ import cluster from "node:cluster";
 import os from "node:os";
 import http from "node:http";
 import { NestFactory } from "@nestjs/core";
-import { setupMaster, setupWorker } from "@socket.io/sticky";
 import {
   FastifyAdapter,
   type NestFastifyApplication,
@@ -35,71 +34,32 @@ async function bootstrap(): Promise<void> {
   const isProduction = process.env.NODE_ENV === "production";
   const corsOriginEnv = process.env.CORS_ORIGIN ?? "*";
 
-  // CRITICAL FIX: Use serverFactory to intercept Socket.IO HTTP polling requests
-  // BEFORE they reach Fastify's routing system.
-  //
-  // The issue: Fastify 5.x crashes with "Cannot read properties of undefined (reading 'length')"
-  // when Socket.IO HTTP polling requests (/socket.io/?EIO=4&...) hit Fastify's defaultRoute,
-  // which has undefined preParsing hooks.
-  //
-  // Solution: Create HTTP server with custom routing that:
-  // 1. Checks if request is for /socket.io/*
-  // 2. If yes AND Socket.IO is ready, let Engine.IO handle it
-  // 3. Otherwise, pass to Fastify's handler
-  //
-  // The key insight: We DON'T call Fastify for socket.io requests at all.
-  // Engine.IO handles them via its own request listener on the HTTP server.
-
-  let socketIoAttached = false;
-
-  const serverFactory = (
-    fastifyHandler: http.RequestListener,
-    _opts: Record<string, unknown>,
-  ): http.Server => {
-    // Create HTTP server with manual request routing
-    const server = http.createServer((req, res) => {
-      // Socket.IO requests: Don't call Fastify at all
-      // Engine.IO (attached via Socket.IO) handles these via server.on('request')
-      // We just need to NOT call fastifyHandler for these requests
-      // Match both /socket.io/ and /socket.io? (query string without trailing slash)
-      const url = req.url ?? "";
-      const isSocketIO =
-        url.startsWith("/socket.io/") || url.startsWith("/socket.io?");
-      if (isSocketIO) {
-        // If Socket.IO isn't ready yet, return 503
-        if (!socketIoAttached) {
-          res.writeHead(503, { "Content-Type": "text/plain" });
-          res.end("Service starting up");
-          return;
-        }
-        // Don't call fastifyHandler - Engine.IO's listener will handle this
-        // Engine.IO adds its own listener via server.on('request') when new Server() is called
-        return;
-      }
-      // All other requests go to Fastify
-      fastifyHandler(req, res);
-    });
-    return server;
-  };
+  // NOTE: Using WebSocket-only transport for Socket.IO.
+  // This avoids the Fastify 5.x crash with HTTP polling (preParsing hooks issue).
+  // WebSocket upgrades use the HTTP 'upgrade' event, not 'request' event,
+  // so they bypass Fastify's routing entirely and go straight to Engine.IO.
 
   const app = await NestFactory.create<NestFastifyApplication>(
     AppModule,
-    new FastifyAdapter({ serverFactory }),
+    new FastifyAdapter(),
     isProduction ? { logger: new JsonLoggerService() } : {},
   );
 
-  // Get the HTTP server created by serverFactory
   const httpServer = app.getHttpServer() as http.Server;
 
   // Create Socket.IO and attach to HTTP server
   // Engine.IO adds a listener to httpServer.on('request') that handles /socket.io/* requests
+  //
+  // IMPORTANT: Using WebSocket-only transport to avoid Fastify 5.x routing issues.
+  // HTTP polling transport causes crashes because Fastify's defaultRoute has undefined
+  // preParsing hooks. WebSocket-only also eliminates the need for sticky sessions in cluster mode.
   const io = new Server(httpServer, {
     cors: {
       origin: corsOriginEnv,
       methods: ["GET", "POST"],
       credentials: true,
     },
-    transports: ["websocket", "polling"],
+    transports: ["websocket"], // WebSocket-only: avoids Fastify routing issue + no sticky sessions needed
     path: "/socket.io/",
     pingInterval: 25000,
     pingTimeout: 20000,
@@ -109,9 +69,6 @@ async function bootstrap(): Promise<void> {
     connectTimeout: 45000,
     allowEIO3: true,
   });
-
-  // Mark Socket.IO as ready - now the serverFactory will let requests through to Engine.IO
-  socketIoAttached = true;
 
   const configService = app.get(ConfigService);
 
@@ -256,31 +213,15 @@ async function bootstrap(): Promise<void> {
     logger.log("AsyncAPI docs available at /api/async-docs");
   }
 
-  // Check if running in cluster worker mode
-  const isClusterWorker =
-    cluster.isWorker &&
-    (process.env.CLUSTER_WORKERS ?? "0").toLowerCase() !== "0";
+  // Start listening
+  // In cluster mode, workers share the port via Node.js cluster (SO_REUSEPORT)
+  // With WebSocket-only transport, sticky sessions are NOT needed:
+  // - WebSocket connections are persistent on one worker
+  // - Redis adapter handles cross-worker message broadcasting
+  await app.listen(port, "0.0.0.0");
 
-  // Initialize Fastify and start listening
-  // In cluster mode, workers don't bind to port - they receive connections via IPC from master
-  if (isClusterWorker) {
-    // Worker mode: Initialize app without binding to external port
-    // The master process handles incoming connections and routes them via IPC
-    await app.init();
-    logger.log(
-      `Worker ${String(cluster.worker?.id)} initialized (sticky session mode)`,
-    );
-  } else {
-    // Single process or master: Bind to port normally
-    await app.listen(port, "0.0.0.0");
-  }
-
-  // In cluster worker mode, set up to receive connections from master via IPC
-  if (isClusterWorker) {
-    setupWorker(io);
-    logger.log(
-      `Worker ${String(cluster.worker?.id)} sticky session handler attached`,
-    );
+  if (cluster.isWorker) {
+    logger.log(`Worker ${String(cluster.worker?.id)} listening on port ${port}`);
   }
 
   // Inject Socket.IO server into the EventsGateway
@@ -327,17 +268,16 @@ async function bootstrap(): Promise<void> {
 }
 
 /**
- * Cluster mode with sticky sessions for high-throughput scenarios
+ * Cluster mode for high-throughput scenarios
  *
  * Architecture:
- * - Primary process: Creates sticky HTTP server that routes connections by client IP
- * - Worker processes: Receive connections via IPC, run full NestJS instance with Socket.IO
+ * - Primary process: Forks worker processes
+ * - Worker processes: Each runs full NestJS instance with Socket.IO, sharing port via SO_REUSEPORT
  * - Redis adapter: Handles cross-worker message broadcasting (rooms, events)
  *
- * Sticky sessions ensure:
- * - HTTP long-polling clients always reach the same worker (session affinity)
- * - WebSocket upgrade requests go to the correct worker
- * - Consistent routing based on client IP hash
+ * NOTE: Using WebSocket-only transport, so sticky sessions are NOT needed:
+ * - WebSocket connections are persistent on one worker
+ * - Redis adapter ensures events reach all workers' connected clients
  */
 function startCluster(): void {
   const clusterWorkersEnv = process.env.CLUSTER_WORKERS ?? "0";
@@ -361,31 +301,13 @@ function startCluster(): void {
   }
 
   const actualWorkers = Math.min(numWorkers, os.cpus().length);
-  const port = parseInt(process.env.PORT ?? "4000", 10);
 
   if (cluster.isPrimary) {
     logger.log(
-      `Primary ${String(process.pid)} starting ${String(actualWorkers)} workers with sticky sessions...`,
+      `Primary ${String(process.pid)} starting ${String(actualWorkers)} workers...`,
     );
 
-    // Create the sticky session HTTP server in primary process
-    // This server receives ALL incoming connections and routes them to workers
-    // based on client IP hash, ensuring session affinity for HTTP long-polling
-    const httpServer = http.createServer();
-
-    // Set up sticky session routing (IP-based affinity)
-    setupMaster(httpServer, {
-      loadBalancingMethod: "least-connection", // Options: "random", "round-robin", "least-connection"
-    });
-
-    // Listen on the external port - workers do NOT bind to this port
-    httpServer.listen(port, "0.0.0.0", () => {
-      logger.log(
-        `Sticky session master listening on port ${String(port)} (routing to ${String(actualWorkers)} workers)`,
-      );
-    });
-
-    // Fork workers
+    // Fork workers - each will listen on the same port (OS handles load balancing)
     for (let i = 0; i < actualWorkers; i++) {
       cluster.fork();
     }

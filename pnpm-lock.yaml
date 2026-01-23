@@ -71,15 +71,9 @@ importers:
       '@nmime/nestjs-asyncapi':
         specifier: 2.0.9
         version: 2.0.9(@nestjs/common@11.1.12(class-transformer@0.5.1)(class-validator@0.14.3)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.1.12)(@nestjs/swagger@11.2.5(@fastify/static@9.0.0)(@nestjs/common@11.1.12(class-transformer@0.5.1)(class-validator@0.14.3)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.1.12)(class-transformer@0.5.1)(class-validator@0.14.3)(reflect-metadata@0.2.2))(@nestjs/websockets@11.1.12)(@swc/core@1.15.10)(@types/babel__core@7.20.5)(@types/node@25.0.9)(encoding@0.1.13)(typescript@5.6.3)
-      '@socket.io/cluster-adapter':
-        specifier: ^0.3.0
-        version: 0.3.0(socket.io-adapter@2.5.6)
       '@socket.io/redis-adapter':
         specifier: ^8.3.0
         version: 8.3.0(socket.io-adapter@2.5.6)
-      '@socket.io/sticky':
-        specifier: ^1.0.4
-        version: 1.0.4
       bullmq:
         specifier: ^5.66.5
         version: 5.66.5
@@ -2951,12 +2945,6 @@ packages:
     resolution: {integrity: sha512-4aUIteuyxtBUhVdiQqcDhKFitwfd9hqoSDYY2KRXiWtgoWJ9Bmise+KfEPDiVHWeJepvF8xJO9/9+WDIciMFFw==}
     engines: {node: '>=18.0.0'}
 
-  '@socket.io/cluster-adapter@0.3.0':
-    resolution: {integrity: sha512-pHtPlQrKCWb1FE49nSaQSqB0xWYZ/OU8ONxWLWU79u6OA92/IHeHolVTcJfrsiK2Zvrh1yvMo3tVFKKjlKkKRQ==}
-    engines: {node: '>=10.0.0'}
-    peerDependencies:
-      socket.io-adapter: ~2.5.5
-
   '@socket.io/component-emitter@3.1.2':
     resolution: {integrity: sha512-9BCxFwvbGg/RsZK9tjXd8s4UcwR0MWeFQ1XEKIQVVvAGJyINdrqKMcTRyLoK8Rse1GjzLV9cwjWV1olXRWEXVA==}
 
@@ -2965,9 +2953,6 @@ packages:
     engines: {node: '>=10.0.0'}
     peerDependencies:
       socket.io-adapter: ^2.5.4
-
-  '@socket.io/sticky@1.0.4':
-    resolution: {integrity: sha512-VuauT5CJLvzYtKIgouFSQ8rUaygseR+zRutnwh6ZA2QYcXx+8g52EoJ8V2SLxfo+Tfs3ELUDy08oEXxlWNrxaw==}
 
   '@standard-schema/spec@1.1.0':
     resolution: {integrity: sha512-l2aFy5jALhniG5HgqrD6jXLi/rUWrKvqN/qJx6yoJsgKhblVd+iqqU4RCXavm/jPityDo5TCvKMnpjKnOriy0w==}
@@ -12492,13 +12477,6 @@ snapshots:
     dependencies:
       tslib: 2.8.1
 
-  '@socket.io/cluster-adapter@0.3.0(socket.io-adapter@2.5.6)':
-    dependencies:
-      debug: 4.4.3(supports-color@8.1.1)
-      socket.io-adapter: 2.5.6
-    transitivePeerDependencies:
-      - supports-color
-
   '@socket.io/component-emitter@3.1.2': {}
 
   '@socket.io/redis-adapter@8.3.0(socket.io-adapter@2.5.6)':
@@ -12509,8 +12487,6 @@ snapshots:
       uid2: 1.0.0
     transitivePeerDependencies:
       - supports-color
-
-  '@socket.io/sticky@1.0.4': {}
 
   '@standard-schema/spec@1.1.0': {}
 
