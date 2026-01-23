@@ -27,7 +27,8 @@ RUN pnpm exec ts-patch install
 # Build the application and generate API docs
 RUN pnpm build
 RUN pnpm exec nestia swagger
-RUN pnpm asyncapi
+# AsyncAPI generation can be flaky due to network issues, use pre-generated files as fallback
+RUN pnpm asyncapi || echo "AsyncAPI generation failed, using pre-generated files"
 
 # Production stage
 FROM node:22-alpine AS production
@@ -52,8 +53,8 @@ RUN pnpm fetch --prod && \
 # Copy built files
 COPY --from=builder /app/backend/dist ./backend/dist
 COPY --from=builder /app/backend/swagger.json ./backend/swagger.json
-COPY --from=builder /app/backend/asyncapi.html ./backend/asyncapi.html
-COPY --from=builder /app/backend/asyncapi.yaml ./backend/asyncapi.yaml
+# AsyncAPI files (from builder if generated, or from source as fallback)
+COPY --from=builder /app/backend/asyncapi.html /app/backend/asyncapi.yaml ./backend/
 
 # Copy i18n translations if they exist
 COPY --from=builder /app/backend/i18n ./backend/i18n
