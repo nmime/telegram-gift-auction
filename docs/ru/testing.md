@@ -184,9 +184,8 @@ pnpm run load-test:stress    # Экстремальный стресс-тест
 pnpm run load-test:edge      # Проверка краевых случаев
 
 # WebSocket тесты
-npx artillery run test/artillery/websocket-test.yml           # Стандартный WS
-npx artillery run test/artillery/websocket-stress.yml         # 11K emit/s
-npx artillery run test/artillery/websocket-max-throughput.yml # 200K emit/s
+npx artillery run test/artillery/websocket-test.yml           # Стандартный WS (100% success)
+npx artillery run test/artillery/websocket-max-throughput.yml # 200K emit/s пик
 ```
 
 ### Результаты производительности
@@ -224,7 +223,7 @@ npx artillery run test/artillery/websocket-max-throughput.yml # 200K emit/s
 ╚══════════════════════════════════════════════════════════════╝
 ```
 
-### Файлы тестов
+### Файлы тестов (6 тестов)
 
 ```
 test/artillery/
@@ -232,10 +231,10 @@ test/artillery/
 ├── stress-test.yml              # HTTP сбалансированный стресс (~1K req/s)
 ├── http-max-throughput.yml      # HTTP максимум (3.3K-13.8K req/s)
 ├── edge-cases.yml               # Тесты валидации
-├── websocket-test.yml           # WebSocket стандартный
-├── websocket-stress.yml         # WebSocket стресс (11K emit/s)
+├── websocket-test.yml           # WebSocket стандартный (100% success)
 ├── websocket-max-throughput.yml # WebSocket максимум (200K emit/s)
 ├── functions.js                 # HTTP хелперы
+├── edge-case-functions.js       # Edge case хелперы
 ├── websocket-functions.js       # WS хелперы
 ├── reports/                     # JSON + HTML отчёты
 └── BENCHMARK_REPORT.md          # Полный отчёт
@@ -457,7 +456,7 @@ const socket = await connectAndJoin(WS_URL, token, auctionId);
 | Юнит-тесты | Vitest | 680 | ✅ |
 | Интеграционные | Vitest + MongoDB Memory Server | 177 | ✅ |
 | E2E-тесты | Nestia | 7 наборов | ✅ |
-| Нагрузочные | Artillery | 4 конфига | ✅ |
+| Нагрузочные | Artillery | 6 конфигов | ✅ |
 
 ### Цели покрытия
 

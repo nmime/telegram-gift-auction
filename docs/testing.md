@@ -222,21 +222,20 @@ Enable cluster mode: `CLUSTER_WORKERS=auto` in `.env`
 ╚══════════════════════════════════════════════════════════════╝
 ```
 
-### Test Files
+### Test Files (6 tests)
 
 ```
 test/artillery/
 ├── load-test.yml                # HTTP standard load test (197 req/s)
-├── stress-test.yml              # HTTP balanced stress (~1K req/s)
+├── stress-test.yml              # HTTP stress test (mixed ops, ~1K req/s)
 ├── http-max-throughput.yml      # HTTP max throughput (3.3K-13.8K req/s)
-├── edge-cases.yml               # Validation tests
-├── websocket-test.yml           # WebSocket standard
-├── websocket-stress.yml         # WebSocket stress (11K emit/s)
-├── websocket-max-throughput.yml # WebSocket max (200K emit/s)
+├── edge-cases.yml               # Validation and error handling
+├── websocket-test.yml           # WebSocket standard (100% success)
+├── websocket-max-throughput.yml # WebSocket max (200K emit/s peak)
 ├── functions.js                 # HTTP helpers
 ├── websocket-functions.js       # WS helpers
 ├── reports/                     # JSON + HTML reports
-└── BENCHMARK_REPORT.md          # Full report
+└── BENCHMARK_REPORT.md          # Full benchmark report
 ```
 
 Full benchmark details: [`backend/test/artillery/BENCHMARK_REPORT.md`](../backend/test/artillery/BENCHMARK_REPORT.md)

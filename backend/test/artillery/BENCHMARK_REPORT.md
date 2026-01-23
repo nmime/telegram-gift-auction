@@ -202,15 +202,14 @@ The stress test pushes HTTP throughput to single-core limits:
 - **Node.js:** Single process, NestJS with Fastify adapter
 - **Rate Limiting:** Bypassed for localhost (development mode)
 
-### Test Files
+### Test Files (6 tests)
 ```
 test/artillery/
-├── load-test.yml                # Main HTTP load test (197 req/s)
-├── stress-test.yml              # HTTP stress test (balanced mixed ops ~1K req/s)
-├── http-max-throughput.yml      # HTTP max throughput (3.3K req/s peak)
+├── load-test.yml                # HTTP standard load test (197 req/s)
+├── stress-test.yml              # HTTP stress test (mixed ops, ~1K req/s)
+├── http-max-throughput.yml      # HTTP max throughput (3.3K-13.8K req/s)
 ├── edge-cases.yml               # Validation and error handling
 ├── websocket-test.yml           # WebSocket standard (100% success)
-├── websocket-stress.yml         # WebSocket stress (11K emit/s)
 ├── websocket-max-throughput.yml # WebSocket max (200K emit/s peak)
 ├── functions.js                 # HTTP test helpers
 ├── edge-case-functions.js       # Edge case helpers
@@ -233,7 +232,6 @@ pnpm run load-test:edge      # Edge cases validation
 
 # WebSocket Tests
 pnpm run load-test:ws                                          # Standard WS (3min)
-npx artillery run test/artillery/websocket-stress.yml          # 11K emit/s
 npx artillery run test/artillery/websocket-max-throughput.yml  # 200K emit/s peak
 
 # Generate JSON reports + HTML
