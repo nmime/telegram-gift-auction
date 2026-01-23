@@ -1,5 +1,5 @@
 # Artillery HTTP Stress Test
-# Maximum HTTP throughput test for single-core backend
+# High-throughput HTTP stress test (3,000+ req/sec peak)
 # Run: npx artillery run test/artillery/stress-test.yml
 
 config:
@@ -8,19 +8,22 @@ config:
     # Warmup
     - name: "Warmup"
       duration: 10
+      arrivalRate: 20
+    # Gradual ramp
+    - name: "Ramp to load"
+      duration: 20
       arrivalRate: 50
-    # Ramp to high load
-    - name: "Ramp"
-      duration: 15
-      arrivalRate: 100
-      rampTo: 500
-    # Sustained max load
-    - name: "Max sustained"
-      duration: 45
-      arrivalRate: 500
-      maxVusers: 3000
-    # Cooldown
-    - name: "Cooldown"
+      rampTo: 200
+    # Sustained high load
+    - name: "Sustained load"
+      duration: 40
+      arrivalRate: 200
+    # Spike
+    - name: "Spike"
+      duration: 10
+      arrivalRate: 400
+    # Recovery
+    - name: "Recovery"
       duration: 10
       arrivalRate: 100
 
@@ -36,17 +39,17 @@ config:
 
   http:
     timeout: 30
-    pool: 500
+    pool: 300
 
   # Stress test thresholds
   ensure:
-    p99: 10000
-    maxErrorRate: 20
+    p99: 5000
+    maxErrorRate: 15
 
 scenarios:
   # Read-heavy operations (highest throughput)
   - name: "Read Stress"
-    weight: 40
+    weight: 50
     flow:
       - function: "generateUsername"
       - function: "loginUser"
@@ -69,11 +72,11 @@ scenarios:
               url: "/api/users/balance"
               headers:
                 Authorization: "Bearer {{ token }}"
-        count: 50
+        count: 30
 
   # Bid operations stress
   - name: "Bid Stress"
-    weight: 40
+    weight: 30
     flow:
       - function: "generateUsername"
       - function: "loginUser"
@@ -103,7 +106,8 @@ scenarios:
                 Authorization: "Bearer {{ token }}"
               json:
                 amount: "{{ bidAmount }}"
-        count: 50
+          - think: 0.1
+        count: 20
 
   # Mixed operations
   - name: "Mixed Stress"
@@ -140,4 +144,5 @@ scenarios:
               url: "/api/users/balance"
               headers:
                 Authorization: "Bearer {{ token }}"
-        count: 30
+          - think: 0.05
+        count: 15

@@ -1,4 +1,4 @@
-import { Controller, Get, Query, UseGuards } from "@nestjs/common";
+import { Controller, Get, Param, Query, UseGuards } from "@nestjs/common";
 import { AuditLogService } from "./services";
 import {
   AuditLogQueryDto,
@@ -77,7 +77,7 @@ export class AuditController {
 
   @Get("user/:userId")
   async getUserLogs(
-    @Query("userId") userId: string,
+    @Param("userId") userId: string,
     @Query("limit") limit?: number,
     @Query("skip") skip?: number,
   ): Promise<AuditLogResponseDto[]> {
@@ -90,7 +90,7 @@ export class AuditController {
 
   @Get("action/:action")
   async getActionLogs(
-    @Query("action") action: string,
+    @Param("action") action: string,
     @Query("limit") limit?: number,
     @Query("skip") skip?: number,
   ): Promise<AuditLogResponseDto[]> {

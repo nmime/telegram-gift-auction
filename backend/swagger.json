@@ -409,6 +409,288 @@
         "x-samchon-controller": "AuthController"
       }
     },
+    "/api/audit/logs": {
+      "get": {
+        "tags": [],
+        "parameters": [
+          {
+            "name": "userId",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": false,
+            "description": "Optional user ID filter"
+          },
+          {
+            "name": "action",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false,
+            "description": "Optional action type filter"
+          },
+          {
+            "name": "resource",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false,
+            "description": "Optional resource filter"
+          },
+          {
+            "name": "result",
+            "in": "query",
+            "schema": {
+              "oneOf": [
+                {
+                  "const": "success"
+                },
+                {
+                  "const": "failure"
+                }
+              ]
+            },
+            "required": false,
+            "description": "Optional result filter"
+          },
+          {
+            "name": "startDate",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date"
+            },
+            "required": false,
+            "description": "Optional start date filter (ISO 8601 format)"
+          },
+          {
+            "name": "endDate",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date"
+            },
+            "required": false,
+            "description": "Optional end date filter (ISO 8601 format)"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 1000
+            },
+            "required": false,
+            "description": "Limit per page (default: 100, min: 1, max: 1000)"
+          },
+          {
+            "name": "skip",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "required": false,
+            "description": "Number of records to skip (default: 0, min: 0)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuditLogListResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "x-samchon-accessor": [
+          "api",
+          "audit",
+          "logs",
+          "getLogs"
+        ],
+        "x-samchon-controller": "AuditController"
+      }
+    },
+    "/api/audit/summary": {
+      "get": {
+        "tags": [],
+        "parameters": [
+          {
+            "name": "startDate",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date"
+            },
+            "required": false,
+            "description": "Optional start date filter (ISO 8601 format)"
+          },
+          {
+            "name": "endDate",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date"
+            },
+            "required": false,
+            "description": "Optional end date filter (ISO 8601 format)"
+          },
+          {
+            "name": "groupBy",
+            "in": "query",
+            "schema": {
+              "oneOf": [
+                {
+                  "const": "action"
+                },
+                {
+                  "const": "user"
+                }
+              ]
+            },
+            "required": false,
+            "description": "Group by action or user (default: action)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/AuditSummaryResponseDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "x-samchon-accessor": [
+          "api",
+          "audit",
+          "summary",
+          "getSummary"
+        ],
+        "x-samchon-controller": "AuditController"
+      }
+    },
+    "/api/audit/user/{userId}": {
+      "get": {
+        "tags": [],
+        "parameters": [
+          {
+            "name": "userId",
+            "in": "path",
+            "schema": {
+              "type": "string"
+            },
+            "required": true
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "number"
+            },
+            "required": false
+          },
+          {
+            "name": "skip",
+            "in": "query",
+            "schema": {
+              "type": "number"
+            },
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/AuditLogResponseDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "x-samchon-accessor": [
+          "api",
+          "audit",
+          "user",
+          "getUserLogs"
+        ],
+        "x-samchon-controller": "AuditController"
+      }
+    },
+    "/api/audit/action/{action}": {
+      "get": {
+        "tags": [],
+        "parameters": [
+          {
+            "name": "action",
+            "in": "path",
+            "schema": {
+              "type": "string"
+            },
+            "required": true
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "number"
+            },
+            "required": false
+          },
+          {
+            "name": "skip",
+            "in": "query",
+            "schema": {
+              "type": "number"
+            },
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/AuditLogResponseDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "x-samchon-accessor": [
+          "api",
+          "audit",
+          "action",
+          "getActionLogs"
+        ],
+        "x-samchon-controller": "AuditController"
+      }
+    },
     "/auctions": {
       "get": {
         "description": "List all auctions\n\nReturns a list of all auctions, optionally filtered by status.",
@@ -1268,6 +1550,228 @@
           "success"
         ],
         "description": "Logout response"
+      },
+      "AuditLogListResponseDto": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AuditLogResponseDto"
+            },
+            "description": "Audit log entries"
+          },
+          "total": {
+            "type": "number",
+            "description": "Total count"
+          },
+          "limit": {
+            "type": "number",
+            "description": "Items per page"
+          },
+          "skip": {
+            "type": "number",
+            "description": "Items skipped"
+          }
+        },
+        "required": [
+          "data",
+          "total",
+          "limit",
+          "skip"
+        ],
+        "description": "List of audit logs with pagination"
+      },
+      "AuditLogResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Audit log ID"
+          },
+          "userId": {
+            "type": "string",
+            "description": "User ID who performed action"
+          },
+          "action": {
+            "type": "string",
+            "description": "Action type"
+          },
+          "resource": {
+            "type": "string",
+            "description": "Resource type"
+          },
+          "resourceId": {
+            "type": "string",
+            "description": "Resource ID"
+          },
+          "oldValues": {
+            "$ref": "#/components/schemas/Recordstringunknown",
+            "description": "Previous values"
+          },
+          "newValues": {
+            "$ref": "#/components/schemas/Recordstringunknown",
+            "description": "New values"
+          },
+          "result": {
+            "oneOf": [
+              {
+                "const": "success"
+              },
+              {
+                "const": "failure"
+              }
+            ],
+            "description": "Result status"
+          },
+          "errorMessage": {
+            "type": "string",
+            "description": "Error message if failed"
+          },
+          "ipAddress": {
+            "type": "string",
+            "description": "Client IP address"
+          },
+          "userAgent": {
+            "type": "string",
+            "description": "User agent"
+          },
+          "metadata": {
+            "$ref": "#/components/schemas/Recordstringunknown",
+            "description": "Additional metadata"
+          },
+          "createdAt": {
+            "type": "string",
+            "description": "Created timestamp",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "action",
+          "resource",
+          "result",
+          "createdAt"
+        ],
+        "description": "Audit log entry response"
+      },
+      "Recordstringunknown": {
+        "type": "object",
+        "properties": {},
+        "required": [],
+        "description": "Construct a type with a set of properties K of type T",
+        "additionalProperties": {}
+      },
+      "AuditLogQueryDto": {
+        "type": "object",
+        "properties": {
+          "userId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Optional user ID filter"
+          },
+          "action": {
+            "type": "string",
+            "description": "Optional action type filter"
+          },
+          "resource": {
+            "type": "string",
+            "description": "Optional resource filter"
+          },
+          "result": {
+            "oneOf": [
+              {
+                "const": "success"
+              },
+              {
+                "const": "failure"
+              }
+            ],
+            "description": "Optional result filter"
+          },
+          "startDate": {
+            "type": "string",
+            "format": "date",
+            "description": "Optional start date filter (ISO 8601 format)"
+          },
+          "endDate": {
+            "type": "string",
+            "format": "date",
+            "description": "Optional end date filter (ISO 8601 format)"
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1000,
+            "description": "Limit per page (default: 100, min: 1, max: 1000)"
+          },
+          "skip": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Number of records to skip (default: 0, min: 0)"
+          }
+        },
+        "required": [],
+        "description": "Query parameters for fetching audit logs"
+      },
+      "AuditSummaryResponseDto": {
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string",
+            "description": "Action type (if grouped by action)"
+          },
+          "userId": {
+            "type": "string",
+            "description": "User ID (if grouped by user)"
+          },
+          "count": {
+            "type": "number",
+            "description": "Total count"
+          },
+          "successCount": {
+            "type": "number",
+            "description": "Successful count"
+          },
+          "failureCount": {
+            "type": "number",
+            "description": "Failed count"
+          }
+        },
+        "required": [
+          "count",
+          "successCount",
+          "failureCount"
+        ],
+        "description": "Audit summary statistics"
+      },
+      "AuditSummaryQueryDto": {
+        "type": "object",
+        "properties": {
+          "startDate": {
+            "type": "string",
+            "format": "date",
+            "description": "Optional start date filter (ISO 8601 format)"
+          },
+          "endDate": {
+            "type": "string",
+            "format": "date",
+            "description": "Optional end date filter (ISO 8601 format)"
+          },
+          "groupBy": {
+            "oneOf": [
+              {
+                "const": "action"
+              },
+              {
+                "const": "user"
+              }
+            ],
+            "description": "Group by action or user (default: action)"
+          }
+        },
+        "required": [],
+        "description": "Query parameters for audit summary"
       },
       "IAuctionResponse": {
         "type": "object",
