@@ -1,3 +1,4 @@
+import { describe, it, expect, beforeAll, afterAll, afterEach } from "vitest";
 import { Test, type TestingModule } from "@nestjs/testing";
 import { BadRequestException, type INestApplication } from "@nestjs/common";
 import { MongooseModule, getModelToken } from "@nestjs/mongoose";
@@ -18,9 +19,6 @@ import {
   AuditLogSchema,
   type AuditLogDocument,
 } from "@/schemas";
-
-// MongoDB Memory Server with replica set requires time to download binary on first run
-jest.setTimeout(180000);
 
 describe("Financial Transaction Integration Tests", () => {
   let mongoServer: MongoMemoryReplSet;

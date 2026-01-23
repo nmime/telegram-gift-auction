@@ -1,4 +1,12 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
+import {
+  describe,
+  it,
+  expect,
+  beforeEach,
+  afterEach,
+  vi,
+  type Mock,
+} from "vitest";
 import { Test, type TestingModule } from "@nestjs/testing";
 import { Types } from "mongoose";
 import { TransactionsController } from "@/modules/transactions/transactions.controller";
@@ -6,9 +14,14 @@ import { TransactionsService } from "@/modules/transactions/transactions.service
 import { AuthGuard, type AuthenticatedRequest } from "@/common";
 import { TransactionType, type TransactionDocument } from "@/schemas";
 
+interface MockTransactionsService {
+  getByUser: Mock;
+  getByAuction: Mock;
+}
+
 describe("TransactionsController", () => {
   let controller: TransactionsController;
-  let mockTransactionsService: jest.Mocked<TransactionsService>;
+  let mockTransactionsService: MockTransactionsService;
 
   const createMockTransaction = (
     overrides: Partial<TransactionDocument> = {},
@@ -41,9 +54,9 @@ describe("TransactionsController", () => {
 
   beforeEach(async () => {
     mockTransactionsService = {
-      getByUser: jest.fn(),
-      getByAuction: jest.fn(),
-    } as any;
+      getByUser: vi.fn(),
+      getByAuction: vi.fn(),
+    };
 
     const module: TestingModule = await Test.createTestingModule({
       controllers: [TransactionsController],
@@ -55,14 +68,14 @@ describe("TransactionsController", () => {
       ],
     })
       .overrideGuard(AuthGuard)
-      .useValue({ canActivate: jest.fn().mockReturnValue(true) })
+      .useValue({ canActivate: vi.fn().mockReturnValue(true) })
       .compile();
 
     controller = module.get<TransactionsController>(TransactionsController);
   });
 
   afterEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   describe("Controller Initialization", () => {
@@ -76,7 +89,10 @@ describe("TransactionsController", () => {
     });
 
     it("should be protected by AuthGuard", () => {
-      const guards = Reflect.getMetadata("__guards__", TransactionsController);
+      const guards = Reflect.getMetadata(
+        "__guards__",
+        TransactionsController,
+      ) as unknown[];
       expect(guards).toBeDefined();
     });
   });
@@ -731,7 +747,9 @@ describe("TransactionsController", () => {
 
     it("should handle service returning null", async () => {
       const userId = new Types.ObjectId().toString();
-      mockTransactionsService.getByUser.mockResolvedValue(null as any);
+      mockTransactionsService.getByUser.mockResolvedValue(
+        null as unknown as TransactionDocument[],
+      );
 
       const req = createMockRequest(userId);
 
@@ -741,7 +759,9 @@ describe("TransactionsController", () => {
 
     it("should handle service returning undefined", async () => {
       const userId = new Types.ObjectId().toString();
-      mockTransactionsService.getByUser.mockResolvedValue(undefined as any);
+      mockTransactionsService.getByUser.mockResolvedValue(
+        undefined as unknown as TransactionDocument[],
+      );
 
       const req = createMockRequest(userId);
 
@@ -757,7 +777,7 @@ describe("TransactionsController", () => {
             throw new Error("Invalid ObjectId");
           },
         },
-      } as any as TransactionDocument;
+      } as unknown as TransactionDocument;
 
       mockTransactionsService.getByUser.mockResolvedValue([
         malformedTransaction,

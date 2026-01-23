@@ -1,4 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
+import { describe, it, expect, beforeEach, vi } from "vitest";
 import { Test, type TestingModule } from "@nestjs/testing";
 import { getModelToken, getConnectionToken } from "@nestjs/mongoose";
 import { BadRequestException, NotFoundException } from "@nestjs/common";
@@ -16,123 +17,123 @@ describe("AuctionsService", () => {
   let service: AuctionsService;
 
   const mockAuctionModel = {
-    create: jest.fn(),
-    find: jest.fn().mockReturnThis(),
-    findById: jest.fn().mockReturnThis(),
-    findByIdAndUpdate: jest.fn(),
-    findOneAndUpdate: jest.fn(),
-    countDocuments: jest.fn(),
-    updateOne: jest.fn(),
-    sort: jest.fn().mockReturnThis(),
-    skip: jest.fn().mockReturnThis(),
-    limit: jest.fn().mockReturnThis(),
-    populate: jest.fn().mockReturnThis(),
-    lean: jest.fn().mockReturnThis(),
-    session: jest.fn().mockReturnThis(),
-    exec: jest.fn(),
+    create: vi.fn(),
+    find: vi.fn().mockReturnThis(),
+    findById: vi.fn().mockReturnThis(),
+    findByIdAndUpdate: vi.fn(),
+    findOneAndUpdate: vi.fn(),
+    countDocuments: vi.fn(),
+    updateOne: vi.fn(),
+    sort: vi.fn().mockReturnThis(),
+    skip: vi.fn().mockReturnThis(),
+    limit: vi.fn().mockReturnThis(),
+    populate: vi.fn().mockReturnThis(),
+    lean: vi.fn().mockReturnThis(),
+    session: vi.fn().mockReturnThis(),
+    exec: vi.fn(),
   };
 
   const createChainMock = () => ({
-    sort: jest.fn().mockReturnThis(),
-    skip: jest.fn().mockReturnThis(),
-    limit: jest.fn().mockReturnThis(),
-    populate: jest.fn().mockReturnThis(),
-    lean: jest.fn().mockReturnThis(),
-    session: jest.fn().mockReturnThis(),
-    exec: jest.fn(),
+    sort: vi.fn().mockReturnThis(),
+    skip: vi.fn().mockReturnThis(),
+    limit: vi.fn().mockReturnThis(),
+    populate: vi.fn().mockReturnThis(),
+    lean: vi.fn().mockReturnThis(),
+    session: vi.fn().mockReturnThis(),
+    exec: vi.fn(),
   });
 
   const mockBidModel = {
-    create: jest.fn(),
-    find: jest.fn().mockImplementation(() => createChainMock()),
-    findOne: jest.fn(),
-    findOneAndUpdate: jest.fn(),
-    findById: jest.fn(),
-    deleteOne: jest.fn(),
-    countDocuments: jest.fn(),
+    create: vi.fn(),
+    find: vi.fn().mockImplementation(() => createChainMock()),
+    findOne: vi.fn(),
+    findOneAndUpdate: vi.fn(),
+    findById: vi.fn(),
+    deleteOne: vi.fn(),
+    countDocuments: vi.fn(),
   };
 
   const mockUserModel = {
-    findById: jest.fn(),
-    findOne: jest.fn(),
-    findOneAndUpdate: jest.fn(),
-    find: jest.fn().mockImplementation(() => ({
-      select: jest.fn().mockReturnThis(),
-      lean: jest.fn().mockReturnThis(),
-      session: jest.fn().mockReturnThis(),
-      exec: jest.fn(),
+    findById: vi.fn(),
+    findOne: vi.fn(),
+    findOneAndUpdate: vi.fn(),
+    find: vi.fn().mockImplementation(() => ({
+      select: vi.fn().mockReturnThis(),
+      lean: vi.fn().mockReturnThis(),
+      session: vi.fn().mockReturnThis(),
+      exec: vi.fn(),
     })),
-    select: jest.fn().mockReturnThis(),
-    lean: jest.fn().mockReturnThis(),
-    session: jest.fn().mockReturnThis(),
-    exec: jest.fn(),
+    select: vi.fn().mockReturnThis(),
+    lean: vi.fn().mockReturnThis(),
+    session: vi.fn().mockReturnThis(),
+    exec: vi.fn(),
   };
 
   const mockSession = {
-    startTransaction: jest.fn(),
-    commitTransaction: jest.fn(),
-    abortTransaction: jest.fn(),
-    endSession: jest.fn(),
+    startTransaction: vi.fn(),
+    commitTransaction: vi.fn(),
+    abortTransaction: vi.fn(),
+    endSession: vi.fn(),
   };
 
   const mockConnection = {
-    startSession: jest.fn().mockResolvedValue(mockSession),
+    startSession: vi.fn().mockResolvedValue(mockSession),
   };
 
   const mockUsersService = {
-    recordTransaction: jest.fn(),
-    findById: jest.fn(),
+    recordTransaction: vi.fn(),
+    findById: vi.fn(),
   };
 
   const mockEventsGateway = {
-    emitAuctionUpdate: jest.fn(),
-    emitAuctionComplete: jest.fn(),
-    emitNewBid: jest.fn(),
-    emitAntiSnipingExtension: jest.fn(),
-    emitRoundComplete: jest.fn(),
-    emitRoundStart: jest.fn(),
+    emitAuctionUpdate: vi.fn(),
+    emitAuctionComplete: vi.fn(),
+    emitNewBid: vi.fn(),
+    emitAntiSnipingExtension: vi.fn(),
+    emitRoundComplete: vi.fn(),
+    emitRoundStart: vi.fn(),
   };
 
   const mockNotificationsService = {
-    notifyOutbid: jest.fn(),
-    notifyAntiSniping: jest.fn(),
-    notifyRoundWin: jest.fn(),
-    notifyRoundLost: jest.fn(),
-    notifyNewRoundStarted: jest.fn(),
-    notifyAuctionComplete: jest.fn(),
+    notifyOutbid: vi.fn(),
+    notifyAntiSniping: vi.fn(),
+    notifyRoundWin: vi.fn(),
+    notifyRoundLost: vi.fn(),
+    notifyNewRoundStarted: vi.fn(),
+    notifyAuctionComplete: vi.fn(),
   };
 
   const mockRedlock = {
-    acquire: jest.fn().mockResolvedValue({ release: jest.fn() }),
+    acquire: vi.fn().mockResolvedValue({ release: vi.fn() }),
   };
 
   const mockRedis = {
-    exists: jest.fn().mockResolvedValue(0),
-    set: jest.fn(),
+    exists: vi.fn().mockResolvedValue(0),
+    set: vi.fn(),
   };
 
   const mockTimerService = {
-    startTimer: jest.fn(),
-    stopTimer: jest.fn(),
-    updateTimer: jest.fn(),
+    startTimer: vi.fn(),
+    stopTimer: vi.fn(),
+    updateTimer: vi.fn(),
   };
 
   const mockBidCacheService = {
-    isCacheWarmed: jest.fn().mockResolvedValue(false),
-    warmupAuctionCache: jest.fn(),
-    warmupBids: jest.fn(),
-    warmupBalances: jest.fn(),
-    warmupUserBalance: jest.fn(),
-    placeBidUltraFast: jest.fn(),
-    getAuctionMeta: jest.fn(),
-    setAuctionMeta: jest.fn(),
-    getTopBidders: jest.fn(),
-    getTotalBidders: jest.fn(),
-    updateRoundEndTime: jest.fn(),
+    isCacheWarmed: vi.fn().mockResolvedValue(false),
+    warmupAuctionCache: vi.fn(),
+    warmupBids: vi.fn(),
+    warmupBalances: vi.fn(),
+    warmupUserBalance: vi.fn(),
+    placeBidUltraFast: vi.fn(),
+    getAuctionMeta: vi.fn(),
+    setAuctionMeta: vi.fn(),
+    getTopBidders: vi.fn(),
+    getTotalBidders: vi.fn(),
+    updateRoundEndTime: vi.fn(),
   };
 
   const mockCacheSyncService = {
-    fullSync: jest.fn(),
+    fullSync: vi.fn(),
   };
 
   beforeEach(async () => {
@@ -155,7 +156,7 @@ describe("AuctionsService", () => {
     }).compile();
 
     service = module.get<AuctionsService>(AuctionsService);
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   it("should be defined", () => {
@@ -429,12 +430,12 @@ describe("AuctionsService", () => {
         version: 0,
       };
 
-      const updatedAuction = {
+      const updatedAuction: Record<string, unknown> = {
         _id: auctionId,
         status: AuctionStatus.ACTIVE,
-        startTime: expect.any(Date),
+        startTime: expect.any(Date) as unknown,
         currentRound: 1,
-        rounds: expect.any(Array),
+        rounds: expect.any(Array) as unknown,
         version: 1,
       };
 
@@ -449,19 +450,19 @@ describe("AuctionsService", () => {
       expect(mockEventsGateway.emitAuctionUpdate).toHaveBeenCalled();
     });
 
-    it("should verify auction exists before starting", async () => {
+    it("should verify auction exists before starting", () => {
       mockAuctionModel.findOneAndUpdate.mockResolvedValueOnce(null);
 
       expect(service).toBeDefined();
     });
 
-    it("should verify auction is in pending status before starting", async () => {
+    it("should verify auction is in pending status before starting", () => {
       mockAuctionModel.findOneAndUpdate.mockResolvedValueOnce(null);
 
       expect(service).toBeDefined();
     });
 
-    it("should set up first round with proper configuration", async () => {
+    it("should set up first round with proper configuration", () => {
       const durationMinutes = 15;
       const auctionId = new Types.ObjectId();
 
@@ -482,7 +483,7 @@ describe("AuctionsService", () => {
       expect(service).toBeDefined();
     });
 
-    it("should verify rounds are configured before starting", async () => {
+    it("should verify rounds are configured before starting", () => {
       const auctionId = new Types.ObjectId();
 
       const mockAuction = {
@@ -533,7 +534,7 @@ describe("AuctionsService", () => {
       ).rejects.toThrow(BadRequestException);
     });
 
-    it("should accept bid amount at or above minimum", async () => {
+    it("should accept bid amount at or above minimum", () => {
       const mockAuction = {
         _id: new Types.ObjectId(auctionId),
         status: AuctionStatus.ACTIVE,
@@ -563,7 +564,7 @@ describe("AuctionsService", () => {
       expect(service).toBeDefined();
     });
 
-    it("should validate auction is found before processing bid", async () => {
+    it("should validate auction is found before processing bid", () => {
       const mockAuction = {
         _id: new Types.ObjectId(auctionId),
         status: AuctionStatus.ACTIVE,
@@ -584,7 +585,7 @@ describe("AuctionsService", () => {
       expect(service).toBeDefined();
     });
 
-    it("should validate user exists before processing bid", async () => {
+    it("should validate user exists before processing bid", () => {
       const mockAuction = {
         _id: new Types.ObjectId(auctionId),
         status: AuctionStatus.ACTIVE,
@@ -606,7 +607,7 @@ describe("AuctionsService", () => {
       expect(service).toBeDefined();
     });
 
-    it("should validate auction is active status", async () => {
+    it("should validate auction is active status", () => {
       mockAuctionModel.findOneAndUpdate.mockResolvedValueOnce(null);
 
       const mockAuctionInactive = {
@@ -615,13 +616,13 @@ describe("AuctionsService", () => {
       };
 
       mockAuctionModel.findById.mockImplementationOnce(() => ({
-        session: jest.fn().mockResolvedValueOnce(mockAuctionInactive),
+        session: vi.fn().mockResolvedValueOnce(mockAuctionInactive),
       }));
 
       expect(service).toBeDefined();
     });
 
-    it("should validate round is active before accepting bid", async () => {
+    it("should validate round is active before accepting bid", () => {
       const mockAuction = {
         _id: new Types.ObjectId(auctionId),
         status: AuctionStatus.ACTIVE,
@@ -638,7 +639,7 @@ describe("AuctionsService", () => {
   });
 
   describe("time-based operations", () => {
-    it("should check round end time before accepting bid", async () => {
+    it("should check round end time before accepting bid", () => {
       const mockAuction = {
         _id: new Types.ObjectId(),
         status: AuctionStatus.ACTIVE,
@@ -668,7 +669,7 @@ describe("AuctionsService", () => {
       expect(service).toBeDefined();
     });
 
-    it("should trigger anti-sniping when bid is placed near end of round", async () => {
+    it("should trigger anti-sniping when bid is placed near end of round", () => {
       const auctionId = new Types.ObjectId();
       const userId = new Types.ObjectId();
       const now = Date.now();
@@ -751,28 +752,28 @@ describe("AuctionsService", () => {
       expect(result).toBeNull();
     });
 
-    it("should return null if round has not ended yet", async () => {
+    it("should return null if round has not ended yet", () => {
       expect(service.completeRound).toBeDefined();
       expect(typeof service.completeRound).toBe("function");
     });
   });
 
   describe("getLeaderboard", () => {
-    it("should validate service provides leaderboard method", async () => {
+    it("should validate service provides leaderboard method", () => {
       expect(service.getLeaderboard).toBeDefined();
       expect(typeof service.getLeaderboard).toBe("function");
     });
   });
 
   describe("getUserBids", () => {
-    it("should provide method to retrieve user bids", async () => {
+    it("should provide method to retrieve user bids", () => {
       expect(service.getUserBids).toBeDefined();
       expect(typeof service.getUserBids).toBe("function");
     });
   });
 
   describe("getMinWinningBid", () => {
-    it("should check auction status before calculating bid", async () => {
+    it("should check auction status before calculating bid", () => {
       const auctionId = new Types.ObjectId();
       const mockAuction = {
         _id: auctionId,
@@ -793,7 +794,7 @@ describe("AuctionsService", () => {
       expect(service).toBeDefined();
     });
 
-    it("should handle fewer bids than items available", async () => {
+    it("should handle fewer bids than items available", () => {
       const auctionId = new Types.ObjectId();
       const mockAuction = {
         _id: auctionId,
@@ -828,7 +829,7 @@ describe("AuctionsService", () => {
       expect(result).toBeNull();
     });
 
-    it("should check if current round is completed", async () => {
+    it("should check if current round is completed", () => {
       const auctionId = new Types.ObjectId();
       const mockAuction = {
         _id: auctionId,
@@ -845,18 +846,21 @@ describe("AuctionsService", () => {
   });
 
   describe("error handling", () => {
-    it("should handle transaction conflicts gracefully", async () => {
+    it("should handle transaction conflicts gracefully", () => {
       // Simulate transaction conflict on first attempt
-      const conflictError = new Error("Conflict");
-      (conflictError as any).hasErrorLabel = (label: string) =>
-        label === "TransientTransactionError";
+      interface MongoError extends Error {
+        hasErrorLabel: (label: string) => boolean;
+      }
+      const conflictError: MongoError = Object.assign(new Error("Conflict"), {
+        hasErrorLabel: (label: string) => label === "TransientTransactionError",
+      });
 
       mockConnection.startSession.mockImplementationOnce(() => ({
         ...mockSession,
-        startTransaction: jest.fn(),
-        commitTransaction: jest.fn(),
-        abortTransaction: jest.fn(),
-        endSession: jest.fn(),
+        startTransaction: vi.fn(),
+        commitTransaction: vi.fn(),
+        abortTransaction: vi.fn(),
+        endSession: vi.fn(),
       }));
 
       mockAuctionModel.findOneAndUpdate.mockRejectedValueOnce(conflictError);
@@ -913,9 +917,9 @@ describe("AuctionsService", () => {
       mockBidModel.find.mockImplementationOnce(() => mockChain);
 
       const mockUserChain = {
-        select: jest.fn().mockReturnThis(),
-        lean: jest.fn().mockReturnThis(),
-        exec: jest.fn().mockResolvedValueOnce([]),
+        select: vi.fn().mockReturnThis(),
+        lean: vi.fn().mockReturnThis(),
+        exec: vi.fn().mockResolvedValueOnce([]),
       };
       mockUserModel.find.mockImplementationOnce(() => mockUserChain);
 
@@ -924,7 +928,7 @@ describe("AuctionsService", () => {
       expect(mockBidCacheService.setAuctionMeta).toHaveBeenCalled();
     });
 
-    it("should validate auction exists before warming cache", async () => {
+    it("should validate auction exists before warming cache", () => {
       mockAuctionModel.findById.mockResolvedValueOnce(null);
 
       // Service should handle the error appropriately

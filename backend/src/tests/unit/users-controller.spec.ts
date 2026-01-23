@@ -1,5 +1,6 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { Test, type TestingModule } from "@nestjs/testing";
+import { Types } from "mongoose";
 import {
   NotFoundException,
   BadRequestException,
@@ -19,9 +20,12 @@ describe("UsersController", () => {
   let controller: UsersController;
   let service: UsersService;
 
+  const anyNumber = expect.any(Number) as unknown as number;
+  const anyString = expect.any(String) as unknown as string;
+
   const mockUserId = "507f1f77bcf86cd799439011";
   const mockUser: Partial<UserDocument> = {
-    _id: mockUserId as any,
+    _id: new Types.ObjectId(mockUserId),
     username: "testuser",
     balance: 1000,
     frozenBalance: 200,
@@ -35,11 +39,11 @@ describe("UsersController", () => {
   } as AuthenticatedRequest;
 
   const mockUsersService = {
-    getBalance: jest.fn(),
-    deposit: jest.fn(),
-    withdraw: jest.fn(),
-    updateLanguage: jest.fn(),
-    findById: jest.fn(),
+    getBalance: vi.fn(),
+    deposit: vi.fn(),
+    withdraw: vi.fn(),
+    updateLanguage: vi.fn(),
+    findById: vi.fn(),
   };
 
   beforeEach(async () => {
@@ -53,7 +57,7 @@ describe("UsersController", () => {
       ],
     })
       .overrideGuard(AuthGuard)
-      .useValue({ canActivate: jest.fn(() => true) })
+      .useValue({ canActivate: vi.fn(() => true) })
       .compile();
 
     controller = module.get<UsersController>(UsersController);
@@ -61,7 +65,7 @@ describe("UsersController", () => {
   });
 
   afterEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   describe("GET /users/balance", () => {
@@ -616,8 +620,8 @@ describe("UsersController", () => {
       const result = await controller.getBalance(mockAuthenticatedRequest);
 
       expect(result).toMatchObject({
-        balance: expect.any(Number),
-        frozenBalance: expect.any(Number),
+        balance: anyNumber,
+        frozenBalance: anyNumber,
       });
     });
 
@@ -630,8 +634,8 @@ describe("UsersController", () => {
       });
 
       expect(result).toMatchObject({
-        balance: expect.any(Number),
-        frozenBalance: expect.any(Number),
+        balance: anyNumber,
+        frozenBalance: anyNumber,
       });
     });
 
@@ -644,8 +648,8 @@ describe("UsersController", () => {
       });
 
       expect(result).toMatchObject({
-        balance: expect.any(Number),
-        frozenBalance: expect.any(Number),
+        balance: anyNumber,
+        frozenBalance: anyNumber,
       });
     });
 
@@ -657,7 +661,7 @@ describe("UsersController", () => {
       });
 
       expect(result).toMatchObject({
-        languageCode: expect.any(String),
+        languageCode: anyString,
       });
     });
   });

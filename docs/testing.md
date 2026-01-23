@@ -225,41 +225,81 @@ Full benchmark details: [`backend/test/artillery/BENCHMARK_REPORT.md`](../backen
 
 ---
 
-## Unit Tests
+## Unit & Integration Tests (Vitest)
 
-### Backend
+The backend uses **Vitest** as the test framework with the following structure:
+
+```
+backend/src/
+├── modules/
+│   └── **/*.spec.ts          # Unit tests (co-located with source)
+└── tests/
+    ├── unit/                  # Additional unit tests
+    │   └── *.spec.ts
+    └── integration/           # Integration tests (MongoDB Memory Server)
+        └── *.spec.ts
+```
+
+### Running Tests
 
 ```bash
 cd backend
 
-# Run all tests
-npm test
+# Run all tests (857 tests)
+pnpm test
+
+# Run only unit tests (680 tests, faster)
+pnpm test:unit
+
+# Run only integration tests (177 tests)
+pnpm test:integration
 
 # Run with coverage
-npm run test:cov
+pnpm test:cov
+
+# Run unit tests with coverage
+pnpm test:cov:unit
 
 # Run specific test file
-npm test -- auctions.service.spec.ts
+pnpm test -- auctions.service.spec.ts
 
-# Watch mode
-npm run test:watch
+# Watch mode (re-runs on file changes)
+pnpm test:watch
+
+# Visual UI mode
+pnpm test:ui
+
+# Debug tests (with inspector)
+pnpm test:debug
 ```
 
-### Frontend
+### Test Configuration
 
-```bash
-cd frontend
+| Config File | Purpose |
+|-------------|---------|
+| `vitest.config.ts` | Base configuration (all tests) |
+| `vitest.config.unit.ts` | Unit tests only (excludes integration/) |
+| `vitest.config.integration.ts` | Integration tests only |
 
-# Run all tests
-npm test
+### Test Statistics
 
-# Run with coverage
-npm run test:coverage
-```
+| Category | Files | Tests | Duration |
+|----------|-------|-------|----------|
+| **Unit** | 15 | 680 | ~3s |
+| **Integration** | 5 | 177 | ~50s |
+| **Total** | 20 | 857 | ~12s (parallel) |
+
+### Key Testing Features
+
+- **Parallel execution**: Tests run in parallel by default
+- **MongoDB Memory Server**: Integration tests use in-memory MongoDB with replica set
+- **Redis Mock**: `ioredis-mock` for Redis operations
+- **SWC Transform**: Fast TypeScript compilation
+- **Typia Integration**: Runtime validation via `@ryoppippi/unplugin-typia`
 
 ---
 
-## E2E Tests
+## Nestia E2E Tests
 
 The system includes comprehensive E2E tests covering all critical functionality.
 
@@ -381,7 +421,18 @@ const socket = await connectAndJoin(WS_URL, token, auctionId);
 
 ---
 
-## Test Coverage Goals
+## Test Coverage
+
+### Current Test Summary
+
+| Test Type | Framework | Count | Status |
+|-----------|-----------|-------|--------|
+| Unit Tests | Vitest | 680 | ✅ |
+| Integration Tests | Vitest + MongoDB Memory Server | 177 | ✅ |
+| E2E Tests | Nestia | 7 suites | ✅ |
+| Load Tests | Artillery | 4 configs | ✅ |
+
+### Coverage Goals
 
 | Area | Target |
 |------|--------|
@@ -389,6 +440,21 @@ const socket = await connectAndJoin(WS_URL, token, auctionId);
 | Controllers | >70% |
 | Guards/Middleware | >90% |
 | Critical paths (bidding) | >95% |
+
+### Generate Coverage Report
+
+```bash
+cd backend
+
+# Full coverage report
+pnpm test:cov
+
+# Unit tests only (faster)
+pnpm test:cov:unit
+
+# View HTML report
+open coverage/index.html
+```
 
 ---
 
@@ -494,49 +560,78 @@ If `difference` is not 0, investigate:
 
 ## CI/CD Integration
 
-### GitHub Actions Example
+### GitHub Actions Configuration
+
+The project uses a comprehensive CI workflow (`.github/workflows/ci.yml`):
 
 ```yaml
-name: Tests
+name: CI
 
-on: [push, pull_request]
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
 
 jobs:
   test:
     runs-on: ubuntu-latest
-
-    services:
-      mongodb:
-        image: mongo:8.2
-        ports:
-          - 27017:27017
-      redis:
-        image: redis:7-alpine
-        ports:
-          - 6379:6379
-
     steps:
       - uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '22'
+          node-version: 22
+          cache: pnpm
 
       - name: Install dependencies
-        run: npm ci
+        run: pnpm install --frozen-lockfile
 
-      - name: Initialize MongoDB replica set
-        run: |
-          docker exec ${{ job.services.mongodb.id }} \
-            mongosh --eval "rs.initiate()"
+      # Unit tests (fast, no external deps)
+      - name: Run unit tests
+        run: pnpm --filter backend test:unit
+        env:
+          CI: true
+          NODE_OPTIONS: --max-old-space-size=4096
 
-      - name: Run tests
-        run: npm test
+      # Integration tests (MongoDB Memory Server)
+      - name: Run integration tests
+        run: pnpm --filter backend test:integration
+        env:
+          CI: true
+          NODE_OPTIONS: --max-old-space-size=4096
+          MONGOMS_REPLSET: rs0
 
-      - name: Run e2e tests
-        run: npm run test:e2e
+      # Coverage report
+      - name: Generate coverage report
+        run: pnpm --filter backend test:cov
+        env:
+          CI: true
+```
 
-      - name: Run load tests
-        run: cd backend && npx ts-node test/load-test.ts
+### CI Pipeline Overview
+
+| Job | Description | Duration |
+|-----|-------------|----------|
+| **CodeQL** | Security vulnerability scanning | ~3min |
+| **Trivy** | Dependency vulnerability scan | ~1min |
+| **Lint** | ESLint code quality checks | ~30s |
+| **Test (Unit)** | Vitest unit tests (680 tests) | ~1min |
+| **Test (Integration)** | Vitest integration tests (177 tests) | ~2min |
+| **Build** | NestJS production build | ~1min |
+
+### Running Tests Locally (CI-style)
+
+```bash
+cd backend
+
+# Run exactly what CI runs
+pnpm test:unit && pnpm test:integration
+
+# With coverage (as in CI)
+CI=true pnpm test:cov
 ```

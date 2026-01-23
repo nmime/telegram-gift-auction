@@ -1,22 +1,63 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
+import {
+  describe,
+  it,
+  expect,
+  beforeEach,
+  afterEach,
+  vi,
+  type Mock,
+} from "vitest";
 import { Test, type TestingModule } from "@nestjs/testing";
 import { ConfigService } from "@nestjs/config";
 import { TelegramController } from "@/modules/telegram/telegram.controller";
 import { TelegramBotService } from "@/modules/telegram/telegram-bot.service";
 import type { FastifyRequest, FastifyReply } from "fastify";
+import type { IncomingHttpHeaders } from "http";
+
+interface MockRequest extends Partial<FastifyRequest> {
+  body: Record<string, unknown>;
+  headers: IncomingHttpHeaders;
+}
+
+interface MockReply extends Partial<FastifyReply> {
+  status: Mock;
+  send: Mock;
+}
+
+// Typed matchers to avoid ESLint no-unsafe-assignment warnings
+const anyNumber = expect.any(Number) as unknown as number;
+const anyObject = expect.any(Object) as unknown as object;
+
+// Type for webhook update body
+interface WebhookUpdate {
+  update_id: number;
+  message?: {
+    message_id?: number;
+    text?: string;
+    from?: {
+      id?: number;
+      username?: string;
+    };
+  };
+}
+
+// Typed partial matcher helper to avoid nested expect.objectContaining any issues
+function partialMatch<T>(obj: Partial<T>): T {
+  return expect.objectContaining(obj) as unknown as T;
+}
 
 describe("TelegramController", () => {
   let controller: TelegramController;
-  let mockTelegramBotService: jest.Mocked<TelegramBotService>;
-  let mockConfigService: jest.Mocked<ConfigService>;
+  let mockTelegramBotService: { handleWebhook: Mock };
+  let mockConfigService: { get: Mock };
 
   beforeEach(async () => {
     mockTelegramBotService = {
-      handleWebhook: jest.fn(),
-    } as any;
+      handleWebhook: vi.fn(),
+    };
 
     mockConfigService = {
-      get: jest.fn((key: string) => {
+      get: vi.fn((key: string) => {
         const config: Record<string, string> = {
           WEBHOOK_SECRET: "test_webhook_secret_token_12345",
           BOT_TOKEN: "test_bot_token",
@@ -25,7 +66,7 @@ describe("TelegramController", () => {
         };
         return config[key];
       }),
-    } as any;
+    };
 
     const module: TestingModule = await Test.createTestingModule({
       controllers: [TelegramController],
@@ -45,7 +86,7 @@ describe("TelegramController", () => {
   });
 
   afterEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   describe("Controller Initialization", () => {
@@ -81,8 +122,8 @@ describe("TelegramController", () => {
   });
 
   describe("Webhook Endpoint Tests", () => {
-    let mockRequest: Partial<FastifyRequest>;
-    let mockReply: Partial<FastifyReply>;
+    let mockRequest: MockRequest;
+    let mockReply: MockReply;
 
     beforeEach(() => {
       mockRequest = {
@@ -110,12 +151,12 @@ describe("TelegramController", () => {
           },
         },
         headers: {},
-      } as any;
+      };
 
       mockReply = {
-        status: jest.fn().mockReturnThis(),
-        send: jest.fn().mockReturnThis(),
-      } as any;
+        status: vi.fn().mockReturnThis(),
+        send: vi.fn().mockReturnThis(),
+      };
     });
 
     it("should process valid webhook with correct signature", async () => {
@@ -172,10 +213,10 @@ describe("TelegramController", () => {
       );
 
       expect(mockTelegramBotService.handleWebhook).toHaveBeenCalledWith(
-        expect.objectContaining({
-          body: expect.objectContaining({
+        partialMatch<Partial<FastifyRequest>>({
+          body: partialMatch<WebhookUpdate>({
             update_id: 123456789,
-            message: expect.any(Object),
+            message: anyObject,
           }),
         }),
         mockReply,
@@ -259,20 +300,20 @@ describe("TelegramController", () => {
   });
 
   describe("Command Handling Tests", () => {
-    let mockRequest: Partial<FastifyRequest>;
-    let mockReply: Partial<FastifyReply>;
+    let mockRequest: MockRequest;
+    let mockReply: MockReply;
     const secretToken = "test_webhook_secret_token_12345";
 
     beforeEach(() => {
       mockRequest = {
         body: {},
         headers: {},
-      } as any;
+      };
 
       mockReply = {
-        status: jest.fn().mockReturnThis(),
-        send: jest.fn().mockReturnThis(),
-      } as any;
+        status: vi.fn().mockReturnThis(),
+        send: vi.fn().mockReturnThis(),
+      };
 
       mockTelegramBotService.handleWebhook.mockResolvedValue(undefined);
     });
@@ -296,9 +337,9 @@ describe("TelegramController", () => {
       );
 
       expect(mockTelegramBotService.handleWebhook).toHaveBeenCalledWith(
-        expect.objectContaining({
-          body: expect.objectContaining({
-            message: expect.objectContaining({
+        partialMatch<Partial<FastifyRequest>>({
+          body: partialMatch<WebhookUpdate>({
+            message: partialMatch<WebhookUpdate["message"]>({
               text: "/start",
             }),
           }),
@@ -326,9 +367,9 @@ describe("TelegramController", () => {
       );
 
       expect(mockTelegramBotService.handleWebhook).toHaveBeenCalledWith(
-        expect.objectContaining({
-          body: expect.objectContaining({
-            message: expect.objectContaining({
+        partialMatch<Partial<FastifyRequest>>({
+          body: partialMatch<WebhookUpdate>({
+            message: partialMatch<WebhookUpdate["message"]>({
               text: "/help",
             }),
           }),
@@ -440,9 +481,9 @@ describe("TelegramController", () => {
       );
 
       expect(mockTelegramBotService.handleWebhook).toHaveBeenCalledWith(
-        expect.objectContaining({
-          body: expect.objectContaining({
-            message: expect.objectContaining({
+        partialMatch<Partial<FastifyRequest>>({
+          body: partialMatch<WebhookUpdate>({
+            message: partialMatch<WebhookUpdate["message"]>({
               text: "/language",
             }),
           }),
@@ -491,12 +532,14 @@ describe("TelegramController", () => {
       );
 
       expect(mockTelegramBotService.handleWebhook).toHaveBeenCalledWith(
-        expect.objectContaining({
-          body: expect.objectContaining({
-            message: expect.objectContaining({
-              from: expect.objectContaining({
-                id: expect.any(Number),
-              }),
+        partialMatch<Partial<FastifyRequest>>({
+          body: partialMatch<WebhookUpdate>({
+            message: partialMatch<WebhookUpdate["message"]>({
+              from: partialMatch<NonNullable<WebhookUpdate["message"]>["from"]>(
+                {
+                  id: anyNumber,
+                },
+              ),
             }),
           }),
         }),
@@ -527,20 +570,20 @@ describe("TelegramController", () => {
   });
 
   describe("Message Types Tests", () => {
-    let mockRequest: Partial<FastifyRequest>;
-    let mockReply: Partial<FastifyReply>;
+    let mockRequest: MockRequest;
+    let mockReply: MockReply;
     const secretToken = "test_webhook_secret_token_12345";
 
     beforeEach(() => {
       mockRequest = {
         body: {},
         headers: {},
-      } as any;
+      };
 
       mockReply = {
-        status: jest.fn().mockReturnThis(),
-        send: jest.fn().mockReturnThis(),
-      } as any;
+        status: vi.fn().mockReturnThis(),
+        send: vi.fn().mockReturnThis(),
+      };
 
       mockTelegramBotService.handleWebhook.mockResolvedValue(undefined);
     });
@@ -564,9 +607,9 @@ describe("TelegramController", () => {
       );
 
       expect(mockTelegramBotService.handleWebhook).toHaveBeenCalledWith(
-        expect.objectContaining({
-          body: expect.objectContaining({
-            message: expect.objectContaining({
+        partialMatch<Partial<FastifyRequest>>({
+          body: partialMatch<WebhookUpdate>({
+            message: partialMatch<WebhookUpdate["message"]>({
               text: "Hello, bot!",
             }),
           }),
@@ -599,9 +642,13 @@ describe("TelegramController", () => {
       );
 
       expect(mockTelegramBotService.handleWebhook).toHaveBeenCalledWith(
-        expect.objectContaining({
-          body: expect.objectContaining({
-            callback_query: expect.objectContaining({
+        partialMatch<Partial<FastifyRequest>>({
+          body: partialMatch<WebhookUpdate>({
+            callback_query: partialMatch<{
+              id: string;
+              from: { id?: number; username?: string };
+              data?: string;
+            }>({
               data: "lang_en",
             }),
           }),
@@ -628,9 +675,13 @@ describe("TelegramController", () => {
       );
 
       expect(mockTelegramBotService.handleWebhook).toHaveBeenCalledWith(
-        expect.objectContaining({
-          body: expect.objectContaining({
-            inline_query: expect.objectContaining({
+        partialMatch<Partial<FastifyRequest>>({
+          body: partialMatch<WebhookUpdate>({
+            inline_query: partialMatch<{
+              id: string;
+              from: { id?: number };
+              query?: string;
+            }>({
               query: "search term",
             }),
           }),
@@ -659,9 +710,12 @@ describe("TelegramController", () => {
       );
 
       expect(mockTelegramBotService.handleWebhook).toHaveBeenCalledWith(
-        expect.objectContaining({
-          body: expect.objectContaining({
-            edited_message: expect.objectContaining({
+        partialMatch<Partial<FastifyRequest>>({
+          body: partialMatch<WebhookUpdate>({
+            edited_message: partialMatch<{
+              message_id?: number;
+              text?: string;
+            }>({
               text: "Edited message",
             }),
           }),
@@ -672,15 +726,15 @@ describe("TelegramController", () => {
   });
 
   describe("Error Scenarios", () => {
-    let mockRequest: Partial<FastifyRequest>;
-    let mockReply: Partial<FastifyReply>;
+    let mockRequest: MockRequest;
+    let mockReply: MockReply;
     const secretToken = "test_webhook_secret_token_12345";
 
     beforeEach(() => {
       mockReply = {
-        status: jest.fn().mockReturnThis(),
-        send: jest.fn().mockReturnThis(),
-      } as any;
+        status: vi.fn().mockReturnThis(),
+        send: vi.fn().mockReturnThis(),
+      };
     });
 
     it("should handle malformed webhook payload", async () => {
@@ -690,7 +744,7 @@ describe("TelegramController", () => {
           invalid_field: "invalid_value",
         },
         headers: {},
-      } as any;
+      };
 
       mockTelegramBotService.handleWebhook.mockRejectedValue(
         new Error("Invalid payload"),
@@ -724,7 +778,7 @@ describe("TelegramController", () => {
           },
         },
         headers: {},
-      } as any;
+      };
 
       mockTelegramBotService.handleWebhook.mockRejectedValue(
         new Error("Invalid user data"),
@@ -746,7 +800,7 @@ describe("TelegramController", () => {
   describe("Integration Test", () => {
     it("should handle full webhook flow from Telegram to service and back", async () => {
       const secretToken = "test_webhook_secret_token_12345";
-      const mockRequest: Partial<FastifyRequest> = {
+      const mockRequest: MockRequest = {
         body: {
           update_id: 123456804,
           message: {
@@ -771,21 +825,21 @@ describe("TelegramController", () => {
           },
         },
         headers: {},
-      } as any;
+      };
 
-      const mockReply: Partial<FastifyReply> = {
-        status: jest.fn().mockReturnThis(),
-        send: jest.fn().mockReturnThis(),
-      } as any;
+      const mockReply: MockReply = {
+        status: vi.fn().mockReturnThis(),
+        send: vi.fn().mockReturnThis(),
+      };
 
       // Mock successful webhook processing
       mockTelegramBotService.handleWebhook.mockImplementation(
-        async (req, _reply) => {
+        async (req: FastifyRequest, _reply: FastifyReply) => {
           // Simulate bot processing the message
-          const update = (req as any).body;
-          expect(update.message.text).toBe("/start");
-          expect(update.message.from.username).toBe("alice_smith");
-          return undefined;
+          const update = req.body as WebhookUpdate;
+          expect(update.message?.text).toBe("/start");
+          expect(update.message?.from?.username).toBe("alice_smith");
+          await Promise.resolve(undefined);
         },
       );
 
@@ -832,15 +886,15 @@ describe("TelegramController", () => {
       const newController =
         newModule.get<TelegramController>(TelegramController);
 
-      const mockRequest = {
+      const mockRequest: MockRequest = {
         body: { update_id: 123 },
         headers: {},
-      } as any;
+      };
 
-      const mockReply = {
-        status: jest.fn().mockReturnThis(),
-        send: jest.fn().mockReturnThis(),
-      } as any;
+      const mockReply: MockReply = {
+        status: vi.fn().mockReturnThis(),
+        send: vi.fn().mockReturnThis(),
+      };
 
       mockTelegramBotService.handleWebhook.mockResolvedValue(undefined);
 
@@ -878,15 +932,15 @@ describe("TelegramController", () => {
       const newController =
         newModule.get<TelegramController>(TelegramController);
 
-      const mockRequest = {
+      const mockRequest: MockRequest = {
         body: { update_id: 123 },
         headers: {},
-      } as any;
+      };
 
-      const mockReply = {
-        status: jest.fn().mockReturnThis(),
-        send: jest.fn().mockReturnThis(),
-      } as any;
+      const mockReply: MockReply = {
+        status: vi.fn().mockReturnThis(),
+        send: vi.fn().mockReturnThis(),
+      };
 
       // Should reject without correct token in production
       await newController.handleWebhook(

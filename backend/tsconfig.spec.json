@@ -7,7 +7,7 @@
     "noPropertyAccessFromIndexSignature": false,
     "exactOptionalPropertyTypes": false,
 
-    // Disable plugins for isolatedModules mode (used by ts-jest)
+    // Disable plugins for isolatedModules mode (used by vitest)
     "plugins": []
   },
   "include": [

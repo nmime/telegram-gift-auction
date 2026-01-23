@@ -227,41 +227,81 @@ test/artillery/
 
 ---
 
-## Юнит-тесты
+## Юнит и интеграционные тесты (Vitest)
 
-### Backend
+Backend использует **Vitest** как тест-фреймворк со следующей структурой:
+
+```
+backend/src/
+├── modules/
+│   └── **/*.spec.ts          # Юнит-тесты (рядом с исходниками)
+└── tests/
+    ├── unit/                  # Дополнительные юнит-тесты
+    │   └── *.spec.ts
+    └── integration/           # Интеграционные тесты (MongoDB Memory Server)
+        └── *.spec.ts
+```
+
+### Запуск тестов
 
 ```bash
 cd backend
 
-# Запустить все тесты
-npm test
+# Запустить все тесты (857 тестов)
+pnpm test
 
-# Запустить с покрытием
-npm run test:cov
+# Только юнит-тесты (680 тестов, быстрее)
+pnpm test:unit
 
-# Запустить конкретный файл
-npm test -- auctions.service.spec.ts
+# Только интеграционные тесты (177 тестов)
+pnpm test:integration
 
-# Режим watch
-npm run test:watch
+# С покрытием
+pnpm test:cov
+
+# Юнит-тесты с покрытием
+pnpm test:cov:unit
+
+# Конкретный файл
+pnpm test -- auctions.service.spec.ts
+
+# Режим watch (перезапуск при изменениях)
+pnpm test:watch
+
+# Визуальный UI режим
+pnpm test:ui
+
+# Отладка тестов (с инспектором)
+pnpm test:debug
 ```
 
-### Frontend
+### Конфигурация тестов
 
-```bash
-cd frontend
+| Файл конфигурации | Назначение |
+|-------------------|------------|
+| `vitest.config.ts` | Базовая конфигурация (все тесты) |
+| `vitest.config.unit.ts` | Только юнит-тесты (исключает integration/) |
+| `vitest.config.integration.ts` | Только интеграционные тесты |
 
-# Запустить все тесты
-npm test
+### Статистика тестов
 
-# Запустить с покрытием
-npm run test:coverage
-```
+| Категория | Файлов | Тестов | Время |
+|-----------|--------|--------|-------|
+| **Юнит** | 15 | 680 | ~3с |
+| **Интеграционные** | 5 | 177 | ~50с |
+| **Всего** | 20 | 857 | ~12с (параллельно) |
+
+### Ключевые особенности тестирования
+
+- **Параллельное выполнение**: Тесты запускаются параллельно по умолчанию
+- **MongoDB Memory Server**: Интеграционные тесты используют in-memory MongoDB с replica set
+- **Redis Mock**: `ioredis-mock` для Redis операций
+- **SWC Transform**: Быстрая компиляция TypeScript
+- **Typia Integration**: Runtime валидация через `@ryoppippi/unplugin-typia`
 
 ---
 
-## E2E-тесты
+## Nestia E2E-тесты
 
 Система включает комплексные E2E-тесты, покрывающие всю критическую функциональность.
 
@@ -390,7 +430,18 @@ const socket = await connectAndJoin(WS_URL, token, auctionId);
 
 ---
 
-## Цели покрытия тестами
+## Покрытие тестами
+
+### Текущая сводка по тестам
+
+| Тип тестов | Фреймворк | Количество | Статус |
+|------------|-----------|------------|--------|
+| Юнит-тесты | Vitest | 680 | ✅ |
+| Интеграционные | Vitest + MongoDB Memory Server | 177 | ✅ |
+| E2E-тесты | Nestia | 7 наборов | ✅ |
+| Нагрузочные | Artillery | 4 конфига | ✅ |
+
+### Цели покрытия
 
 | Область | Цель |
 |---------|------|
@@ -398,6 +449,21 @@ const socket = await connectAndJoin(WS_URL, token, auctionId);
 | Контроллеры | >70% |
 | Guards/Middleware | >90% |
 | Критические пути (ставки) | >95% |
+
+### Генерация отчёта о покрытии
+
+```bash
+cd backend
+
+# Полный отчёт покрытия
+pnpm test:cov
+
+# Только юнит-тесты (быстрее)
+pnpm test:cov:unit
+
+# Открыть HTML отчёт
+open coverage/index.html
+```
 
 ---
 
@@ -503,49 +569,78 @@ curl http://localhost:4000/api/transactions/verify-integrity \
 
 ## Интеграция CI/CD
 
-### Пример GitHub Actions
+### Конфигурация GitHub Actions
+
+Проект использует комплексный CI workflow (`.github/workflows/ci.yml`):
 
 ```yaml
-name: Tests
+name: CI
 
-on: [push, pull_request]
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
 
 jobs:
   test:
     runs-on: ubuntu-latest
-
-    services:
-      mongodb:
-        image: mongo:8.2
-        ports:
-          - 27017:27017
-      redis:
-        image: redis:7-alpine
-        ports:
-          - 6379:6379
-
     steps:
       - uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '22'
+          node-version: 22
+          cache: pnpm
 
       - name: Install dependencies
-        run: npm ci
+        run: pnpm install --frozen-lockfile
 
-      - name: Initialize MongoDB replica set
-        run: |
-          docker exec ${{ job.services.mongodb.id }} \
-            mongosh --eval "rs.initiate()"
+      # Юнит-тесты (быстрые, без внешних зависимостей)
+      - name: Run unit tests
+        run: pnpm --filter backend test:unit
+        env:
+          CI: true
+          NODE_OPTIONS: --max-old-space-size=4096
 
-      - name: Run tests
-        run: npm test
+      # Интеграционные тесты (MongoDB Memory Server)
+      - name: Run integration tests
+        run: pnpm --filter backend test:integration
+        env:
+          CI: true
+          NODE_OPTIONS: --max-old-space-size=4096
+          MONGOMS_REPLSET: rs0
 
-      - name: Run e2e tests
-        run: npm run test:e2e
+      # Отчёт о покрытии
+      - name: Generate coverage report
+        run: pnpm --filter backend test:cov
+        env:
+          CI: true
+```
 
-      - name: Run load tests
-        run: cd backend && npx ts-node test/load-test.ts
+### Обзор CI пайплайна
+
+| Job | Описание | Время |
+|-----|----------|-------|
+| **CodeQL** | Сканирование уязвимостей безопасности | ~3мин |
+| **Trivy** | Сканирование уязвимостей зависимостей | ~1мин |
+| **Lint** | ESLint проверка качества кода | ~30с |
+| **Test (Unit)** | Vitest юнит-тесты (680 тестов) | ~1мин |
+| **Test (Integration)** | Vitest интеграционные тесты (177 тестов) | ~2мин |
+| **Build** | NestJS продакшен сборка | ~1мин |
+
+### Локальный запуск тестов (как в CI)
+
+```bash
+cd backend
+
+# Запустить как в CI
+pnpm test:unit && pnpm test:integration
+
+# С покрытием (как в CI)
+CI=true pnpm test:cov
 ```

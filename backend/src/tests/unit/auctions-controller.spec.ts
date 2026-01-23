@@ -1,24 +1,62 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
+import {
+  describe,
+  it,
+  expect,
+  beforeEach,
+  afterEach,
+  vi,
+  type Mock,
+} from "vitest";
 import { Test, type TestingModule } from "@nestjs/testing";
 import { BadRequestException, NotFoundException } from "@nestjs/common";
 import { AuctionsController } from "@/modules/auctions/auctions.controller";
 import { AuctionsService } from "@/modules/auctions/auctions.service";
 import { BotService } from "@/modules/auctions/bot.service";
-import { AuctionStatus } from "@/schemas";
+import {
+  AuctionStatus,
+  type AuctionDocument,
+  type BidDocument,
+} from "@/schemas";
 import { Types } from "mongoose";
+import type { ICreateAuction } from "@/modules/auctions/dto";
 
-// Mock AuthGuard to bypass authentication in tests
-jest.mock("@/common", () => ({
-  ...jest.requireActual("@/common"),
-  AuthGuard: jest.fn().mockImplementation(() => ({
-    canActivate: jest.fn(() => true),
-  })),
+interface MockAuthenticatedRequest {
+  user: {
+    sub: string;
+    username: string;
+  };
+}
+
+// Mock only the guards to bypass authentication in tests
+vi.mock("@/common/guards", () => ({
+  AuthGuard: class MockAuthGuard {
+    canActivate() {
+      return true;
+    }
+  },
+  ThrottlerBehindProxyGuard: class MockThrottlerGuard {
+    canActivate() {
+      return true;
+    }
+  },
+  getClientIp: vi.fn().mockReturnValue("127.0.0.1"),
 }));
 
 describe("AuctionsController", () => {
   let controller: AuctionsController;
-  let auctionsService: jest.Mocked<AuctionsService>;
-  let botService: jest.Mocked<BotService>;
+  let auctionsService: {
+    create: Mock;
+    findAll: Mock;
+    findById: Mock;
+    start: Mock;
+    placeBid: Mock;
+    placeBidFast: Mock;
+    getLeaderboard: Mock;
+    getUserBids: Mock;
+    getMinWinningBid: Mock;
+    auditFinancialIntegrity: Mock;
+  };
+  let botService: { startBots: Mock };
 
   const mockDate = new Date("2024-01-01T00:00:00.000Z");
 
@@ -55,31 +93,31 @@ describe("AuctionsController", () => {
     endTime: null,
     createdAt: mockDate,
     updatedAt: mockDate,
-  } as any;
+  } as Partial<AuctionDocument>;
 
-  const mockAuthenticatedRequest = {
+  const mockAuthenticatedRequest: MockAuthenticatedRequest = {
     user: {
       sub: "user123",
       username: "testuser",
     },
-  } as any;
+  };
 
   beforeEach(async () => {
     const mockAuctionsService = {
-      create: jest.fn(),
-      findAll: jest.fn(),
-      findById: jest.fn(),
-      start: jest.fn(),
-      placeBid: jest.fn(),
-      placeBidFast: jest.fn(),
-      getLeaderboard: jest.fn(),
-      getUserBids: jest.fn(),
-      getMinWinningBid: jest.fn(),
-      auditFinancialIntegrity: jest.fn(),
+      create: vi.fn(),
+      findAll: vi.fn(),
+      findById: vi.fn(),
+      start: vi.fn(),
+      placeBid: vi.fn(),
+      placeBidFast: vi.fn(),
+      getLeaderboard: vi.fn(),
+      getUserBids: vi.fn(),
+      getMinWinningBid: vi.fn(),
+      auditFinancialIntegrity: vi.fn(),
     };
 
     const mockBotService = {
-      startBots: jest.fn(),
+      startBots: vi.fn(),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -102,7 +140,7 @@ describe("AuctionsController", () => {
   });
 
   afterEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   describe("Controller Initialization", () => {
@@ -260,7 +298,7 @@ describe("AuctionsController", () => {
       ).rejects.toThrow(BadRequestException);
     });
 
-    it("should require user authentication", async () => {
+    it("should require user authentication", () => {
       // This test demonstrates that the endpoint is protected by AuthGuard
       // In a real scenario, the guard would reject unauthenticated requests
       expect(controller.create).toBeDefined();
@@ -283,7 +321,9 @@ describe("AuctionsController", () => {
     ];
 
     it("should return all auctions without filter", async () => {
-      auctionsService.findAll.mockResolvedValue(mockAuctions as any);
+      auctionsService.findAll.mockResolvedValue(
+        mockAuctions as unknown as AuctionDocument[],
+      );
 
       const result = await controller.findAll({});
 
@@ -295,7 +335,9 @@ describe("AuctionsController", () => {
       const pendingAuctions = mockAuctions.filter(
         (a) => a.status === AuctionStatus.PENDING,
       );
-      auctionsService.findAll.mockResolvedValue(pendingAuctions as any);
+      auctionsService.findAll.mockResolvedValue(
+        pendingAuctions as unknown as AuctionDocument[],
+      );
 
       const result = await controller.findAll({
         status: AuctionStatus.PENDING,
@@ -312,7 +354,9 @@ describe("AuctionsController", () => {
       const activeAuctions = mockAuctions.filter(
         (a) => a.status === AuctionStatus.ACTIVE,
       );
-      auctionsService.findAll.mockResolvedValue(activeAuctions as any);
+      auctionsService.findAll.mockResolvedValue(
+        activeAuctions as unknown as AuctionDocument[],
+      );
 
       const result = await controller.findAll({ status: AuctionStatus.ACTIVE });
 
@@ -324,7 +368,9 @@ describe("AuctionsController", () => {
       const completedAuctions = mockAuctions.filter(
         (a) => a.status === AuctionStatus.COMPLETED,
       );
-      auctionsService.findAll.mockResolvedValue(completedAuctions as any);
+      auctionsService.findAll.mockResolvedValue(
+        completedAuctions as unknown as AuctionDocument[],
+      );
 
       const result = await controller.findAll({
         status: AuctionStatus.COMPLETED,
@@ -340,7 +386,9 @@ describe("AuctionsController", () => {
         { ...mockAuctionDocument, createdAt: new Date("2024-01-02") },
         { ...mockAuctionDocument, createdAt: new Date("2024-01-01") },
       ];
-      auctionsService.findAll.mockResolvedValue(sortedAuctions as any);
+      auctionsService.findAll.mockResolvedValue(
+        sortedAuctions as unknown as AuctionDocument[],
+      );
 
       const result = await controller.findAll({});
 
@@ -643,7 +691,7 @@ describe("AuctionsController", () => {
       expect(result.details).toContain("does not match");
     });
 
-    it("should require admin access for audit endpoint", async () => {
+    it("should require admin access for audit endpoint", () => {
       // This test demonstrates that admin endpoints should be protected
       // In a real implementation, there would be an AdminGuard
       expect(controller.auditFinancialIntegrity).toBeDefined();
@@ -663,11 +711,14 @@ describe("AuctionsController", () => {
       );
 
       await expect(
-        controller.create(invalidDto as any, mockAuthenticatedRequest),
+        controller.create(
+          invalidDto as unknown as ICreateAuction,
+          mockAuthenticatedRequest,
+        ),
       ).rejects.toThrow(BadRequestException);
     });
 
-    it("should require authentication for protected endpoints", async () => {
+    it("should require authentication for protected endpoints", () => {
       // This test demonstrates the authentication requirement
       // The AuthGuard would reject requests without valid JWT
       expect(controller.create).toBeDefined();
@@ -814,7 +865,9 @@ describe("AuctionsController", () => {
     ];
 
     it("should return user's bids for auction", async () => {
-      auctionsService.getUserBids.mockResolvedValue(mockBids as any);
+      auctionsService.getUserBids.mockResolvedValue(
+        mockBids as unknown as BidDocument[],
+      );
 
       const result = await controller.getMyBids(
         validId,
@@ -829,7 +882,9 @@ describe("AuctionsController", () => {
     });
 
     it("should include bid status and amounts", async () => {
-      auctionsService.getUserBids.mockResolvedValue(mockBids as any);
+      auctionsService.getUserBids.mockResolvedValue(
+        mockBids as unknown as BidDocument[],
+      );
 
       const result = await controller.getMyBids(
         validId,
@@ -842,7 +897,9 @@ describe("AuctionsController", () => {
     });
 
     it("should include won round and item number for winning bids", async () => {
-      auctionsService.getUserBids.mockResolvedValue(mockBids as any);
+      auctionsService.getUserBids.mockResolvedValue(
+        mockBids as unknown as BidDocument[],
+      );
 
       const result = await controller.getMyBids(
         validId,
@@ -923,7 +980,12 @@ describe("AuctionsController", () => {
     });
 
     it("should place bid successfully", async () => {
-      auctionsService.placeBid.mockResolvedValue(mockBidResponse as any);
+      auctionsService.placeBid.mockResolvedValue(
+        mockBidResponse as unknown as {
+          bid: BidDocument;
+          auction: AuctionDocument;
+        },
+      );
 
       const mockRequest = createMockRequest();
 

@@ -1,24 +1,31 @@
+import { describe, it, expect, beforeEach, vi } from "vitest";
 import { Test, type TestingModule } from "@nestjs/testing";
 import { getModelToken } from "@nestjs/mongoose";
 import { Types } from "mongoose";
 import { BidsService } from "./bids.service";
 import { Bid, BidStatus } from "@/schemas";
 
+interface BidQuery {
+  auctionId?: Types.ObjectId;
+  userId?: Types.ObjectId;
+  status?: BidStatus;
+}
+
 describe("BidsService", () => {
   let service: BidsService;
 
   const mockBidModel = {
-    find: jest.fn().mockReturnThis(),
-    findById: jest.fn(),
-    findOne: jest.fn(),
-    create: jest.fn(),
-    sort: jest.fn().mockReturnThis(),
-    populate: jest.fn().mockReturnThis(),
-    exec: jest.fn(),
-    countDocuments: jest.fn(),
-    updateOne: jest.fn().mockReturnThis(),
-    updateMany: jest.fn().mockReturnThis(),
-    deleteOne: jest.fn(),
+    find: vi.fn().mockReturnThis(),
+    findById: vi.fn(),
+    findOne: vi.fn(),
+    create: vi.fn(),
+    sort: vi.fn().mockReturnThis(),
+    populate: vi.fn().mockReturnThis(),
+    exec: vi.fn(),
+    countDocuments: vi.fn(),
+    updateOne: vi.fn().mockReturnThis(),
+    updateMany: vi.fn().mockReturnThis(),
+    deleteOne: vi.fn(),
   };
 
   beforeEach(async () => {
@@ -33,7 +40,7 @@ describe("BidsService", () => {
     }).compile();
 
     service = module.get<BidsService>(BidsService);
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   it("should be defined", () => {
@@ -170,7 +177,7 @@ describe("BidsService", () => {
 
       await service.getActiveByAuction(auctionId);
 
-      const findCall = mockBidModel.find.mock.calls[0][0];
+      const findCall = mockBidModel.find.mock.calls[0][0] as BidQuery;
       expect(findCall.status).toBe(BidStatus.ACTIVE);
     });
 
@@ -205,9 +212,9 @@ describe("BidsService", () => {
 
       const result = await service.getActiveByAuction(auctionId);
 
-      const findQuery = mockBidModel.find.mock.calls[0][0];
+      const findQuery = mockBidModel.find.mock.calls[0][0] as BidQuery;
       expect(findQuery).toHaveProperty("status", BidStatus.ACTIVE);
-      expect(result && result[0] && result[0].status).toBe(BidStatus.ACTIVE);
+      expect(result[0]?.status).toBe(BidStatus.ACTIVE);
     });
   });
 
@@ -368,7 +375,8 @@ describe("BidsService", () => {
 
       await service.countByAuction(auctionId);
 
-      const countQuery = mockBidModel.countDocuments.mock.calls[0][0];
+      const countQuery = mockBidModel.countDocuments.mock
+        .calls[0][0] as BidQuery;
       expect(countQuery.status).toBe(BidStatus.ACTIVE);
     });
 
@@ -385,7 +393,8 @@ describe("BidsService", () => {
 
       await service.countByAuction(auctionId);
 
-      const countQuery = mockBidModel.countDocuments.mock.calls[0][0];
+      const countQuery = mockBidModel.countDocuments.mock
+        .calls[0][0] as BidQuery;
       expect(countQuery.auctionId).toEqual(new Types.ObjectId(auctionId));
     });
 
@@ -526,7 +535,7 @@ describe("BidsService", () => {
       // Test with different status values
       await service.getActiveByAuction(auctionId);
 
-      const findQuery = mockBidModel.find.mock.calls[0][0];
+      const findQuery = mockBidModel.find.mock.calls[0][0] as BidQuery;
       expect([
         BidStatus.ACTIVE,
         BidStatus.WON,

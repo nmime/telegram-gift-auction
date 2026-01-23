@@ -1,16 +1,82 @@
 /**
- * Global Redis Mock Setup for All Tests
- * Uses ioredis-mock to provide a fully functional Redis mock for testing
+ * Global Test Setup
+ * Includes Redis mock and Nestia mock for testing without transforms
  */
 
+import { vi } from "vitest";
 import RedisMock from "ioredis-mock";
 import { EventEmitter } from "events";
+import {
+  Get,
+  Post,
+  Put,
+  Patch,
+  Delete,
+  Body,
+  Query,
+  Param,
+  Header,
+  Headers,
+} from "@nestjs/common";
 
 // Mock ioredis globally across all test files
-jest.mock("ioredis", () => RedisMock);
+vi.mock("ioredis", () => ({ default: RedisMock }));
+
+// Mock @nestia/core to avoid transform requirement in tests
+// This replaces nestia decorators with NestJS equivalents
+vi.mock("@nestia/core", () => {
+  // Create a typed route decorator that falls back to NestJS decorators
+  const createTypedRoute = () => ({
+    Get: (path?: string) => Get(path),
+    Post: (path?: string) => Post(path),
+    Put: (path?: string) => Put(path),
+    Patch: (path?: string) => Patch(path),
+    Delete: (path?: string) => Delete(path),
+  });
+
+  // TypedBody decorator - falls back to NestJS Body
+  const TypedBody = () => Body();
+
+  // TypedQuery decorator - falls back to NestJS Query
+  const TypedQuery = () => Query();
+
+  // TypedParam decorator - falls back to NestJS Param
+  const TypedParam = (key?: string) => Param(key);
+
+  // TypedHeader decorator - falls back to NestJS Header
+  const TypedHeader = (key: string) => Header(key);
+
+  // TypedHeaders decorator - falls back to NestJS Headers
+  const TypedHeaders = () => Headers();
+
+  // TypedException decorator - just returns a pass-through decorator
+  const TypedException = () => {
+    return (_target: unknown, _key?: string, _descriptor?: unknown) => {};
+  };
+
+  return {
+    TypedRoute: createTypedRoute(),
+    TypedBody,
+    TypedQuery,
+    TypedParam,
+    TypedHeader,
+    TypedHeaders,
+    TypedException,
+    // For direct imports
+    default: {
+      TypedRoute: createTypedRoute(),
+      TypedBody,
+      TypedQuery,
+      TypedParam,
+      TypedHeader,
+      TypedHeaders,
+      TypedException,
+    },
+  };
+});
 
 // Mock BullMQ's Queue and Worker classes since they use Lua scripts that ioredis-mock doesn't support
-jest.mock("bullmq", () => {
+vi.mock("bullmq", () => {
   class MockQueue extends EventEmitter {
     name: string;
     connection: unknown;
@@ -21,12 +87,20 @@ jest.mock("bullmq", () => {
       this.connection = options?.connection;
     }
     async add() {
-      return { id: "mock-job-id" };
+      return await Promise.resolve({ id: "mock-job-id" });
     }
-    async close() {}
-    async clean() {}
-    async drain() {}
-    async obliterate() {}
+    async close() {
+      await Promise.resolve();
+    }
+    async clean() {
+      await Promise.resolve();
+    }
+    async drain() {
+      await Promise.resolve();
+    }
+    async obliterate() {
+      await Promise.resolve();
+    }
   }
 
   class MockWorker extends EventEmitter {

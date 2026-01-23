@@ -1,54 +1,105 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
+import {
+  describe,
+  it,
+  expect,
+  beforeEach,
+  afterEach,
+  vi,
+  type Mock,
+} from "vitest";
 import { Test, type TestingModule } from "@nestjs/testing";
 import { JwtService } from "@nestjs/jwt";
 import { EventsGateway } from "@/modules/events/events.gateway";
 import { BidCacheService } from "@/modules/redis/bid-cache.service";
 import { redisClient } from "@/modules/redis/constants";
-import type { Server, Socket } from "socket.io";
-import type Redis from "ioredis";
+import type { AuctionStatus } from "@/schemas";
+
+// Mock socket interface with optional auth fields
+interface MockSocket {
+  id: string;
+  on: Mock;
+  join: Mock;
+  leave: Mock;
+  emit: Mock;
+  userId?: string;
+  username?: string;
+}
+
+// Mock auction interface for tests
+interface MockAuction {
+  _id: { toString: () => string };
+  status?: AuctionStatus | string;
+  currentRound?: number;
+  endTime?: Date;
+  rounds?: MockRound[];
+}
+
+interface MockRound {
+  roundNumber?: number;
+  itemsCount?: number;
+  startTime?: Date;
+  endTime?: Date;
+}
+
+interface MockWinner {
+  amount: number;
+  itemNumber: number;
+}
+
+// Bid payload interface
+interface BidPayload {
+  auctionId?: string;
+  amount?: number;
+}
 
 describe("EventsGateway", () => {
   let gateway: EventsGateway;
-  let mockRedis: jest.Mocked<Redis>;
-  let mockBidCacheService: jest.Mocked<BidCacheService>;
-  let mockJwtService: jest.Mocked<JwtService>;
-  let mockServer: jest.Mocked<Server>;
-  let mockSocket: jest.Mocked<Socket>;
+  let mockRedis: { duplicate: Mock };
+  let mockBidCacheService: { placeBidUltraFast: Mock };
+  let mockJwtService: { verify: Mock };
+  let mockServer: {
+    adapter: Mock;
+    on: Mock;
+    to: Mock;
+    emit: Mock;
+    sockets: { adapter: { rooms: Map<string, Set<string>> } };
+  };
+  let mockSocket: MockSocket;
 
   beforeEach(async () => {
     mockRedis = {
-      duplicate: jest.fn().mockReturnThis(),
-    } as unknown as jest.Mocked<Redis>;
+      duplicate: vi.fn().mockReturnThis(),
+    };
 
     mockBidCacheService = {
-      placeBidUltraFast: jest.fn(),
-    } as unknown as jest.Mocked<BidCacheService>;
+      placeBidUltraFast: vi.fn(),
+    };
 
     mockJwtService = {
-      verify: jest.fn(),
-    } as unknown as jest.Mocked<JwtService>;
+      verify: vi.fn(),
+    };
 
     mockServer = {
-      adapter: jest.fn(),
-      on: jest.fn(),
-      to: jest.fn().mockReturnThis(),
-      emit: jest.fn(),
+      adapter: vi.fn(),
+      on: vi.fn(),
+      to: vi.fn().mockReturnThis(),
+      emit: vi.fn(),
       sockets: {
         adapter: {
           rooms: new Map(),
         },
       },
-    } as unknown as jest.Mocked<Server>;
+    };
 
     mockSocket = {
       id: "socket-123",
-      on: jest.fn(),
-      join: jest.fn(),
-      leave: jest.fn(),
-      emit: jest.fn(),
+      on: vi.fn(),
+      join: vi.fn(),
+      leave: vi.fn(),
+      emit: vi.fn(),
       userId: undefined,
       username: undefined,
-    } as unknown as jest.Mocked<Socket>;
+    };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -72,7 +123,7 @@ describe("EventsGateway", () => {
   });
 
   afterEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   describe("Gateway Initialization", () => {
@@ -98,7 +149,7 @@ describe("EventsGateway", () => {
         (call) => call[0] === "connection",
       );
       const connectionHandler = connCall
-        ? (connCall[1] as (socket: any) => void)
+        ? (connCall[1] as (socket: MockSocket) => void)
         : undefined;
 
       connectionHandler?.(mockSocket);
@@ -132,7 +183,7 @@ describe("EventsGateway", () => {
         (call) => call[0] === "connection",
       );
       const connectionHandler = connCall
-        ? (connCall[1] as (socket: any) => void)
+        ? (connCall[1] as (socket: MockSocket) => void)
         : undefined;
       connectionHandler?.(mockSocket);
 
@@ -153,8 +204,8 @@ describe("EventsGateway", () => {
       authHandler("valid_token");
 
       expect(mockJwtService.verify).toHaveBeenCalledWith("valid_token");
-      expect((mockSocket as any).userId).toBe("user123");
-      expect((mockSocket as any).username).toBe("testuser");
+      expect(mockSocket.userId).toBe("user123");
+      expect(mockSocket.username).toBe("testuser");
       expect(mockSocket.emit).toHaveBeenCalledWith("auth-response", {
         success: true,
         userId: "user123",
@@ -172,7 +223,7 @@ describe("EventsGateway", () => {
         success: false,
         error: "Invalid or expired token",
       });
-      expect((mockSocket as any).userId).toBeUndefined();
+      expect(mockSocket.userId).toBeUndefined();
     });
 
     it("should reject expired token", () => {
@@ -200,7 +251,7 @@ describe("EventsGateway", () => {
         (call) => call[0] === "connection",
       );
       const connectionHandler = connCall
-        ? (connCall[1] as (socket: any) => void)
+        ? (connCall[1] as (socket: MockSocket) => void)
         : undefined;
       connectionHandler?.(mockSocket);
 
@@ -256,19 +307,19 @@ describe("EventsGateway", () => {
     it("should handle multiple clients in same auction", () => {
       const mockSocket2 = {
         id: "socket-456",
-        on: jest.fn(),
-        join: jest.fn(),
-        leave: jest.fn(),
-        emit: jest.fn(),
+        on: vi.fn(),
+        join: vi.fn(),
+        leave: vi.fn(),
+        emit: vi.fn(),
         userId: undefined,
         username: undefined,
-      } as unknown as jest.Mocked<Socket>;
+      };
 
       const connCall = mockServer.on.mock.calls.find(
         (call) => call[0] === "connection",
       );
       const connectionHandler = connCall
-        ? (connCall[1] as (socket: any) => void)
+        ? (connCall[1] as (socket: MockSocket) => void)
         : undefined;
       connectionHandler?.(mockSocket2);
 
@@ -288,7 +339,7 @@ describe("EventsGateway", () => {
   });
 
   describe("Bid Placement via WebSocket", () => {
-    let placeBidHandler: (payload: any) => Promise<void>;
+    let placeBidHandler: (payload: BidPayload) => Promise<void>;
 
     beforeEach(() => {
       gateway.setServer(mockServer);
@@ -296,7 +347,7 @@ describe("EventsGateway", () => {
         (call) => call[0] === "connection",
       );
       const connectionHandler = connCall
-        ? (connCall[1] as (socket: any) => void)
+        ? (connCall[1] as (socket: MockSocket) => void)
         : undefined;
       connectionHandler?.(mockSocket);
 
@@ -304,12 +355,12 @@ describe("EventsGateway", () => {
         (call) => call[0] === "place-bid",
       );
       placeBidHandler = placeBidCall
-        ? (placeBidCall[1] as (payload: any) => Promise<void>)
+        ? (placeBidCall[1] as (payload: BidPayload) => Promise<void>)
         : async () => {};
     });
 
     it("should reject bid without authentication", async () => {
-      (mockSocket as any).userId = undefined;
+      mockSocket.userId = undefined;
 
       await placeBidHandler({ auctionId: "auction123", amount: 1000 });
 
@@ -321,7 +372,7 @@ describe("EventsGateway", () => {
     });
 
     it("should reject bid with invalid payload", async () => {
-      (mockSocket as any).userId = "user123";
+      mockSocket.userId = "user123";
 
       await placeBidHandler({ auctionId: "auction123", amount: -100 });
 
@@ -333,7 +384,7 @@ describe("EventsGateway", () => {
     });
 
     it("should reject bid with missing auctionId", async () => {
-      (mockSocket as any).userId = "user123";
+      mockSocket.userId = "user123";
 
       await placeBidHandler({ amount: 1000 });
 
@@ -345,7 +396,7 @@ describe("EventsGateway", () => {
     });
 
     it("should place bid successfully", async () => {
-      (mockSocket as any).userId = "user123";
+      mockSocket.userId = "user123";
 
       mockBidCacheService.placeBidUltraFast.mockResolvedValue({
         success: true,
@@ -372,7 +423,7 @@ describe("EventsGateway", () => {
     });
 
     it("should broadcast new bid to auction room", async () => {
-      (mockSocket as any).userId = "user123";
+      mockSocket.userId = "user123";
 
       mockBidCacheService.placeBidUltraFast.mockResolvedValue({
         success: true,
@@ -399,7 +450,7 @@ describe("EventsGateway", () => {
     });
 
     it("should handle bid placement errors", async () => {
-      (mockSocket as any).userId = "user123";
+      mockSocket.userId = "user123";
 
       mockBidCacheService.placeBidUltraFast.mockResolvedValue({
         success: false,
@@ -417,7 +468,7 @@ describe("EventsGateway", () => {
     });
 
     it("should indicate warmup needed", async () => {
-      (mockSocket as any).userId = "user123";
+      mockSocket.userId = "user123";
 
       mockBidCacheService.placeBidUltraFast.mockResolvedValue({
         success: false,
@@ -436,7 +487,7 @@ describe("EventsGateway", () => {
     });
 
     it("should handle internal server errors", async () => {
-      (mockSocket as any).userId = "user123";
+      mockSocket.userId = "user123";
 
       mockBidCacheService.placeBidUltraFast.mockRejectedValue(
         new Error("Redis connection failed"),
@@ -457,7 +508,7 @@ describe("EventsGateway", () => {
     });
 
     it("should emit auction update", () => {
-      const auction = {
+      const auction: MockAuction = {
         _id: { toString: () => "auction123" },
         status: "active",
         currentRound: 2,
@@ -465,7 +516,7 @@ describe("EventsGateway", () => {
           { roundNumber: 1, itemsCount: 5 },
           { roundNumber: 2, itemsCount: 3 },
         ],
-      } as any;
+      };
 
       gateway.emitAuctionUpdate(auction);
 
@@ -497,11 +548,11 @@ describe("EventsGateway", () => {
     });
 
     it("should emit anti-sniping extension", () => {
-      const auction = {
+      const auction: MockAuction = {
         _id: { toString: () => "auction123" },
         currentRound: 1,
         rounds: [{ roundNumber: 1, endTime: new Date() }],
-      } as any;
+      };
 
       gateway.emitAntiSnipingExtension(auction, 2);
 
@@ -517,7 +568,7 @@ describe("EventsGateway", () => {
     });
 
     it("should emit round start", () => {
-      const auction = {
+      const auction: MockAuction = {
         _id: { toString: () => "auction123" },
         rounds: [
           {
@@ -527,7 +578,7 @@ describe("EventsGateway", () => {
             endTime: new Date(),
           },
         ],
-      } as any;
+      };
 
       gateway.emitRoundStart(auction, 1);
 
@@ -543,14 +594,14 @@ describe("EventsGateway", () => {
     });
 
     it("should emit round complete with winners", () => {
-      const auction = {
+      const auction: MockAuction = {
         _id: { toString: () => "auction123" },
-      } as any;
+      };
 
-      const winners = [
+      const winners: MockWinner[] = [
         { amount: 1500, itemNumber: 1 },
         { amount: 1400, itemNumber: 2 },
-      ] as any;
+      ];
 
       gateway.emitRoundComplete(auction, 1, winners);
 
@@ -564,17 +615,17 @@ describe("EventsGateway", () => {
           winners: expect.arrayContaining([
             { amount: 1500, itemNumber: 1 },
             { amount: 1400, itemNumber: 2 },
-          ]),
+          ]) as unknown as MockWinner[],
         }),
       );
     });
 
     it("should emit auction complete", () => {
-      const auction = {
+      const auction: MockAuction = {
         _id: { toString: () => "auction123" },
         endTime: new Date(),
         rounds: [{}, {}, {}],
-      } as any;
+      };
 
       gateway.emitAuctionComplete(auction);
 
@@ -631,9 +682,9 @@ describe("EventsGateway", () => {
   });
 
   describe("Edge Cases", () => {
-    let placeBidHandler: (payload: any) => Promise<void>;
+    let placeBidHandler: (payload: BidPayload) => Promise<void>;
     let _joinHandler: (auctionId: string) => void;
-    let _connectionHandler: ((socket: any) => void) | undefined;
+    let _connectionHandler: ((socket: MockSocket) => void) | undefined;
 
     beforeEach(() => {
       gateway.setServer(mockServer);
@@ -644,7 +695,7 @@ describe("EventsGateway", () => {
         (call) => call[0] === "connection",
       );
       const connectionHandler = connCall
-        ? (connCall[1] as (socket: any) => void)
+        ? (connCall[1] as (socket: MockSocket) => void)
         : undefined;
       connectionHandler?.(mockSocket);
 
@@ -652,10 +703,10 @@ describe("EventsGateway", () => {
         (call) => call[0] === "place-bid",
       );
       placeBidHandler = placeBidCall
-        ? (placeBidCall[1] as (payload: any) => Promise<void>)
+        ? (placeBidCall[1] as (payload: BidPayload) => Promise<void>)
         : async () => {};
 
-      (mockSocket as any).userId = "user123";
+      mockSocket.userId = "user123";
 
       mockBidCacheService.placeBidUltraFast.mockResolvedValue({
         success: true,
@@ -681,7 +732,7 @@ describe("EventsGateway", () => {
         (call) => call[0] === "connection",
       );
       const connectionHandler = connCall
-        ? (connCall[1] as (socket: any) => void)
+        ? (connCall[1] as (socket: MockSocket) => void)
         : undefined;
       connectionHandler?.(mockSocket);
 
@@ -689,10 +740,10 @@ describe("EventsGateway", () => {
         (call) => call[0] === "place-bid",
       );
       placeBidHandler = placeBidCall
-        ? (placeBidCall[1] as (payload: any) => Promise<void>)
+        ? (placeBidCall[1] as (payload: BidPayload) => Promise<void>)
         : async () => {};
 
-      (mockSocket as any).userId = "user123";
+      mockSocket.userId = "user123";
 
       await placeBidHandler({ auctionId: "auction123", amount: 0 });
 

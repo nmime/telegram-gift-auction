@@ -1,6 +1,18 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
+import {
+  describe,
+  it,
+  expect,
+  beforeAll,
+  afterAll,
+  beforeEach,
+  vi,
+} from "vitest";
 import { Test, type TestingModule } from "@nestjs/testing";
-import { type INestApplication, ValidationPipe } from "@nestjs/common";
+import {
+  type INestApplication,
+  ValidationPipe,
+  type ExecutionContext,
+} from "@nestjs/common";
 import { JwtService } from "@nestjs/jwt";
 import { MongooseModule, getModelToken } from "@nestjs/mongoose";
 import { type Model, type Connection, Types } from "mongoose";
@@ -28,8 +40,59 @@ import {
   type BidDocument,
 } from "@/schemas";
 
-// MongoDB Memory Server with replica set requires time to download binary on first run
-jest.setTimeout(180000);
+interface JwtPayload {
+  sub: string;
+  username: string;
+  telegramId?: number;
+  iat?: number;
+  exp?: number;
+}
+
+interface TelegramWidgetUser {
+  id: number;
+  first_name?: string;
+  last_name?: string;
+  username?: string;
+  photo_url?: string;
+  language_code?: string;
+  is_premium?: boolean;
+  auth_date: number;
+  hash: string;
+}
+
+interface AuthUser {
+  id: string;
+  username: string;
+  balance: number;
+  frozenBalance: number;
+  telegramId?: number;
+  firstName?: string;
+  lastName?: string;
+  photoUrl?: string;
+  sub?: string;
+}
+
+// Type for mock auth request
+interface MockAuthRequest {
+  headers: {
+    authorization?: string;
+  };
+  user?: AuthUser;
+}
+
+// Type for mongoose query filter
+type MongooseQueryFilter = Record<string, unknown>;
+
+// Helper to create typed mock execution context
+function createMockExecutionContext(
+  request: MockAuthRequest,
+): ExecutionContext {
+  return {
+    switchToHttp: () => ({
+      getRequest: () => request,
+    }),
+  } as unknown as ExecutionContext;
+}
 
 describe("Authentication Integration Tests", () => {
   let app: INestApplication;
@@ -46,6 +109,7 @@ describe("Authentication Integration Tests", () => {
   let mongoConnection: Connection;
 
   beforeAll(async () => {
+    // MongoDB Memory Server with replica set requires time to download binary on first run
     // Start in-memory MongoDB replica set for integration testing
     // Replica set is required for transaction support
     mongoServer = await MongoMemoryReplSet.create({
@@ -140,9 +204,9 @@ describe("Authentication Integration Tests", () => {
         hash: "mock_hash",
       };
 
-      jest
-        .spyOn(telegramService, "validateWidgetAuth")
-        .mockReturnValue(telegramUser);
+      vi.spyOn(telegramService, "validateWidgetAuth").mockReturnValue(
+        telegramUser,
+      );
 
       const loginResponse =
         await authService.loginWithTelegramWidget(telegramUser);
@@ -151,7 +215,9 @@ describe("Authentication Integration Tests", () => {
       expect(loginResponse.user.username).toBe("testuser");
 
       // Step 2: Verify JWT token
-      const payload = await jwtService.verifyAsync(loginResponse.accessToken);
+      const payload = await jwtService.verifyAsync<JwtPayload>(
+        loginResponse.accessToken,
+      );
       expect(payload.sub).toBe(loginResponse.user.id);
       expect(payload.username).toBe("testuser");
 
@@ -175,9 +241,9 @@ describe("Authentication Integration Tests", () => {
         hash: "mock_hash",
       };
 
-      jest
-        .spyOn(telegramService, "validateWidgetAuth")
-        .mockReturnValue(telegramUser);
+      vi.spyOn(telegramService, "validateWidgetAuth").mockReturnValue(
+        telegramUser,
+      );
 
       // First login
       const firstLogin =
@@ -195,8 +261,9 @@ describe("Authentication Integration Tests", () => {
       expect(firstToken).not.toBe(secondToken);
 
       // Both tokens should be valid
-      const firstPayload = await jwtService.verifyAsync(firstToken);
-      const secondPayload = await jwtService.verifyAsync(secondToken);
+      const firstPayload = await jwtService.verifyAsync<JwtPayload>(firstToken);
+      const secondPayload =
+        await jwtService.verifyAsync<JwtPayload>(secondToken);
 
       expect(firstPayload.sub).toBe(secondPayload.sub);
       expect(firstPayload.username).toBe(secondPayload.username);
@@ -235,7 +302,7 @@ describe("Authentication Integration Tests", () => {
         username,
       });
 
-      const payload = await jwtService.verifyAsync(newToken);
+      const payload = await jwtService.verifyAsync<JwtPayload>(newToken);
       expect(payload.sub).toBe(userId);
     });
 
@@ -264,14 +331,16 @@ describe("Authentication Integration Tests", () => {
         },
       ];
 
-      jest
-        .spyOn(telegramService, "validateWidgetAuth")
-        .mockImplementation((user) => user as any);
+      vi.spyOn(telegramService, "validateWidgetAuth").mockImplementation(
+        (user: TelegramWidgetUser) => user,
+      );
 
       const logins = await Promise.all(
         users.map(
           async (user) =>
-            await authService.loginWithTelegramWidget(user as any),
+            await authService.loginWithTelegramWidget(
+              user as TelegramWidgetUser,
+            ),
         ),
       );
 
@@ -284,7 +353,7 @@ describe("Authentication Integration Tests", () => {
       for (let i = 0; i < logins.length; i++) {
         const token = tokens?.[i];
         expect(token).toBeDefined();
-        const payload = await jwtService.verifyAsync(token!);
+        const payload = await jwtService.verifyAsync<JwtPayload>(token!);
         expect(payload.username).toBe(users?.[i]?.username);
         expect(payload.telegramId).toBe(users?.[i]?.id);
       }
@@ -299,9 +368,9 @@ describe("Authentication Integration Tests", () => {
         hash: "mock_hash",
       };
 
-      jest
-        .spyOn(telegramService, "validateWidgetAuth")
-        .mockReturnValue(telegramUser);
+      vi.spyOn(telegramService, "validateWidgetAuth").mockReturnValue(
+        telegramUser,
+      );
 
       // Login
       const login = await authService.loginWithTelegramWidget(telegramUser);
@@ -330,7 +399,7 @@ describe("Authentication Integration Tests", () => {
       await expect(jwtService.verifyAsync(tamperedToken)).rejects.toThrow();
 
       // Should accept valid token
-      const payload = await jwtService.verifyAsync(validToken);
+      const payload = await jwtService.verifyAsync<JwtPayload>(validToken);
       expect(payload.sub).toBe(validUserId);
     });
 
@@ -343,9 +412,9 @@ describe("Authentication Integration Tests", () => {
         hash: "mock_hash",
       };
 
-      jest
-        .spyOn(telegramService, "validateWidgetAuth")
-        .mockReturnValue(telegramUser);
+      vi.spyOn(telegramService, "validateWidgetAuth").mockReturnValue(
+        telegramUser,
+      );
 
       const login = await authService.loginWithTelegramWidget(telegramUser);
       const token = login.accessToken;
@@ -365,7 +434,7 @@ describe("Authentication Integration Tests", () => {
       expect(transactions).toHaveLength(1);
 
       // Token should still be valid for all operations
-      const payload = await jwtService.verifyAsync(token);
+      const payload = await jwtService.verifyAsync<JwtPayload>(token);
       expect(payload.sub).toBe(login.user.id);
     });
 
@@ -378,9 +447,9 @@ describe("Authentication Integration Tests", () => {
         hash: "mock_hash",
       };
 
-      jest
-        .spyOn(telegramService, "validateWidgetAuth")
-        .mockReturnValue(telegramUser);
+      vi.spyOn(telegramService, "validateWidgetAuth").mockReturnValue(
+        telegramUser,
+      );
 
       const login = await authService.loginWithTelegramWidget(telegramUser);
 
@@ -416,9 +485,9 @@ describe("Authentication Integration Tests", () => {
         hash: "widget_hash",
       };
 
-      jest
-        .spyOn(telegramService, "validateWidgetAuth")
-        .mockReturnValue(telegramUser);
+      vi.spyOn(telegramService, "validateWidgetAuth").mockReturnValue(
+        telegramUser,
+      );
 
       // Widget login
       const login = await authService.loginWithTelegramWidget(telegramUser);
@@ -457,9 +526,9 @@ describe("Authentication Integration Tests", () => {
         hash: "existing_hash",
       };
 
-      jest
-        .spyOn(telegramService, "validateWidgetAuth")
-        .mockReturnValue(telegramUser);
+      vi.spyOn(telegramService, "validateWidgetAuth").mockReturnValue(
+        telegramUser,
+      );
 
       const login = await authService.loginWithTelegramWidget(telegramUser);
 
@@ -482,9 +551,9 @@ describe("Authentication Integration Tests", () => {
         hash: "balance_hash",
       };
 
-      jest
-        .spyOn(telegramService, "validateWidgetAuth")
-        .mockReturnValue(telegramUser);
+      vi.spyOn(telegramService, "validateWidgetAuth").mockReturnValue(
+        telegramUser,
+      );
 
       // Login
       const login = await authService.loginWithTelegramWidget(telegramUser);
@@ -497,7 +566,9 @@ describe("Authentication Integration Tests", () => {
       expect(balance.balance).toBe(750);
 
       // Token should still be valid
-      const payload = await jwtService.verifyAsync(login.accessToken);
+      const payload = await jwtService.verifyAsync<JwtPayload>(
+        login.accessToken,
+      );
       expect(payload.sub).toBe(login.user.id);
     });
 
@@ -510,9 +581,9 @@ describe("Authentication Integration Tests", () => {
         hash: "multi_hash",
       };
 
-      jest
-        .spyOn(telegramService, "validateWidgetAuth")
-        .mockReturnValue(telegramUser);
+      vi.spyOn(telegramService, "validateWidgetAuth").mockReturnValue(
+        telegramUser,
+      );
 
       // First login
       const login1 = await authService.loginWithTelegramWidget(telegramUser);
@@ -545,9 +616,9 @@ describe("Authentication Integration Tests", () => {
         hash: "logout_hash",
       };
 
-      jest
-        .spyOn(telegramService, "validateWidgetAuth")
-        .mockReturnValue(telegramUser);
+      vi.spyOn(telegramService, "validateWidgetAuth").mockReturnValue(
+        telegramUser,
+      );
 
       const login = await authService.loginWithTelegramWidget(telegramUser);
 
@@ -555,7 +626,9 @@ describe("Authentication Integration Tests", () => {
       // In real scenario, client would discard token, but server doesn't invalidate
 
       // JWT should still be valid server-side
-      const payload = await jwtService.verifyAsync(login.accessToken);
+      const payload = await jwtService.verifyAsync<JwtPayload>(
+        login.accessToken,
+      );
       expect(payload.sub).toBe(login.user.id);
 
       // Can still access services with token
@@ -573,9 +646,9 @@ describe("Authentication Integration Tests", () => {
         hash: "premium_hash",
       };
 
-      jest
-        .spyOn(telegramService, "validateWidgetAuth")
-        .mockReturnValue(premiumUser);
+      vi.spyOn(telegramService, "validateWidgetAuth").mockReturnValue(
+        premiumUser,
+      );
 
       const login = await authService.loginWithTelegramWidget(premiumUser);
 
@@ -593,9 +666,7 @@ describe("Authentication Integration Tests", () => {
         hash: "new_hash",
       };
 
-      jest
-        .spyOn(telegramService, "validateWidgetAuth")
-        .mockReturnValue(newUser);
+      vi.spyOn(telegramService, "validateWidgetAuth").mockReturnValue(newUser);
 
       // First login (new user)
       const firstLogin = await authService.loginWithTelegramWidget(newUser);
@@ -628,9 +699,9 @@ describe("Authentication Integration Tests", () => {
         hash: "conflict_hash",
       };
 
-      jest
-        .spyOn(telegramService, "validateWidgetAuth")
-        .mockReturnValue(telegramUser);
+      vi.spyOn(telegramService, "validateWidgetAuth").mockReturnValue(
+        telegramUser,
+      );
 
       const login = await authService.loginWithTelegramWidget(telegramUser);
 
@@ -648,7 +719,7 @@ describe("Authentication Integration Tests", () => {
   });
 
   describe("Service Access After Auth", () => {
-    let authenticatedUser: any;
+    let authenticatedUser: AuthUser;
     let authToken: string; // Reserved for future request authentication tests
 
     beforeEach(async () => {
@@ -660,9 +731,9 @@ describe("Authentication Integration Tests", () => {
         hash: "service_hash",
       };
 
-      jest
-        .spyOn(telegramService, "validateWidgetAuth")
-        .mockReturnValue(telegramUser);
+      vi.spyOn(telegramService, "validateWidgetAuth").mockReturnValue(
+        telegramUser,
+      );
 
       const login = await authService.loginWithTelegramWidget(telegramUser);
       authenticatedUser = login.user;
@@ -766,9 +837,9 @@ describe("Authentication Integration Tests", () => {
         hash: "second_hash",
       };
 
-      jest
-        .spyOn(telegramService, "validateWidgetAuth")
-        .mockReturnValue(telegramUser2);
+      vi.spyOn(telegramService, "validateWidgetAuth").mockReturnValue(
+        telegramUser2,
+      );
 
       const login2 = await authService.loginWithTelegramWidget(telegramUser2);
 
@@ -808,7 +879,7 @@ describe("Authentication Integration Tests", () => {
       expect(user).toBeDefined();
 
       // Verify token payload
-      const payload = await jwtService.verifyAsync(authToken);
+      const payload = await jwtService.verifyAsync<JwtPayload>(authToken);
       expect(payload.sub).toBe(authenticatedUser.id);
       expect(payload.username).toBe("serviceuser");
     });
@@ -835,7 +906,7 @@ describe("Authentication Integration Tests", () => {
   describe("Error Recovery Scenarios", () => {
     beforeEach(() => {
       // Restore all mocks to avoid interference from previous tests
-      jest.restoreAllMocks();
+      vi.restoreAllMocks();
     });
 
     it("should recover from login failure → retry login → works", async () => {
@@ -850,13 +921,15 @@ describe("Authentication Integration Tests", () => {
       let callCount = 0;
       // Mock database findOne to fail first, then work
       const originalFindOne = userModel.findOne.bind(userModel);
-      jest.spyOn(userModel, "findOne").mockImplementation((query) => {
-        callCount++;
-        if (callCount === 1) {
-          throw new Error("Database connection error");
-        }
-        return originalFindOne(query);
-      });
+      vi.spyOn(userModel, "findOne").mockImplementation(
+        (query: MongooseQueryFilter) => {
+          callCount++;
+          if (callCount === 1) {
+            throw new Error("Database connection error");
+          }
+          return originalFindOne(query);
+        },
+      );
 
       // First attempt fails due to database error
       await expect(
@@ -881,13 +954,15 @@ describe("Authentication Integration Tests", () => {
       let attemptCount = 0;
       // Mock database findOne to timeout first, then work
       const originalFindOne = userModel.findOne.bind(userModel);
-      jest.spyOn(userModel, "findOne").mockImplementation((query) => {
-        attemptCount++;
-        if (attemptCount === 1) {
-          throw new Error("Connection timeout");
-        }
-        return originalFindOne(query);
-      });
+      vi.spyOn(userModel, "findOne").mockImplementation(
+        (query: MongooseQueryFilter) => {
+          attemptCount++;
+          if (attemptCount === 1) {
+            throw new Error("Connection timeout");
+          }
+          return originalFindOne(query);
+        },
+      );
 
       // First attempt fails
       await expect(
@@ -908,21 +983,21 @@ describe("Authentication Integration Tests", () => {
         hash: "service_hash",
       };
 
-      jest
-        .spyOn(telegramService, "validateWidgetAuth")
-        .mockReturnValue(telegramUser);
+      vi.spyOn(telegramService, "validateWidgetAuth").mockReturnValue(
+        telegramUser,
+      );
 
       // Simulate service down by throwing error
-      jest
-        .spyOn(userModel, "create")
-        .mockRejectedValueOnce(new Error("Service unavailable"));
+      vi.spyOn(userModel, "create").mockRejectedValueOnce(
+        new Error("Service unavailable") as never,
+      );
 
       await expect(
         authService.loginWithTelegramWidget(telegramUser),
       ).rejects.toThrow();
 
       // Restore normal operation
-      jest.spyOn(userModel, "create").mockRestore();
+      vi.spyOn(userModel, "create").mockRestore();
 
       // Retry should succeed
       const login = await authService.loginWithTelegramWidget(telegramUser);
@@ -944,14 +1019,16 @@ describe("Authentication Integration Tests", () => {
         hash: "invalid_hash",
       };
 
-      jest
-        .spyOn(telegramService, "validateWidgetAuth")
-        .mockReturnValue(telegramUser);
+      vi.spyOn(telegramService, "validateWidgetAuth").mockReturnValue(
+        telegramUser,
+      );
 
       const login = await authService.loginWithTelegramWidget(telegramUser);
 
       // New token should work
-      const payload = await jwtService.verifyAsync(login.accessToken);
+      const payload = await jwtService.verifyAsync<JwtPayload>(
+        login.accessToken,
+      );
       expect(payload.username).toBe("invalidtokenuser");
 
       // Can access services
@@ -986,9 +1063,9 @@ describe("Authentication Integration Tests", () => {
         hash: "deleted_hash",
       };
 
-      jest
-        .spyOn(telegramService, "validateWidgetAuth")
-        .mockReturnValue(telegramUser);
+      vi.spyOn(telegramService, "validateWidgetAuth").mockReturnValue(
+        telegramUser,
+      );
 
       const login = await authService.loginWithTelegramWidget(telegramUser);
       expect(login.user.username).toBe("deleteduser");
@@ -1004,9 +1081,9 @@ describe("Authentication Integration Tests", () => {
         hash: "concurrent_hash",
       };
 
-      jest
-        .spyOn(telegramService, "validateWidgetAuth")
-        .mockReturnValue(telegramUser);
+      vi.spyOn(telegramService, "validateWidgetAuth").mockReturnValue(
+        telegramUser,
+      );
 
       // First create the user with initial login (avoid race condition in user creation)
       const initialLogin =
@@ -1042,7 +1119,6 @@ describe("Authentication Integration Tests", () => {
   });
 
   describe("Guard and Middleware Chain", () => {
-    let mockExecutionContext: any;
     let authGuard: AuthGuard;
 
     beforeEach(() => {
@@ -1058,39 +1134,33 @@ describe("Authentication Integration Tests", () => {
         hash: "chain_hash",
       };
 
-      jest
-        .spyOn(telegramService, "validateWidgetAuth")
-        .mockReturnValue(telegramUser);
+      vi.spyOn(telegramService, "validateWidgetAuth").mockReturnValue(
+        telegramUser,
+      );
 
       // Step 1: Login (creates user)
       const login = await authService.loginWithTelegramWidget(telegramUser);
 
       // Step 2: Create mock request with auth header
-      const mockRequest = {
+      const mockRequest: MockAuthRequest = {
         headers: {
           authorization: `Bearer ${login.accessToken}`,
         },
         user: undefined,
       };
 
-      mockExecutionContext = {
-        switchToHttp: () => ({
-          getRequest: () => mockRequest,
-        }),
-      };
-
       // Step 3: Guard validates token and adds user to request
       const canActivate = await authGuard.canActivate(
-        mockExecutionContext as unknown as any,
+        createMockExecutionContext(mockRequest),
       );
       expect(canActivate).toBe(true);
       expect(mockRequest.user).toBeDefined();
 
       if (mockRequest.user) {
-        expect((mockRequest.user as any).username).toBe("chainuser");
+        expect(mockRequest.user.username).toBe("chainuser");
 
         // Step 4: Service can now access user from request
-        const user = await authService.getUser((mockRequest.user as any).sub);
+        const user = await authService.getUser(mockRequest.user.sub);
         expect(user.username).toBe("chainuser");
       }
     });
@@ -1108,40 +1178,32 @@ describe("Authentication Integration Tests", () => {
         user: undefined,
       };
 
-      mockExecutionContext = {
-        switchToHttp: () => ({
-          getRequest: () => mockRequest,
-        }),
-      };
-
       // Guard validates and modifies request
-      await authGuard.canActivate(mockExecutionContext as unknown as any);
+      await authGuard.canActivate(
+        createMockExecutionContext(mockRequest as MockAuthRequest),
+      );
 
       // Verify user was added to request
       expect(mockRequest.user).toBeDefined();
       if (mockRequest.user) {
-        expect((mockRequest.user as any).sub).toBe("507f1f77bcf86cd799439013");
-        expect((mockRequest.user as any).username).toBe("modifieduser");
+        expect((mockRequest.user as AuthUser).sub).toBe(
+          "507f1f77bcf86cd799439013",
+        );
+        expect((mockRequest.user as AuthUser).username).toBe("modifieduser");
       }
     });
 
     it("should propagate errors in middleware chain", async () => {
-      const mockRequest = {
+      const mockRequest: MockAuthRequest = {
         headers: {
           authorization: "Bearer invalid.token.here",
         },
       };
 
-      mockExecutionContext = {
-        switchToHttp: () => ({
-          getRequest: () => mockRequest,
-        }),
-      };
-
       // Guard should throw UnauthorizedException
-      await expect(authGuard.canActivate(mockExecutionContext)).rejects.toThrow(
-        "Invalid token",
-      );
+      await expect(
+        authGuard.canActivate(createMockExecutionContext(mockRequest)),
+      ).rejects.toThrow("Invalid token");
     });
 
     it("should chain multiple guards correctly", async () => {
@@ -1157,21 +1219,15 @@ describe("Authentication Integration Tests", () => {
       });
 
       // Test first guard (AuthGuard)
-      const mockRequest1 = {
+      const mockRequest1: MockAuthRequest = {
         headers: {
           authorization: `Bearer ${token}`,
         },
         user: undefined,
       };
 
-      const mockContext1 = {
-        switchToHttp: () => ({
-          getRequest: () => mockRequest1,
-        }),
-      };
-
       const result1 = await authGuard.canActivate(
-        mockContext1 as unknown as any,
+        createMockExecutionContext(mockRequest1),
       );
       expect(result1).toBe(true);
       expect(mockRequest1.user).toBeDefined();
@@ -1179,14 +1235,14 @@ describe("Authentication Integration Tests", () => {
       // If there were additional guards, they would receive the modified request
       // For this test, we verify the request state is correct for downstream guards
       if (mockRequest1.user) {
-        expect((mockRequest1.user as any).sub).toBe(user._id.toString());
-        expect((mockRequest1.user as any).username).toBe("guardchainuser");
+        expect(mockRequest1.user.sub).toBe(user._id.toString());
+        expect(mockRequest1.user.username).toBe("guardchainuser");
       }
     });
   });
 
   describe("Integration with Real Services", () => {
-    let authenticatedUser: any;
+    let authenticatedUser: AuthUser;
 
     beforeEach(async () => {
       const telegramUser = {
@@ -1197,9 +1253,9 @@ describe("Authentication Integration Tests", () => {
         hash: "real_hash",
       };
 
-      jest
-        .spyOn(telegramService, "validateWidgetAuth")
-        .mockReturnValue(telegramUser);
+      vi.spyOn(telegramService, "validateWidgetAuth").mockReturnValue(
+        telegramUser,
+      );
 
       const login = await authService.loginWithTelegramWidget(telegramUser);
       authenticatedUser = login.user;
@@ -1279,9 +1335,9 @@ describe("Authentication Integration Tests", () => {
         hash: "second_hash",
       };
 
-      jest
-        .spyOn(telegramService, "validateWidgetAuth")
-        .mockReturnValue(telegramUser2);
+      vi.spyOn(telegramService, "validateWidgetAuth").mockReturnValue(
+        telegramUser2,
+      );
 
       const login2 = await authService.loginWithTelegramWidget(telegramUser2);
 

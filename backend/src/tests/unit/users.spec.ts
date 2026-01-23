@@ -1,4 +1,12 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
+import {
+  describe,
+  it,
+  expect,
+  beforeEach,
+  afterEach,
+  vi,
+  type Mock,
+} from "vitest";
 import { Test, type TestingModule } from "@nestjs/testing";
 import { getModelToken, getConnectionToken } from "@nestjs/mongoose";
 import {
@@ -12,10 +20,21 @@ import { Types } from "mongoose";
 
 describe("UsersService", () => {
   let service: UsersService;
-  let mockUserModel: any;
-  let mockTransactionModel: any;
-  let mockConnection: any;
-  let mockSession: any;
+  let mockUserModel: {
+    findById: Mock;
+    findOne: Mock;
+    findByIdAndUpdate: Mock;
+    findOneAndUpdate: Mock;
+    create: Mock;
+  };
+  let mockTransactionModel: { create: Mock };
+  let mockConnection: { startSession: Mock };
+  let mockSession: {
+    startTransaction: Mock;
+    commitTransaction: Mock;
+    abortTransaction: Mock;
+    endSession: Mock;
+  };
 
   const mockUserId = new Types.ObjectId();
   const mockAuctionId = new Types.ObjectId();
@@ -24,29 +43,29 @@ describe("UsersService", () => {
   beforeEach(async () => {
     // Mock session
     mockSession = {
-      startTransaction: jest.fn(),
-      commitTransaction: jest.fn(),
-      abortTransaction: jest.fn(),
-      endSession: jest.fn(),
+      startTransaction: vi.fn(),
+      commitTransaction: vi.fn(),
+      abortTransaction: vi.fn(),
+      endSession: vi.fn(),
     };
 
     // Mock connection
     mockConnection = {
-      startSession: jest.fn().mockResolvedValue(mockSession),
+      startSession: vi.fn().mockResolvedValue(mockSession),
     };
 
     // Mock UserModel
     mockUserModel = {
-      findById: jest.fn(),
-      findOne: jest.fn(),
-      findByIdAndUpdate: jest.fn(),
-      findOneAndUpdate: jest.fn(),
-      create: jest.fn(),
+      findById: vi.fn(),
+      findOne: vi.fn(),
+      findByIdAndUpdate: vi.fn(),
+      findOneAndUpdate: vi.fn(),
+      create: vi.fn(),
     };
 
     // Mock TransactionModel
     mockTransactionModel = {
-      create: jest.fn(),
+      create: vi.fn(),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -71,7 +90,7 @@ describe("UsersService", () => {
   });
 
   afterEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   describe("Service Initialization", () => {
@@ -161,7 +180,7 @@ describe("UsersService", () => {
       };
 
       mockUserModel.findById.mockReturnValue({
-        session: jest.fn().mockResolvedValue(mockUser),
+        session: vi.fn().mockResolvedValue(mockUser),
       });
       mockUserModel.findOneAndUpdate.mockResolvedValue(mockUpdatedUser);
       mockTransactionModel.create.mockResolvedValue([{}]);
@@ -208,7 +227,7 @@ describe("UsersService", () => {
 
     it("should throw NotFoundException when user does not exist", async () => {
       mockUserModel.findById.mockReturnValue({
-        session: jest.fn().mockResolvedValue(null),
+        session: vi.fn().mockResolvedValue(null),
       });
 
       await expect(service.deposit(mockUserId.toString(), 100)).rejects.toThrow(
@@ -226,7 +245,7 @@ describe("UsersService", () => {
       };
 
       mockUserModel.findById.mockReturnValue({
-        session: jest.fn().mockResolvedValue(mockUser),
+        session: vi.fn().mockResolvedValue(mockUser),
       });
       mockUserModel.findOneAndUpdate.mockResolvedValue(null);
 
@@ -247,7 +266,7 @@ describe("UsersService", () => {
       };
 
       mockUserModel.findById.mockReturnValue({
-        session: jest.fn().mockResolvedValue(mockUser),
+        session: vi.fn().mockResolvedValue(mockUser),
       });
       mockUserModel.findOneAndUpdate.mockRejectedValue(
         new Error("Database error"),
@@ -274,7 +293,7 @@ describe("UsersService", () => {
       };
 
       mockUserModel.findById.mockReturnValue({
-        session: jest.fn().mockResolvedValue(mockUser),
+        session: vi.fn().mockResolvedValue(mockUser),
       });
       mockUserModel.findOneAndUpdate.mockResolvedValue(mockUpdatedUser);
       mockTransactionModel.create.mockResolvedValue([{}]);
@@ -300,7 +319,7 @@ describe("UsersService", () => {
       };
 
       mockUserModel.findById.mockReturnValue({
-        session: jest.fn().mockResolvedValue(mockUser),
+        session: vi.fn().mockResolvedValue(mockUser),
       });
       mockUserModel.findOneAndUpdate.mockResolvedValue(mockUpdatedUser);
       mockTransactionModel.create.mockResolvedValue([{}]);
@@ -343,7 +362,7 @@ describe("UsersService", () => {
 
     it("should throw NotFoundException when user does not exist", async () => {
       mockUserModel.findById.mockReturnValue({
-        session: jest.fn().mockResolvedValue(null),
+        session: vi.fn().mockResolvedValue(null),
       });
 
       await expect(
@@ -360,7 +379,7 @@ describe("UsersService", () => {
       };
 
       mockUserModel.findById.mockReturnValue({
-        session: jest.fn().mockResolvedValue(mockUser),
+        session: vi.fn().mockResolvedValue(mockUser),
       });
 
       await expect(
@@ -380,7 +399,7 @@ describe("UsersService", () => {
       };
 
       mockUserModel.findById.mockReturnValue({
-        session: jest.fn().mockResolvedValue(mockUser),
+        session: vi.fn().mockResolvedValue(mockUser),
       });
       mockUserModel.findOneAndUpdate.mockResolvedValue(null);
 
@@ -406,7 +425,7 @@ describe("UsersService", () => {
       };
 
       mockUserModel.findById.mockReturnValue({
-        session: jest.fn().mockResolvedValue(mockUser),
+        session: vi.fn().mockResolvedValue(mockUser),
       });
       mockUserModel.findOneAndUpdate.mockResolvedValue(mockUpdatedUser);
       mockTransactionModel.create.mockResolvedValue([{}]);
@@ -430,7 +449,7 @@ describe("UsersService", () => {
       };
 
       mockUserModel.findById.mockReturnValue({
-        session: jest.fn().mockResolvedValue(mockUser),
+        session: vi.fn().mockResolvedValue(mockUser),
       });
       mockUserModel.findOneAndUpdate.mockResolvedValue(mockUpdatedUser);
       mockTransactionModel.create.mockResolvedValue([{}]);
@@ -545,7 +564,7 @@ describe("UsersService", () => {
       };
 
       mockUserModel.findById.mockReturnValue({
-        session: jest.fn().mockResolvedValue(mockUser),
+        session: vi.fn().mockResolvedValue(mockUser),
       });
       mockUserModel.findOneAndUpdate.mockResolvedValue(mockUpdatedUser);
       mockTransactionModel.create.mockResolvedValue([{}]);
@@ -586,7 +605,7 @@ describe("UsersService", () => {
 
     it("should throw NotFoundException when user does not exist", async () => {
       mockUserModel.findById.mockReturnValue({
-        session: jest.fn().mockResolvedValue(null),
+        session: vi.fn().mockResolvedValue(null),
       });
 
       await expect(
@@ -609,7 +628,7 @@ describe("UsersService", () => {
       };
 
       mockUserModel.findById.mockReturnValue({
-        session: jest.fn().mockResolvedValue(mockUser),
+        session: vi.fn().mockResolvedValue(mockUser),
       });
 
       await expect(
@@ -641,7 +660,7 @@ describe("UsersService", () => {
       };
 
       mockUserModel.findById.mockReturnValue({
-        session: jest.fn().mockResolvedValue(mockUser),
+        session: vi.fn().mockResolvedValue(mockUser),
       });
       mockUserModel.findOneAndUpdate.mockResolvedValue(null);
 
@@ -680,7 +699,7 @@ describe("UsersService", () => {
       };
 
       mockUserModel.findById.mockReturnValue({
-        session: jest.fn().mockResolvedValue(mockUser),
+        session: vi.fn().mockResolvedValue(mockUser),
       });
       mockUserModel.findOneAndUpdate.mockResolvedValue(mockUpdatedUser);
       mockTransactionModel.create.mockResolvedValue([{}]);
@@ -707,7 +726,7 @@ describe("UsersService", () => {
       };
 
       mockUserModel.findById.mockReturnValue({
-        session: jest.fn().mockResolvedValue(mockUser),
+        session: vi.fn().mockResolvedValue(mockUser),
       });
       mockUserModel.findOneAndUpdate.mockResolvedValue(mockUpdatedUser);
       mockTransactionModel.create.mockResolvedValue([{}]);
@@ -748,7 +767,7 @@ describe("UsersService", () => {
 
     it("should throw NotFoundException when user does not exist", async () => {
       mockUserModel.findById.mockReturnValue({
-        session: jest.fn().mockResolvedValue(null),
+        session: vi.fn().mockResolvedValue(null),
       });
 
       await expect(
@@ -771,7 +790,7 @@ describe("UsersService", () => {
       };
 
       mockUserModel.findById.mockReturnValue({
-        session: jest.fn().mockResolvedValue(mockUser),
+        session: vi.fn().mockResolvedValue(mockUser),
       });
       mockUserModel.findOneAndUpdate.mockResolvedValue(null);
 
@@ -812,7 +831,7 @@ describe("UsersService", () => {
       };
 
       mockUserModel.findById.mockReturnValue({
-        session: jest.fn().mockResolvedValue(mockUser),
+        session: vi.fn().mockResolvedValue(mockUser),
       });
       mockUserModel.findOneAndUpdate.mockResolvedValue(mockUpdatedUser);
       mockTransactionModel.create.mockResolvedValue([{}]);
@@ -852,7 +871,7 @@ describe("UsersService", () => {
 
     it("should throw NotFoundException when user does not exist", async () => {
       mockUserModel.findById.mockReturnValue({
-        session: jest.fn().mockResolvedValue(null),
+        session: vi.fn().mockResolvedValue(null),
       });
 
       await expect(
@@ -875,7 +894,7 @@ describe("UsersService", () => {
       };
 
       mockUserModel.findById.mockReturnValue({
-        session: jest.fn().mockResolvedValue(mockUser),
+        session: vi.fn().mockResolvedValue(mockUser),
       });
       mockUserModel.findOneAndUpdate.mockResolvedValue(null);
 
@@ -916,7 +935,7 @@ describe("UsersService", () => {
       };
 
       mockUserModel.findById.mockReturnValue({
-        session: jest.fn().mockResolvedValue(mockUser),
+        session: vi.fn().mockResolvedValue(mockUser),
       });
       mockUserModel.findOneAndUpdate.mockResolvedValue(mockUpdatedUser);
       mockTransactionModel.create.mockResolvedValue([{}]);
@@ -957,7 +976,7 @@ describe("UsersService", () => {
 
     it("should throw NotFoundException when user does not exist", async () => {
       mockUserModel.findById.mockReturnValue({
-        session: jest.fn().mockResolvedValue(null),
+        session: vi.fn().mockResolvedValue(null),
       });
 
       await expect(
@@ -980,7 +999,7 @@ describe("UsersService", () => {
       };
 
       mockUserModel.findById.mockReturnValue({
-        session: jest.fn().mockResolvedValue(mockUser),
+        session: vi.fn().mockResolvedValue(mockUser),
       });
       mockUserModel.findOneAndUpdate.mockResolvedValue(null);
 
@@ -1095,7 +1114,7 @@ describe("UsersService", () => {
       };
 
       mockUserModel.findById.mockReturnValue({
-        session: jest.fn().mockResolvedValue(mockUser),
+        session: vi.fn().mockResolvedValue(mockUser),
       });
 
       const result = await service.findByIdForUpdate(mockUserId, mockSession);
@@ -1105,7 +1124,7 @@ describe("UsersService", () => {
 
     it("should return null when user not found", async () => {
       mockUserModel.findById.mockReturnValue({
-        session: jest.fn().mockResolvedValue(null),
+        session: vi.fn().mockResolvedValue(null),
       });
 
       const result = await service.findByIdForUpdate(mockUserId, mockSession);
@@ -1134,7 +1153,7 @@ describe("UsersService", () => {
         };
 
         mockUserModel.findById.mockReturnValue({
-          session: jest.fn().mockResolvedValue(mockUser),
+          session: vi.fn().mockResolvedValue(mockUser),
         });
         mockUserModel.findOneAndUpdate.mockResolvedValue(mockUpdatedUser);
         mockTransactionModel.create.mockResolvedValue([{}]);
@@ -1166,7 +1185,7 @@ describe("UsersService", () => {
       };
 
       mockUserModel.findById.mockReturnValue({
-        session: jest.fn().mockResolvedValue(mockUser),
+        session: vi.fn().mockResolvedValue(mockUser),
       });
       mockUserModel.findOneAndUpdate.mockResolvedValue(mockUserAfterFreeze);
       mockTransactionModel.create.mockResolvedValue([{}]);
@@ -1195,7 +1214,7 @@ describe("UsersService", () => {
 
       // First attempt succeeds
       mockUserModel.findById.mockReturnValueOnce({
-        session: jest.fn().mockResolvedValue(mockUser),
+        session: vi.fn().mockResolvedValue(mockUser),
       });
       mockUserModel.findOneAndUpdate.mockResolvedValueOnce({
         _id: mockUserId,
@@ -1208,7 +1227,7 @@ describe("UsersService", () => {
 
       // Second concurrent attempt fails due to version mismatch
       mockUserModel.findById.mockReturnValueOnce({
-        session: jest.fn().mockResolvedValue(mockUser),
+        session: vi.fn().mockResolvedValue(mockUser),
       });
       mockUserModel.findOneAndUpdate.mockResolvedValueOnce(null);
 
@@ -1230,7 +1249,7 @@ describe("UsersService", () => {
       };
 
       mockUserModel.findById.mockReturnValue({
-        session: jest.fn().mockResolvedValue(mockUser),
+        session: vi.fn().mockResolvedValue(mockUser),
       });
       mockUserModel.findOneAndUpdate.mockResolvedValue(mockUpdatedUser);
       mockTransactionModel.create.mockResolvedValue([{}]);
@@ -1253,7 +1272,7 @@ describe("UsersService", () => {
       };
 
       mockUserModel.findById.mockReturnValue({
-        session: jest.fn().mockResolvedValue(mockUser),
+        session: vi.fn().mockResolvedValue(mockUser),
       });
       mockUserModel.findOneAndUpdate.mockResolvedValue(mockUpdatedUser);
       mockTransactionModel.create.mockResolvedValue([{}]);
@@ -1266,6 +1285,10 @@ describe("UsersService", () => {
 
   describe("recordTransaction", () => {
     it("should record bid_freeze transaction", async () => {
+      const anyObjectId = expect.any(
+        Types.ObjectId,
+      ) as unknown as Types.ObjectId;
+
       mockTransactionModel.create.mockResolvedValue([{}]);
 
       await service.recordTransaction(
@@ -1284,7 +1307,7 @@ describe("UsersService", () => {
       expect(mockTransactionModel.create).toHaveBeenCalledWith(
         [
           expect.objectContaining({
-            userId: expect.any(Types.ObjectId),
+            userId: anyObjectId,
             type: TransactionType.BID_FREEZE,
             amount: 100,
             balanceBefore: 1000,
@@ -1409,6 +1432,10 @@ describe("UsersService", () => {
     });
 
     it("should handle string userId by converting to ObjectId", async () => {
+      const anyObjectId = expect.any(
+        Types.ObjectId,
+      ) as unknown as Types.ObjectId;
+
       mockTransactionModel.create.mockResolvedValue([{}]);
 
       await service.recordTransaction(
@@ -1427,7 +1454,7 @@ describe("UsersService", () => {
       expect(mockTransactionModel.create).toHaveBeenCalledWith(
         [
           expect.objectContaining({
-            userId: expect.any(Types.ObjectId),
+            userId: anyObjectId,
           }),
         ],
         { session: mockSession },

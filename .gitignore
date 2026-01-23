@@ -28,6 +28,9 @@ npm-debug.log*
 # Test coverage
 coverage/
 
+# TypeScript build info
+*.tsbuildinfo
+
 # Temporary files
 *.tmp
 *.temp

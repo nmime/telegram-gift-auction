@@ -1,24 +1,37 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
+import { describe, it, expect, beforeEach, vi, type Mock } from "vitest";
 import { Test, type TestingModule } from "@nestjs/testing";
 import { getModelToken } from "@nestjs/mongoose";
 import { Types } from "mongoose";
 import { TransactionsService } from "@/modules/transactions/transactions.service";
 import { Transaction, TransactionType } from "@/schemas";
 
+interface MockTransactionModel {
+  find: Mock;
+  findById: Mock;
+  findOne: Mock;
+  create: Mock;
+  countDocuments: Mock;
+  sort: Mock;
+  skip: Mock;
+  limit: Mock;
+  exec: Mock;
+  aggregate: Mock;
+}
+
 describe("TransactionsService", () => {
   let service: TransactionsService;
 
-  const mockTransactionModel = {
-    find: jest.fn().mockReturnThis(),
-    findById: jest.fn(),
-    findOne: jest.fn(),
-    create: jest.fn(),
-    countDocuments: jest.fn(),
-    sort: jest.fn().mockReturnThis(),
-    skip: jest.fn().mockReturnThis(),
-    limit: jest.fn().mockReturnThis(),
-    exec: jest.fn(),
-    aggregate: jest.fn(),
+  const mockTransactionModel: MockTransactionModel = {
+    find: vi.fn().mockReturnThis(),
+    findById: vi.fn(),
+    findOne: vi.fn(),
+    create: vi.fn(),
+    countDocuments: vi.fn(),
+    sort: vi.fn().mockReturnThis(),
+    skip: vi.fn().mockReturnThis(),
+    limit: vi.fn().mockReturnThis(),
+    exec: vi.fn(),
+    aggregate: vi.fn(),
   };
 
   beforeEach(async () => {
@@ -33,7 +46,7 @@ describe("TransactionsService", () => {
     }).compile();
 
     service = module.get<TransactionsService>(TransactionsService);
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   it("should be defined", () => {
@@ -120,7 +133,7 @@ describe("TransactionsService", () => {
     });
 
     it("should return transactions with both custom limit and offset", async () => {
-      const mockTransactions: any[] = [];
+      const mockTransactions: ReturnType<typeof mockTransactionModel.exec> = [];
       mockTransactionModel.exec.mockResolvedValue(mockTransactions);
 
       const result = await service.getByUser(userId, 25, 100);
@@ -665,7 +678,7 @@ describe("TransactionsService", () => {
       mockTransactionModel.exec.mockResolvedValue([]);
 
       // Service passes null through, MongoDB will handle it
-      const result = await service.getByUser(null as any);
+      const result = await service.getByUser(null as unknown as string);
       expect(result).toEqual([]);
     });
 
@@ -673,7 +686,7 @@ describe("TransactionsService", () => {
       mockTransactionModel.exec.mockResolvedValue([]);
 
       // Service passes undefined through, MongoDB will handle it
-      const result = await service.getByUser(undefined as any);
+      const result = await service.getByUser(undefined as unknown as string);
       expect(result).toEqual([]);
     });
 

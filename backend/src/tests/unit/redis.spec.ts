@@ -1,32 +1,71 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
+import {
+  describe,
+  it,
+  expect,
+  beforeEach,
+  afterEach,
+  vi,
+  type Mock,
+} from "vitest";
 import { Test, type TestingModule } from "@nestjs/testing";
 import { BidCacheService } from "@/modules/redis/bid-cache.service";
 import { LeaderboardService } from "@/modules/redis/leaderboard.service";
 import { redisClient } from "@/modules/redis/constants";
-import type Redis from "ioredis";
+
+interface RedisPipeline {
+  hset: Mock;
+  exec: Mock;
+  del?: Mock;
+  zadd?: Mock;
+}
+
+interface BalancePipeline {
+  hgetall: Mock;
+  exec: Mock;
+}
+
+interface BidPipeline {
+  hgetall: Mock;
+  exec: Mock;
+}
 
 describe("Redis Services", () => {
   describe("BidCacheService", () => {
     let service: BidCacheService;
-    let mockRedis: jest.Mocked<Redis>;
+    let mockRedis: {
+      script: Mock;
+      evalsha: Mock;
+      hset: Mock;
+      hgetall: Mock;
+      smembers: Mock;
+      del: Mock;
+      srem: Mock;
+      pipeline: Mock;
+      scan: Mock;
+      exists: Mock;
+      zrevrange: Mock;
+      zcard: Mock;
+      zrem: Mock;
+      duplicate: Mock;
+    };
 
     beforeEach(async () => {
       mockRedis = {
-        script: jest.fn(),
-        evalsha: jest.fn(),
-        hset: jest.fn(),
-        hgetall: jest.fn(),
-        smembers: jest.fn(),
-        del: jest.fn(),
-        srem: jest.fn(),
-        pipeline: jest.fn(),
-        scan: jest.fn(),
-        exists: jest.fn(),
-        zrevrange: jest.fn(),
-        zcard: jest.fn(),
-        zrem: jest.fn(),
-        duplicate: jest.fn().mockReturnThis(),
-      } as unknown as jest.Mocked<Redis>;
+        script: vi.fn(),
+        evalsha: vi.fn(),
+        hset: vi.fn(),
+        hgetall: vi.fn(),
+        smembers: vi.fn(),
+        del: vi.fn(),
+        srem: vi.fn(),
+        pipeline: vi.fn(),
+        scan: vi.fn(),
+        exists: vi.fn(),
+        zrevrange: vi.fn(),
+        zcard: vi.fn(),
+        zrem: vi.fn(),
+        duplicate: vi.fn().mockReturnThis(),
+      };
 
       const module: TestingModule = await Test.createTestingModule({
         providers: [
@@ -42,7 +81,7 @@ describe("Redis Services", () => {
     });
 
     afterEach(() => {
-      jest.clearAllMocks();
+      vi.clearAllMocks();
     });
 
     describe("Module Initialization", () => {
@@ -89,11 +128,11 @@ describe("Redis Services", () => {
       });
 
       it("should warmup balances for multiple users", async () => {
-        const mockPipeline = {
-          hset: jest.fn().mockReturnThis(),
-          exec: jest.fn().mockResolvedValue([]),
+        const mockPipeline: RedisPipeline = {
+          hset: vi.fn().mockReturnThis(),
+          exec: vi.fn().mockResolvedValue([]),
         };
-        mockRedis.pipeline.mockReturnValue(mockPipeline as any);
+        mockRedis.pipeline.mockReturnValue(mockPipeline);
 
         const users = [
           { id: "user1", balance: 1000, frozenBalance: 0 },
@@ -114,13 +153,13 @@ describe("Redis Services", () => {
       });
 
       it("should warmup existing bids", async () => {
-        const mockPipeline = {
-          del: jest.fn().mockReturnThis(),
-          hset: jest.fn().mockReturnThis(),
-          zadd: jest.fn().mockReturnThis(),
-          exec: jest.fn().mockResolvedValue([]),
+        const mockPipeline: RedisPipeline = {
+          del: vi.fn().mockReturnThis(),
+          hset: vi.fn().mockReturnThis(),
+          zadd: vi.fn().mockReturnThis(),
+          exec: vi.fn().mockResolvedValue([]),
         };
-        mockRedis.pipeline.mockReturnValue(mockPipeline as any);
+        mockRedis.pipeline.mockReturnValue(mockPipeline);
 
         const bids = [
           {
@@ -542,16 +581,16 @@ describe("Redis Services", () => {
           .mockResolvedValueOnce(["user1"])
           .mockResolvedValueOnce(["user1"]);
 
-        const mockBalancePipeline = {
-          hgetall: jest.fn().mockReturnThis(),
-          exec: jest
+        const mockBalancePipeline: BalancePipeline = {
+          hgetall: vi.fn().mockReturnThis(),
+          exec: vi
             .fn()
             .mockResolvedValue([[null, { available: "5000", frozen: "1500" }]]),
         };
 
-        const mockBidPipeline = {
-          hgetall: jest.fn().mockReturnThis(),
-          exec: jest
+        const mockBidPipeline: BidPipeline = {
+          hgetall: vi.fn().mockReturnThis(),
+          exec: vi
             .fn()
             .mockResolvedValue([
               [
@@ -562,8 +601,8 @@ describe("Redis Services", () => {
         };
 
         mockRedis.pipeline
-          .mockReturnValueOnce(mockBalancePipeline as any)
-          .mockReturnValueOnce(mockBidPipeline as any);
+          .mockReturnValueOnce(mockBalancePipeline)
+          .mockReturnValueOnce(mockBidPipeline);
 
         const result = await service.getSyncData("auction1");
 
@@ -693,18 +732,26 @@ describe("Redis Services", () => {
 
   describe("LeaderboardService", () => {
     let service: LeaderboardService;
-    let mockRedis: jest.Mocked<Redis>;
+    let mockRedis: {
+      zadd: Mock;
+      zrem: Mock;
+      zrevrange: Mock;
+      zrevrank: Mock;
+      zscore: Mock;
+      zcard: Mock;
+      del: Mock;
+    };
 
     beforeEach(async () => {
       mockRedis = {
-        zadd: jest.fn(),
-        zrem: jest.fn(),
-        zrevrange: jest.fn(),
-        zrevrank: jest.fn(),
-        zscore: jest.fn(),
-        zcard: jest.fn(),
-        del: jest.fn(),
-      } as unknown as jest.Mocked<Redis>;
+        zadd: vi.fn(),
+        zrem: vi.fn(),
+        zrevrange: vi.fn(),
+        zrevrank: vi.fn(),
+        zscore: vi.fn(),
+        zcard: vi.fn(),
+        del: vi.fn(),
+      };
 
       const module: TestingModule = await Test.createTestingModule({
         providers: [
@@ -720,7 +767,7 @@ describe("Redis Services", () => {
     });
 
     afterEach(() => {
-      jest.clearAllMocks();
+      vi.clearAllMocks();
     });
 
     it("should be defined", () => {
@@ -729,7 +776,7 @@ describe("Redis Services", () => {
 
     describe("Add/Update Bid", () => {
       it("should add bid to leaderboard", async () => {
-        mockRedis.zadd.mockResolvedValue(1 as any);
+        mockRedis.zadd.mockResolvedValue(1 as unknown as number);
 
         await service.addBid("auction1", "user1", 1000, new Date("2024-01-01"));
 
@@ -741,7 +788,7 @@ describe("Redis Services", () => {
       });
 
       it("should update existing bid", async () => {
-        mockRedis.zadd.mockResolvedValue(0 as any);
+        mockRedis.zadd.mockResolvedValue(0 as unknown as number);
 
         await service.updateBid(
           "auction1",
@@ -759,7 +806,7 @@ describe("Redis Services", () => {
 
       it("should preserve timestamp for tie-breaking", async () => {
         const timestamp = new Date("2024-01-01T12:00:00.000Z");
-        mockRedis.zadd.mockResolvedValue(1 as any);
+        mockRedis.zadd.mockResolvedValue(1 as unknown as number);
 
         await service.addBid("auction1", "user1", 1000, timestamp);
 
@@ -910,7 +957,7 @@ describe("Redis Services", () => {
     describe("Rebuild Leaderboard", () => {
       it("should rebuild leaderboard from bid array", async () => {
         mockRedis.del.mockResolvedValue(1);
-        mockRedis.zadd.mockResolvedValue(3 as any);
+        mockRedis.zadd.mockResolvedValue(3 as unknown as number);
 
         const bids = [
           {
@@ -983,7 +1030,7 @@ describe("Redis Services", () => {
     describe("Score Encoding/Decoding", () => {
       it("should correctly encode higher amounts with higher scores", async () => {
         const timestamp = new Date("2024-01-01T12:00:00.000Z");
-        mockRedis.zadd.mockResolvedValue(1 as any);
+        mockRedis.zadd.mockResolvedValue(1 as unknown as number);
 
         await service.addBid("auction1", "user1", 1000, timestamp);
         await service.addBid("auction1", "user2", 2000, timestamp);
@@ -1002,7 +1049,7 @@ describe("Redis Services", () => {
       it("should prioritize earlier timestamps for same amount", async () => {
         const earlier = new Date("2024-01-01T12:00:00.000Z");
         const later = new Date("2024-01-01T12:00:01.000Z");
-        mockRedis.zadd.mockResolvedValue(1 as any);
+        mockRedis.zadd.mockResolvedValue(1 as unknown as number);
 
         await service.addBid("auction1", "user1", 1000, earlier);
         await service.addBid("auction1", "user2", 1000, later);

@@ -1,3 +1,4 @@
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { Test, type TestingModule } from "@nestjs/testing";
 import { AuditController } from "@/modules/audit/audit.controller";
 import { AuditLogService } from "@/modules/audit/services";
@@ -29,16 +30,16 @@ describe("AuditController", () => {
   };
 
   const mockAuditLogService = {
-    findWithFilters: jest.fn(),
-    countLogs: jest.fn(),
-    getSummaryByAction: jest.fn(),
-    getSummaryByUser: jest.fn(),
-    findByUser: jest.fn(),
-    findByAction: jest.fn(),
+    findWithFilters: vi.fn(),
+    countLogs: vi.fn(),
+    getSummaryByAction: vi.fn(),
+    getSummaryByUser: vi.fn(),
+    findByUser: vi.fn(),
+    findByAction: vi.fn(),
   };
 
   const mockAuthGuard = {
-    canActivate: jest.fn().mockReturnValue(true),
+    canActivate: vi.fn().mockReturnValue(true),
   };
 
   beforeEach(async () => {
@@ -60,7 +61,7 @@ describe("AuditController", () => {
   });
 
   afterEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   describe("Controller Initialization", () => {
@@ -376,18 +377,21 @@ describe("AuditController", () => {
     });
 
     it("should return mapped response DTOs", async () => {
+      const anyString = expect.any(String) as unknown as string;
+      const anyDate = expect.any(Date) as unknown as Date;
+
       const userId = mockUserId.toString();
       mockAuditLogService.findByUser.mockResolvedValue([mockAuditLog]);
 
       const result = await controller.getUserLogs(userId);
 
       expect(result?.[0]).toMatchObject({
-        id: expect.any(String),
-        userId: expect.any(String),
-        action: expect.any(String),
-        resource: expect.any(String),
-        result: expect.any(String),
-        createdAt: expect.any(Date),
+        id: anyString,
+        userId: anyString,
+        action: anyString,
+        resource: anyString,
+        result: anyString,
+        createdAt: anyDate,
       });
     });
 
@@ -460,7 +464,10 @@ describe("AuditController", () => {
 
   describe("Authorization and Security", () => {
     it("should be protected by AuthGuard", () => {
-      const guards = Reflect.getMetadata("__guards__", AuditController);
+      const guards = Reflect.getMetadata(
+        "__guards__",
+        AuditController,
+      ) as unknown[];
       expect(guards).toContain(AuthGuard);
     });
 
@@ -545,7 +552,10 @@ describe("AuditController", () => {
       // Negative values should be handled by validation or default to 0
       await controller.getLogs({ limit: -10, skip: -5 });
 
-      const callArgs = mockAuditLogService.findWithFilters.mock.calls[0][0];
+      const callArgs = mockAuditLogService.findWithFilters.mock.calls[0][0] as {
+        limit?: number;
+        skip?: number;
+      };
       // Either validation rejects or defaults are used
       expect(callArgs.limit).toBeDefined();
       expect(callArgs.skip).toBeDefined();

@@ -1,4 +1,12 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
+import {
+  describe,
+  it,
+  expect,
+  beforeEach,
+  afterEach,
+  vi,
+  type Mock,
+} from "vitest";
 import { Test, type TestingModule } from "@nestjs/testing";
 import { JwtService } from "@nestjs/jwt";
 import { UnauthorizedException } from "@nestjs/common";
@@ -12,30 +20,80 @@ import type {
   ITelegramWebAppAuth,
 } from "@/modules/auth/dto";
 
+// Type interfaces for mock objects
+interface MockAuthService {
+  loginWithTelegramWidget: Mock;
+  loginWithTelegramMiniApp: Mock;
+  validateUser: Mock;
+  validateToken: Mock;
+  getUser: Mock;
+}
+
+interface MockTelegramService {
+  validateWidgetAuth: Mock;
+  validateWebAppInitData: Mock;
+}
+
+interface MockJwtService {
+  verifyAsync: Mock;
+  signAsync: Mock;
+}
+
+interface UserDocument {
+  _id: string | { toString: () => string };
+  username: string;
+  balance: number;
+  frozenBalance: number;
+  telegramId?: number;
+  firstName?: string;
+  lastName?: string;
+  photoUrl?: string;
+  languageCode?: string;
+  isPremium?: boolean;
+}
+
+interface ValidatedWebAppData {
+  query_id: string;
+  user: {
+    id: number;
+    first_name: string;
+    last_name?: string;
+    username?: string;
+    language_code?: string;
+    is_premium?: boolean;
+  };
+  auth_date: number;
+  hash: string;
+}
+
+// Typed helpers for expect.any() to avoid no-unsafe-assignment warnings
+const anyNumber = expect.any(Number) as unknown as number;
+const anyString = expect.any(String) as unknown as string;
+
 describe("AuthController", () => {
   let controller: AuthController;
-  let mockAuthService: jest.Mocked<AuthService>;
-  let mockTelegramService: jest.Mocked<TelegramService>;
-  let mockJwtService: jest.Mocked<JwtService>;
+  let mockAuthService: MockAuthService;
+  let mockTelegramService: MockTelegramService;
+  let mockJwtService: MockJwtService;
 
   beforeEach(async () => {
     mockAuthService = {
-      loginWithTelegramWidget: jest.fn(),
-      loginWithTelegramMiniApp: jest.fn(),
-      validateUser: jest.fn(),
-      validateToken: jest.fn(),
-      getUser: jest.fn(),
-    } as any;
+      loginWithTelegramWidget: vi.fn(),
+      loginWithTelegramMiniApp: vi.fn(),
+      validateUser: vi.fn(),
+      validateToken: vi.fn(),
+      getUser: vi.fn(),
+    };
 
     mockTelegramService = {
-      validateWidgetAuth: jest.fn(),
-      validateWebAppInitData: jest.fn(),
-    } as any;
+      validateWidgetAuth: vi.fn(),
+      validateWebAppInitData: vi.fn(),
+    };
 
     mockJwtService = {
-      verifyAsync: jest.fn(),
-      signAsync: jest.fn(),
-    } as any;
+      verifyAsync: vi.fn(),
+      signAsync: vi.fn(),
+    };
 
     const module: TestingModule = await Test.createTestingModule({
       controllers: [AuthController],
@@ -59,7 +117,7 @@ describe("AuthController", () => {
   });
 
   afterEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   describe("Controller Initialization", () => {
@@ -68,11 +126,16 @@ describe("AuthController", () => {
     });
 
     it("should inject AuthService", () => {
-      expect((controller as any).authService).toBe(mockAuthService);
+      expect(
+        (controller as unknown as { authService: MockAuthService }).authService,
+      ).toBe(mockAuthService);
     });
 
     it("should inject TelegramService", () => {
-      expect((controller as any).telegramService).toBe(mockTelegramService);
+      expect(
+        (controller as unknown as { telegramService: MockTelegramService })
+          .telegramService,
+      ).toBe(mockTelegramService);
     });
   });
 
@@ -231,7 +294,7 @@ describe("AuthController", () => {
       expect(mockAuthService.loginWithTelegramWidget).toHaveBeenCalledWith(
         expect.objectContaining({
           is_premium: true,
-        }),
+        }) as ITelegramWidgetAuth,
       );
     });
   });
@@ -333,7 +396,7 @@ describe("AuthController", () => {
       mockTelegramService.validateWebAppInitData.mockReturnValue({
         auth_date: 1234567890,
         hash: "hash",
-      } as any);
+      } as unknown as ValidatedWebAppData);
       mockAuthService.loginWithTelegramMiniApp.mockRejectedValue(
         new UnauthorizedException("User data not found in init data"),
       );
@@ -386,29 +449,31 @@ describe("AuthController", () => {
   });
 
   describe("POST /auth/logout - logout", () => {
-    it("should return success status on logout", async () => {
-      const result = await controller.logout();
+    it("should return success status on logout", () => {
+      const result = controller.logout();
 
       expect(result).toEqual({ success: true });
       expect(result.success).toBe(true);
     });
 
-    it("should always return success regardless of state", async () => {
-      const result1 = await controller.logout();
-      const result2 = await controller.logout();
-      const result3 = await controller.logout();
+    it("should always return success regardless of state", () => {
+      const result1 = controller.logout();
+      const result2 = controller.logout();
+      const result3 = controller.logout();
 
       expect(result1).toEqual({ success: true });
       expect(result2).toEqual({ success: true });
       expect(result3).toEqual({ success: true });
     });
 
-    it("should not throw errors", async () => {
-      await expect(controller.logout()).resolves.not.toThrow();
+    it("should not throw errors", () => {
+      // Simply ensure the method completes without throwing
+      const result = controller.logout();
+      expect(result).toBeDefined();
     });
 
-    it("should return correct response structure", async () => {
-      const result = await controller.logout();
+    it("should return correct response structure", () => {
+      const result = controller.logout();
 
       expect(result).toHaveProperty("success");
       expect(typeof result.success).toBe("boolean");
@@ -422,7 +487,7 @@ describe("AuthController", () => {
         username: "johndoe",
         telegramId: 123456789,
       },
-    } as any;
+    } as unknown as AuthenticatedRequest;
 
     const mockUserDocument = {
       _id: "user_id_123",
@@ -438,7 +503,9 @@ describe("AuthController", () => {
     };
 
     it("should return current user data when user exists", async () => {
-      mockAuthService.validateUser.mockResolvedValue(mockUserDocument as any);
+      mockAuthService.validateUser.mockResolvedValue(
+        mockUserDocument as unknown as UserDocument,
+      );
 
       const result = await controller.me(mockRequest);
 
@@ -473,11 +540,13 @@ describe("AuthController", () => {
         frozenBalance: 0,
       };
 
-      mockAuthService.validateUser.mockResolvedValue(minimalUser as any);
+      mockAuthService.validateUser.mockResolvedValue(
+        minimalUser as unknown as UserDocument,
+      );
 
       const result = await controller.me({
         user: { sub: "user_id_456", username: "minimaluser" },
-      } as any);
+      } as unknown as AuthenticatedRequest);
 
       expect(result).toMatchObject({
         id: "user_id_456",
@@ -497,7 +566,9 @@ describe("AuthController", () => {
         frozenBalance: 50,
       };
 
-      mockAuthService.validateUser.mockResolvedValue(userWithObjectId as any);
+      mockAuthService.validateUser.mockResolvedValue(
+        userWithObjectId as unknown as UserDocument,
+      );
 
       const result = await controller.me(mockRequest);
 
@@ -517,11 +588,13 @@ describe("AuthController", () => {
         languageCode: "ru",
       };
 
-      mockAuthService.validateUser.mockResolvedValue(fullUser as any);
+      mockAuthService.validateUser.mockResolvedValue(
+        fullUser as unknown as UserDocument,
+      );
 
       const result = await controller.me({
         user: { sub: "user_id_full", username: "fulluser" },
-      } as any);
+      } as unknown as AuthenticatedRequest);
 
       expect(result).toEqual({
         id: "user_id_full",
@@ -552,7 +625,7 @@ describe("AuthController", () => {
           sub: "different_user_id",
           username: "differentuser",
         },
-      } as any;
+      } as unknown as AuthenticatedRequest;
 
       mockAuthService.validateUser.mockResolvedValue(null);
 
@@ -592,7 +665,9 @@ describe("AuthController", () => {
       });
 
       await expect(
-        controller.loginWithTelegramWidget(null as any),
+        controller.loginWithTelegramWidget(
+          null as unknown as ITelegramWidgetAuth,
+        ),
       ).rejects.toThrow(UnauthorizedException);
     });
 
@@ -656,13 +731,13 @@ describe("AuthController", () => {
       const result = await controller.loginWithTelegramWidget(widgetAuth);
 
       expect(result).toMatchObject({
-        user: expect.objectContaining({
-          id: expect.any(String),
-          username: expect.any(String),
-          balance: expect.any(Number),
-          frozenBalance: expect.any(Number),
-        }),
-        accessToken: expect.any(String),
+        user: {
+          id: anyString,
+          username: anyString,
+          balance: anyNumber,
+          frozenBalance: anyNumber,
+        },
+        accessToken: anyString,
       });
     });
 
@@ -674,17 +749,19 @@ describe("AuthController", () => {
         frozenBalance: 20,
       };
 
-      mockAuthService.validateUser.mockResolvedValue(mockUser as any);
+      mockAuthService.validateUser.mockResolvedValue(
+        mockUser as unknown as UserDocument,
+      );
 
       const result = await controller.me({
         user: { sub: "format_id", username: "formatuser" },
-      } as any);
+      } as unknown as AuthenticatedRequest);
 
       expect(result).toMatchObject({
-        id: expect.any(String),
-        username: expect.any(String),
-        balance: expect.any(Number),
-        frozenBalance: expect.any(Number),
+        id: anyString,
+        username: anyString,
+        balance: anyNumber,
+        frozenBalance: anyNumber,
       });
     });
 
@@ -696,11 +773,13 @@ describe("AuthController", () => {
         frozenBalance: 100.25,
       };
 
-      mockAuthService.validateUser.mockResolvedValue(mockUser as any);
+      mockAuthService.validateUser.mockResolvedValue(
+        mockUser as unknown as UserDocument,
+      );
 
       const result = await controller.me({
         user: { sub: "balance_id", username: "balanceuser" },
-      } as any);
+      } as unknown as AuthenticatedRequest);
 
       expect(typeof result?.balance).toBe("number");
       expect(typeof result?.frozenBalance).toBe("number");
@@ -820,7 +899,7 @@ describe("AuthController", () => {
           username: "sequential",
           telegramId: 999,
         },
-      } as any;
+      } as unknown as AuthenticatedRequest;
 
       const userDocument = {
         _id: "sequential_user_id",
@@ -831,7 +910,9 @@ describe("AuthController", () => {
         firstName: "Sequential",
       };
 
-      mockAuthService.validateUser.mockResolvedValue(userDocument as any);
+      mockAuthService.validateUser.mockResolvedValue(
+        userDocument as unknown as UserDocument,
+      );
 
       const meResult = await controller.me(meRequest);
 

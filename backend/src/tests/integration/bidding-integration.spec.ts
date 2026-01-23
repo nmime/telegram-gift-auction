@@ -1,3 +1,13 @@
+import {
+  describe,
+  it,
+  expect,
+  beforeAll,
+  afterAll,
+  afterEach,
+  beforeEach,
+  vi,
+} from "vitest";
 import { Test, type TestingModule } from "@nestjs/testing";
 import type { INestApplication } from "@nestjs/common";
 import { getModelToken, MongooseModule } from "@nestjs/mongoose";
@@ -37,9 +47,6 @@ import { EventsGateway } from "@/modules/events/events.gateway";
 import { redisClient } from "@/modules/redis/constants";
 import type { ICreateAuction, IPlaceBid } from "@/modules/auctions/dto";
 import { ConfigModule } from "@nestjs/config";
-
-// MongoDB Memory Server with replica set requires time to download binary on first run
-jest.setTimeout(180000);
 
 describe("Bidding Integration Tests", () => {
   let app: INestApplication;
@@ -1153,7 +1160,7 @@ describe("Bidding Integration Tests", () => {
 
     it("should create auction → place bid → WebSocket event sent", async () => {
       // Mock or spy on eventsGateway
-      const _emitSpy = jest.spyOn(eventsGateway, "emitAuctionUpdate");
+      const _emitSpy = vi.spyOn(eventsGateway, "emitAuctionUpdate");
 
       await auctionsService.placeBid(
         testAuction._id.toString(),

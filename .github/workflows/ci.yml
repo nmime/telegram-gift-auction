@@ -116,23 +116,21 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Run unit tests
-        run: pnpm test -- --testPathIgnorePatterns=integration --bail
+        run: pnpm --filter backend test:unit
         env:
           CI: true
           NODE_OPTIONS: --max-old-space-size=4096
         timeout-minutes: 20
 
       - name: Run integration tests
-        run: |
-          export MONGOMS_REPLSET=rs0
-          pnpm test -- --testPathPatterns=integration --bail --maxWorkers=1
+        run: pnpm --filter backend test:integration
         env:
           CI: true
           NODE_OPTIONS: --max-old-space-size=4096
+          MONGOMS_REPLSET: rs0
           MONGODB_MEMORY_SERVER_DOWNLOAD_CACHE: /tmp/mongodb-memory-server
           MONGODB_MEMORY_SERVER_SKIP_DOWNLOAD: 'false'
         timeout-minutes: 30
-        continue-on-error: true
 
       - name: Generate coverage report
         run: pnpm --filter backend test:cov

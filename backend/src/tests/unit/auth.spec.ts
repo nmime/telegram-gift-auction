@@ -1,4 +1,13 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
+import {
+  describe,
+  it,
+  expect,
+  beforeEach,
+  afterEach,
+  vi,
+  type Mock,
+  type Mocked,
+} from "vitest";
 import { Test, type TestingModule } from "@nestjs/testing";
 import { getModelToken } from "@nestjs/mongoose";
 import { JwtService } from "@nestjs/jwt";
@@ -8,33 +17,56 @@ import { AuthService } from "@/modules/auth/auth.service";
 import { TelegramService } from "@/modules/auth/telegram.service";
 import { AuthController } from "@/modules/auth/auth.controller";
 import { AuthGuard } from "@/common/guards/auth.guard";
+import type { AuthenticatedRequest } from "@/common/types";
 import { User } from "@/schemas";
 
+// Mock object interfaces for proper typing
+interface ConfigServiceMock {
+  get: Mock<(key: string) => unknown>;
+}
+
+interface MockRequest {
+  headers: {
+    authorization?: string;
+  };
+  user?: Record<string, unknown> | null;
+}
+
+// Typed helpers for expect.any() to avoid no-unsafe-assignment warnings
+const anyNumber = expect.any(Number) as unknown as number;
+const anyString = expect.any(String) as unknown as string;
+
 // Mock @grammyjs/validator
-jest.mock("@grammyjs/validator", () => ({
-  validateWebAppData: jest.fn(),
-  checkSignature: jest.fn(),
+vi.mock("@grammyjs/validator", () => ({
+  validateWebAppData: vi.fn(),
+  checkSignature: vi.fn(),
 }));
 
+import * as grammyValidator from "@grammyjs/validator";
+
 describe("Auth Module", () => {
-  const mockValidator = jest.requireMock("@grammyjs/validator");
-  const checkSignature = mockValidator.checkSignature as jest.Mock;
+  const mockValidator = vi.mocked(grammyValidator);
+  const checkSignature = mockValidator.checkSignature as unknown as Mock;
   describe("AuthService", () => {
     let service: AuthService;
-    let mockUserModel: any;
-    let mockJwtService: jest.Mocked<JwtService>;
+    let mockUserModel: {
+      findOne: Mock;
+      create: Mock;
+      findById: Mock;
+    };
+    let mockJwtService: Mocked<Pick<JwtService, "signAsync" | "verifyAsync">>;
 
     beforeEach(async () => {
       mockUserModel = {
-        findOne: jest.fn(),
-        create: jest.fn(),
-        findById: jest.fn(),
+        findOne: vi.fn(),
+        create: vi.fn(),
+        findById: vi.fn(),
       };
 
       mockJwtService = {
-        signAsync: jest.fn(),
-        verifyAsync: jest.fn(),
-      } as any;
+        signAsync: vi.fn(),
+        verifyAsync: vi.fn(),
+      };
 
       const module: TestingModule = await Test.createTestingModule({
         providers: [
@@ -54,7 +86,7 @@ describe("Auth Module", () => {
     });
 
     afterEach(() => {
-      jest.clearAllMocks();
+      vi.clearAllMocks();
     });
 
     describe("Service Initialization", () => {
@@ -171,7 +203,7 @@ describe("Auth Module", () => {
           isPremium: false,
           balance: 100,
           frozenBalance: 50,
-          save: jest.fn().mockResolvedValue(true),
+          save: vi.fn().mockResolvedValue(true),
         };
 
         mockUserModel.findOne.mockResolvedValue(existingUser);
@@ -200,7 +232,7 @@ describe("Auth Module", () => {
           firstName: "OldFirst",
           balance: 100,
           frozenBalance: 50,
-          save: jest.fn().mockResolvedValue(true),
+          save: vi.fn().mockResolvedValue(true),
         };
 
         mockUserModel.findOne.mockResolvedValue(existingUser);
@@ -218,7 +250,7 @@ describe("Auth Module", () => {
           telegramId: 123456789,
           balance: 100,
           frozenBalance: 50,
-          save: jest.fn().mockResolvedValue(true),
+          save: vi.fn().mockResolvedValue(true),
         };
 
         mockUserModel.findOne.mockResolvedValue(existingUser);
@@ -243,7 +275,7 @@ describe("Auth Module", () => {
           photoUrl: "https://example.com/photo.jpg",
           balance: 100,
           frozenBalance: 50,
-          save: jest.fn().mockResolvedValue(true),
+          save: vi.fn().mockResolvedValue(true),
         };
 
         mockUserModel.findOne.mockResolvedValue(existingUser);
@@ -331,10 +363,10 @@ describe("Auth Module", () => {
         const invalidInitData = {
           auth_date: Math.floor(Date.now() / 1000),
           hash: "mock_hash",
-        };
+        } as unknown;
 
         await expect(
-          service.loginWithTelegramMiniApp(invalidInitData as any),
+          service.loginWithTelegramMiniApp(invalidInitData),
         ).rejects.toThrow(UnauthorizedException);
       });
 
@@ -496,22 +528,21 @@ describe("Auth Module", () => {
 
   describe("TelegramService", () => {
     let service: TelegramService;
-    let mockConfigService: jest.Mocked<ConfigService>;
-    let validateWebAppData: jest.Mock;
-    let checkSignature: jest.Mock;
+    let mockConfigService: ConfigServiceMock;
+    let validateWebAppData: Mock;
+    let checkSignature: Mock;
 
     beforeEach(async () => {
-      // Get mocked functions from jest.mock at top of file
-      const validator = jest.requireMock("@grammyjs/validator");
-      validateWebAppData = validator.validateWebAppData;
-      checkSignature = validator.checkSignature;
+      // Get mocked functions from vi.mock at top of file
+      validateWebAppData = mockValidator.validateWebAppData as Mock;
+      checkSignature = mockValidator.checkSignature as Mock;
 
       mockConfigService = {
-        get: jest.fn((key: string) => {
+        get: vi.fn((key: string) => {
           if (key === "BOT_TOKEN") return "test_bot_token_123";
           return undefined;
         }),
-      } as any;
+      };
 
       const module: TestingModule = await Test.createTestingModule({
         providers: [
@@ -527,7 +558,7 @@ describe("Auth Module", () => {
     });
 
     afterEach(() => {
-      jest.clearAllMocks();
+      vi.clearAllMocks();
     });
 
     describe("Service Initialization", () => {
@@ -564,7 +595,7 @@ describe("Auth Module", () => {
           expect.objectContaining({
             id: "123456789",
             first_name: "John",
-            auth_date: expect.any(String),
+            auth_date: anyString,
             hash: "valid_hash",
           }),
         );
@@ -580,11 +611,12 @@ describe("Auth Module", () => {
 
       it("should throw if bot token not configured", () => {
         mockConfigService.get.mockReturnValue(undefined);
-        const newService = new TelegramService(mockConfigService);
 
-        expect(() => newService.validateWidgetAuth(validPayload)).toThrow(
-          "Bot token not configured",
-        );
+        // Constructor throws when BOT_TOKEN is not configured
+        expect(
+          () =>
+            new TelegramService(mockConfigService as unknown as ConfigService),
+        ).toThrow("BOT_TOKEN is not configured");
       });
 
       it("should throw if auth_date is too old (>24 hours)", () => {
@@ -688,18 +720,19 @@ describe("Auth Module", () => {
             last_name: "Smith",
             username: "janesmith",
           },
-          auth_date: expect.any(Number),
+          auth_date: anyNumber,
           hash: "valid_hash",
         });
       });
 
       it("should throw if bot token not configured", () => {
         mockConfigService.get.mockReturnValue(undefined);
-        const newService = new TelegramService(mockConfigService);
 
-        expect(() => newService.validateWebAppInitData(validInitData)).toThrow(
-          "Bot token not configured",
-        );
+        // Constructor throws when BOT_TOKEN is not configured
+        expect(
+          () =>
+            new TelegramService(mockConfigService as unknown as ConfigService),
+        ).toThrow("BOT_TOKEN is not configured");
       });
 
       it("should throw if init data too large (>4096 bytes)", () => {
@@ -805,20 +838,27 @@ describe("Auth Module", () => {
 
   describe("AuthController", () => {
     let controller: AuthController;
-    let mockAuthService: jest.Mocked<AuthService>;
-    let mockTelegramService: jest.Mocked<TelegramService>;
+    let mockAuthService: {
+      loginWithTelegramWidget: Mock;
+      loginWithTelegramMiniApp: Mock;
+      validateUser: Mock;
+    };
+    let mockTelegramService: {
+      validateWidgetAuth: Mock;
+      validateWebAppInitData: Mock;
+    };
 
     beforeEach(async () => {
       mockAuthService = {
-        loginWithTelegramWidget: jest.fn(),
-        loginWithTelegramMiniApp: jest.fn(),
-        validateUser: jest.fn(),
-      } as any;
+        loginWithTelegramWidget: vi.fn(),
+        loginWithTelegramMiniApp: vi.fn(),
+        validateUser: vi.fn(),
+      };
 
       mockTelegramService = {
-        validateWidgetAuth: jest.fn(),
-        validateWebAppInitData: jest.fn(),
-      } as any;
+        validateWidgetAuth: vi.fn(),
+        validateWebAppInitData: vi.fn(),
+      };
 
       const module: TestingModule = await Test.createTestingModule({
         controllers: [AuthController],
@@ -834,8 +874,8 @@ describe("Auth Module", () => {
           {
             provide: JwtService,
             useValue: {
-              verifyAsync: jest.fn(),
-              signAsync: jest.fn(),
+              verifyAsync: vi.fn(),
+              signAsync: vi.fn(),
             },
           },
         ],
@@ -845,7 +885,7 @@ describe("Auth Module", () => {
     });
 
     afterEach(() => {
-      jest.clearAllMocks();
+      vi.clearAllMocks();
     });
 
     describe("Controller Initialization", () => {
@@ -952,15 +992,15 @@ describe("Auth Module", () => {
     });
 
     describe("POST /auth/logout", () => {
-      it("should return success on logout", async () => {
-        const result = await controller.logout();
+      it("should return success on logout", () => {
+        const result = controller.logout();
 
         expect(result).toEqual({ success: true });
       });
 
-      it("should always return success regardless of user state", async () => {
-        const result1 = await controller.logout();
-        const result2 = await controller.logout();
+      it("should always return success regardless of user state", () => {
+        const result1 = controller.logout();
+        const result2 = controller.logout();
 
         expect(result1).toEqual({ success: true });
         expect(result2).toEqual({ success: true });
@@ -973,7 +1013,7 @@ describe("Auth Module", () => {
           sub: "user_id_123",
           username: "johndoe",
         },
-      } as any;
+      } as unknown as MockRequest;
 
       it("should return current user data", async () => {
         const mockUser = {
@@ -988,9 +1028,11 @@ describe("Auth Module", () => {
           languageCode: "en",
         };
 
-        mockAuthService.validateUser.mockResolvedValue(mockUser as any);
+        mockAuthService.validateUser.mockResolvedValue(mockUser as unknown);
 
-        const result = await controller.me(mockRequest);
+        const result = await controller.me(
+          mockRequest as unknown as AuthenticatedRequest,
+        );
 
         expect(mockAuthService.validateUser).toHaveBeenCalledWith(
           "user_id_123",
@@ -1024,9 +1066,11 @@ describe("Auth Module", () => {
           frozenBalance: 0,
         };
 
-        mockAuthService.validateUser.mockResolvedValue(mockUser as any);
+        mockAuthService.validateUser.mockResolvedValue(mockUser as unknown);
 
-        const result = await controller.me(mockRequest);
+        const result = await controller.me(
+          mockRequest as unknown as AuthenticatedRequest,
+        );
 
         expect(result).toMatchObject({
           id: "user_id_123",
@@ -1040,12 +1084,12 @@ describe("Auth Module", () => {
 
   describe("AuthGuard", () => {
     let guard: AuthGuard;
-    let mockJwtService: jest.Mocked<JwtService>;
+    let mockJwtService: { verifyAsync: Mock };
 
     beforeEach(async () => {
       mockJwtService = {
-        verifyAsync: jest.fn(),
-      } as any;
+        verifyAsync: vi.fn(),
+      };
 
       const module: TestingModule = await Test.createTestingModule({
         providers: [
@@ -1061,7 +1105,7 @@ describe("Auth Module", () => {
     });
 
     afterEach(() => {
-      jest.clearAllMocks();
+      vi.clearAllMocks();
     });
 
     describe("Guard Initialization", () => {
@@ -1083,7 +1127,7 @@ describe("Auth Module", () => {
               user: null,
             }),
           }),
-        } as any;
+        } as unknown as ExecutionContext;
       };
 
       it("should allow request with valid Bearer token", async () => {
@@ -1165,7 +1209,7 @@ describe("Auth Module", () => {
           switchToHttp: () => ({
             getRequest: () => mockRequest,
           }),
-        } as any;
+        } as unknown as ExecutionContext;
 
         await guard.canActivate(context);
 
@@ -1197,20 +1241,27 @@ describe("Auth Module", () => {
   describe("Edge Cases and Error Scenarios", () => {
     describe("Null and Undefined Handling", () => {
       let service: AuthService;
-      let mockUserModel: any;
-      let mockJwtService: jest.Mocked<JwtService>;
+      let mockUserModel: {
+        findOne: Mock;
+        create: Mock;
+        findById: Mock;
+      };
+      let mockJwtService: {
+        signAsync: Mock;
+        verifyAsync: Mock;
+      };
 
       beforeEach(async () => {
         mockUserModel = {
-          findOne: jest.fn(),
-          create: jest.fn(),
-          findById: jest.fn(),
+          findOne: vi.fn(),
+          create: vi.fn(),
+          findById: vi.fn(),
         };
 
         mockJwtService = {
-          signAsync: jest.fn(),
-          verifyAsync: jest.fn(),
-        } as any;
+          signAsync: vi.fn(),
+          verifyAsync: vi.fn(),
+        };
 
         const module: TestingModule = await Test.createTestingModule({
           providers: [
@@ -1250,9 +1301,9 @@ describe("Auth Module", () => {
       let telegramService: TelegramService;
 
       beforeEach(async () => {
-        const mockConfigService = {
-          get: jest.fn(() => "test_bot_token"),
-        } as any;
+        const mockConfigService: { get: Mock } = {
+          get: vi.fn(() => "test_bot_token"),
+        };
 
         const module: TestingModule = await Test.createTestingModule({
           providers: [

@@ -1,4 +1,12 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
+import {
+  describe,
+  it,
+  expect,
+  beforeEach,
+  afterEach,
+  vi,
+  type Mock,
+} from "vitest";
 import { Test, type TestingModule } from "@nestjs/testing";
 import { Types } from "mongoose";
 import { JwtService } from "@nestjs/jwt";
@@ -8,9 +16,39 @@ import { BidStatus, AuctionStatus } from "@/schemas";
 import { type AuthenticatedRequest, AuthGuard } from "@/common";
 import type { IBidResponse } from "@/modules/bids/dto";
 
+// Mock bid type that supports both populated and unpopulated auction
+interface MockPopulatedAuction {
+  _id: Types.ObjectId;
+  title: string;
+  status: AuctionStatus;
+}
+
+interface MockBid {
+  _id: Types.ObjectId | string;
+  auctionId: Types.ObjectId | string | MockPopulatedAuction;
+  userId: Types.ObjectId;
+  amount: number;
+  status: BidStatus;
+  wonRound?: number | null;
+  itemNumber?: number | null;
+  createdAt: Date;
+}
+
+// Mock BSON ObjectId for edge case tests (unused in current tests)
+// interface _MockBsonObjectId {
+//   _bsontype: string;
+//   id: Uint8Array;
+//   toString: () => string;
+// }
+
 describe("BidsController", () => {
   let controller: BidsController;
-  let mockBidsService: jest.Mocked<BidsService>;
+  let mockBidsService: {
+    getByUser: Mock;
+    getByAuction: Mock;
+    getActiveByAuction: Mock;
+    countByAuction: Mock;
+  };
 
   const mockUserId = new Types.ObjectId("507f1f77bcf86cd799439011");
   const mockAuctionId = new Types.ObjectId("507f1f77bcf86cd799439012");
@@ -28,11 +66,11 @@ describe("BidsController", () => {
 
   beforeEach(async () => {
     mockBidsService = {
-      getByUser: jest.fn(),
-      getByAuction: jest.fn(),
-      getActiveByAuction: jest.fn(),
-      countByAuction: jest.fn(),
-    } as any;
+      getByUser: vi.fn(),
+      getByAuction: vi.fn(),
+      getActiveByAuction: vi.fn(),
+      countByAuction: vi.fn(),
+    };
 
     const module: TestingModule = await Test.createTestingModule({
       controllers: [BidsController],
@@ -44,21 +82,21 @@ describe("BidsController", () => {
         {
           provide: JwtService,
           useValue: {
-            verifyAsync: jest.fn(),
-            signAsync: jest.fn(),
+            verifyAsync: vi.fn(),
+            signAsync: vi.fn(),
           },
         },
       ],
     })
       .overrideGuard(AuthGuard)
-      .useValue({ canActivate: jest.fn(() => true) })
+      .useValue({ canActivate: vi.fn(() => true) })
       .compile();
 
     controller = module.get<BidsController>(BidsController);
   });
 
   afterEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   describe("Controller Initialization", () => {
@@ -91,7 +129,7 @@ describe("BidsController", () => {
           },
         ];
 
-        mockBidsService.getByUser.mockResolvedValue(mockBids as any);
+        mockBidsService.getByUser.mockResolvedValue(mockBids as MockBid[]);
 
         const request = createMockRequest(mockUserId.toString());
         const result = await controller.getMyBids(request);
@@ -125,7 +163,7 @@ describe("BidsController", () => {
           },
         ];
 
-        mockBidsService.getByUser.mockResolvedValue(mockBids as any);
+        mockBidsService.getByUser.mockResolvedValue(mockBids as MockBid[]);
 
         const request = createMockRequest(mockUserId.toString());
         const result = await controller.getMyBids(request);
@@ -154,7 +192,7 @@ describe("BidsController", () => {
           },
         ];
 
-        mockBidsService.getByUser.mockResolvedValue(mockBids as any);
+        mockBidsService.getByUser.mockResolvedValue(mockBids as MockBid[]);
 
         const request = createMockRequest(mockUserId.toString());
         const result = await controller.getMyBids(request);
@@ -214,7 +252,7 @@ describe("BidsController", () => {
           },
         ];
 
-        mockBidsService.getByUser.mockResolvedValue(mockBids as any);
+        mockBidsService.getByUser.mockResolvedValue(mockBids as MockBid[]);
 
         const request = createMockRequest(mockUserId.toString());
         const result = await controller.getMyBids(request);
@@ -256,7 +294,7 @@ describe("BidsController", () => {
           },
         ];
 
-        mockBidsService.getByUser.mockResolvedValue(mockBids as any);
+        mockBidsService.getByUser.mockResolvedValue(mockBids as MockBid[]);
 
         const request = createMockRequest(mockUserId.toString());
         const result = await controller.getMyBids(request);
@@ -278,7 +316,7 @@ describe("BidsController", () => {
           },
         ];
 
-        mockBidsService.getByUser.mockResolvedValue(mockBids as any);
+        mockBidsService.getByUser.mockResolvedValue(mockBids as MockBid[]);
 
         const request = createMockRequest(mockUserId.toString());
         const result = await controller.getMyBids(request);
@@ -302,7 +340,7 @@ describe("BidsController", () => {
           },
         ];
 
-        mockBidsService.getByUser.mockResolvedValue(mockBids as any);
+        mockBidsService.getByUser.mockResolvedValue(mockBids as MockBid[]);
 
         const request = createMockRequest(mockUserId.toString());
         const result = await controller.getMyBids(request);
@@ -323,7 +361,7 @@ describe("BidsController", () => {
           },
         ];
 
-        mockBidsService.getByUser.mockResolvedValue(mockBids as any);
+        mockBidsService.getByUser.mockResolvedValue(mockBids as MockBid[]);
 
         const request = createMockRequest(mockUserId.toString());
         const result = await controller.getMyBids(request);
@@ -343,7 +381,7 @@ describe("BidsController", () => {
           },
         ];
 
-        mockBidsService.getByUser.mockResolvedValue(mockBids as any);
+        mockBidsService.getByUser.mockResolvedValue(mockBids as MockBid[]);
 
         const request = createMockRequest(mockUserId.toString());
         const result = await controller.getMyBids(request);
@@ -369,7 +407,7 @@ describe("BidsController", () => {
           },
         ];
 
-        mockBidsService.getByUser.mockResolvedValue(mockBids as any);
+        mockBidsService.getByUser.mockResolvedValue(mockBids as MockBid[]);
 
         const request = createMockRequest(mockUserId.toString());
         const result = await controller.getMyBids(request);
@@ -393,7 +431,7 @@ describe("BidsController", () => {
           },
         ];
 
-        mockBidsService.getByUser.mockResolvedValue(mockBids as any);
+        mockBidsService.getByUser.mockResolvedValue(mockBids as MockBid[]);
 
         const request = createMockRequest(mockUserId.toString());
         const result = await controller.getMyBids(request);
@@ -418,7 +456,7 @@ describe("BidsController", () => {
           },
         ];
 
-        mockBidsService.getByUser.mockResolvedValue(mockBids as any);
+        mockBidsService.getByUser.mockResolvedValue(mockBids as MockBid[]);
 
         const request = createMockRequest(mockUserId.toString());
         const result = await controller.getMyBids(request);
@@ -442,7 +480,7 @@ describe("BidsController", () => {
           },
         ];
 
-        mockBidsService.getByUser.mockResolvedValue(mockBids as any);
+        mockBidsService.getByUser.mockResolvedValue(mockBids as MockBid[]);
 
         const request = createMockRequest(mockUserId.toString());
         const result = await controller.getMyBids(request);
@@ -464,7 +502,7 @@ describe("BidsController", () => {
           },
         ];
 
-        mockBidsService.getByUser.mockResolvedValue(mockBids as any);
+        mockBidsService.getByUser.mockResolvedValue(mockBids as MockBid[]);
 
         const request = createMockRequest(mockUserId.toString());
         const result = await controller.getMyBids(request);
@@ -492,7 +530,7 @@ describe("BidsController", () => {
           },
         ];
 
-        mockBidsService.getByUser.mockResolvedValue(mockBids as any);
+        mockBidsService.getByUser.mockResolvedValue(mockBids as MockBid[]);
 
         const request = createMockRequest(mockUserId.toString());
         const result = await controller.getMyBids(request);
@@ -518,7 +556,7 @@ describe("BidsController", () => {
           },
         ];
 
-        mockBidsService.getByUser.mockResolvedValue(mockBids as any);
+        mockBidsService.getByUser.mockResolvedValue(mockBids as MockBid[]);
 
         const request = createMockRequest(mockUserId.toString());
         const result = await controller.getMyBids(request);
@@ -543,7 +581,7 @@ describe("BidsController", () => {
           },
         ];
 
-        mockBidsService.getByUser.mockResolvedValue(mockBids as any);
+        mockBidsService.getByUser.mockResolvedValue(mockBids as MockBid[]);
 
         const request = createMockRequest(mockUserId.toString());
         const result = await controller.getMyBids(request);
@@ -569,7 +607,7 @@ describe("BidsController", () => {
           },
         ];
 
-        mockBidsService.getByUser.mockResolvedValue(mockBids as any);
+        mockBidsService.getByUser.mockResolvedValue(mockBids as MockBid[]);
 
         const request = createMockRequest(mockUserId.toString());
         const result: IBidResponse[] = await controller.getMyBids(request);
@@ -589,6 +627,8 @@ describe("BidsController", () => {
       });
 
       it("should ensure auction field has correct structure when populated", async () => {
+        const anyString = expect.any(String) as unknown as string;
+
         const mockBids = [
           {
             _id: mockBidId,
@@ -604,15 +644,15 @@ describe("BidsController", () => {
           },
         ];
 
-        mockBidsService.getByUser.mockResolvedValue(mockBids as any);
+        mockBidsService.getByUser.mockResolvedValue(mockBids as MockBid[]);
 
         const request = createMockRequest(mockUserId.toString());
         const result = await controller.getMyBids(request);
 
         expect(result[0]?.auction).toMatchObject({
-          id: expect.any(String),
-          title: expect.any(String),
-          status: expect.any(String),
+          id: anyString,
+          title: anyString,
+          status: anyString,
         });
       });
 
@@ -628,7 +668,7 @@ describe("BidsController", () => {
           },
         ];
 
-        mockBidsService.getByUser.mockResolvedValue(mockBids as any);
+        mockBidsService.getByUser.mockResolvedValue(mockBids as MockBid[]);
 
         const request = createMockRequest(mockUserId.toString());
         const result = await controller.getMyBids(request);
@@ -658,7 +698,7 @@ describe("BidsController", () => {
           createdAt: new Date(`2024-01-${(i % 28) + 1}T10:00:00Z`),
         }));
 
-        mockBidsService.getByUser.mockResolvedValue(mockBids as any);
+        mockBidsService.getByUser.mockResolvedValue(mockBids as MockBid[]);
 
         const request = createMockRequest(mockUserId.toString());
         const result = await controller.getMyBids(request);
@@ -678,7 +718,7 @@ describe("BidsController", () => {
           createdAt: new Date("2024-01-15T10:00:00Z"),
         }));
 
-        mockBidsService.getByUser.mockResolvedValue(mockBids as any);
+        mockBidsService.getByUser.mockResolvedValue(mockBids as MockBid[]);
 
         const request = createMockRequest(mockUserId.toString());
         const result = await controller.getMyBids(request);
@@ -714,7 +754,7 @@ describe("BidsController", () => {
           },
         ];
 
-        mockBidsService.getByUser.mockResolvedValue(mockBids as any);
+        mockBidsService.getByUser.mockResolvedValue(mockBids as MockBid[]);
 
         const request = createMockRequest(mockUserId.toString());
         const result = await controller.getMyBids(request);
@@ -736,7 +776,7 @@ describe("BidsController", () => {
           },
         ];
 
-        mockBidsService.getByUser.mockResolvedValue(mockBids as any);
+        mockBidsService.getByUser.mockResolvedValue(mockBids as MockBid[]);
 
         const request = createMockRequest(mockUserId.toString());
         const result = await controller.getMyBids(request);
@@ -783,7 +823,7 @@ describe("BidsController", () => {
           },
         ];
 
-        mockBidsService.getByUser.mockResolvedValue(user1Bids as any);
+        mockBidsService.getByUser.mockResolvedValue(user1Bids as MockBid[]);
 
         const request = createMockRequest(user1Id);
         await controller.getMyBids(request);
@@ -812,7 +852,7 @@ describe("BidsController", () => {
           },
         ];
 
-        mockBidsService.getByUser.mockResolvedValue(mockBids as any);
+        mockBidsService.getByUser.mockResolvedValue(mockBids as MockBid[]);
 
         const request = createMockRequest(mockUserId.toString());
         const result = await controller.getMyBids(request);
@@ -833,7 +873,7 @@ describe("BidsController", () => {
           },
         ];
 
-        mockBidsService.getByUser.mockResolvedValue(mockBids as any);
+        mockBidsService.getByUser.mockResolvedValue(mockBids as MockBid[]);
 
         const request = createMockRequest(mockUserId.toString());
         const result = await controller.getMyBids(request);
@@ -855,7 +895,7 @@ describe("BidsController", () => {
           },
         ];
 
-        mockBidsService.getByUser.mockResolvedValue(mockBids as any);
+        mockBidsService.getByUser.mockResolvedValue(mockBids as MockBid[]);
 
         const request = createMockRequest(mockUserId.toString());
         const result = await controller.getMyBids(request);
@@ -881,7 +921,7 @@ describe("BidsController", () => {
           },
         ];
 
-        mockBidsService.getByUser.mockResolvedValue(mockBids as any);
+        mockBidsService.getByUser.mockResolvedValue(mockBids as MockBid[]);
 
         const request = createMockRequest(mockUserId.toString());
         const result = await controller.getMyBids(request);
@@ -905,7 +945,7 @@ describe("BidsController", () => {
         },
       ];
 
-      mockBidsService.getByUser.mockResolvedValue(mockBids as any);
+      mockBidsService.getByUser.mockResolvedValue(mockBids as MockBid[]);
 
       const request = createMockRequest(mockUserId.toString());
       const result = await controller.getMyBids(request);
@@ -926,7 +966,7 @@ describe("BidsController", () => {
         },
       ];
 
-      mockBidsService.getByUser.mockResolvedValue(mockBids as any);
+      mockBidsService.getByUser.mockResolvedValue(mockBids as MockBid[]);
 
       const request = createMockRequest(mockUserId.toString());
       const result = await controller.getMyBids(request);
@@ -946,7 +986,7 @@ describe("BidsController", () => {
         },
       ];
 
-      mockBidsService.getByUser.mockResolvedValue(mockBids as any);
+      mockBidsService.getByUser.mockResolvedValue(mockBids as MockBid[]);
 
       const request = createMockRequest(mockUserId.toString());
       const result = await controller.getMyBids(request);
@@ -967,7 +1007,7 @@ describe("BidsController", () => {
         },
       ];
 
-      mockBidsService.getByUser.mockResolvedValue(mockBids as any);
+      mockBidsService.getByUser.mockResolvedValue(mockBids as MockBid[]);
 
       const request = createMockRequest(mockUserId.toString());
       const result = await controller.getMyBids(request);
@@ -989,7 +1029,7 @@ describe("BidsController", () => {
         },
       ];
 
-      mockBidsService.getByUser.mockResolvedValue(mockBids as any);
+      mockBidsService.getByUser.mockResolvedValue(mockBids as MockBid[]);
 
       const request = createMockRequest(mockUserId.toString());
       const result = await controller.getMyBids(request);
@@ -1027,8 +1067,8 @@ describe("BidsController", () => {
       ];
 
       mockBidsService.getByUser
-        .mockResolvedValueOnce(user1Bids as any)
-        .mockResolvedValueOnce(user2Bids as any);
+        .mockResolvedValueOnce(user1Bids as MockBid[])
+        .mockResolvedValueOnce(user2Bids as MockBid[]);
 
       const request1 = createMockRequest(user1Id);
       const request2 = createMockRequest(user2Id);
