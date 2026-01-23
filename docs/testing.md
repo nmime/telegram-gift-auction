@@ -177,14 +177,16 @@ cd backend
 
 # HTTP Tests
 pnpm run load-test:smoke     # Quick 10s validation
-pnpm run load-test           # Standard load test
-pnpm run load-test:stress    # Extreme stress test
+pnpm run load-test           # Standard load test (197 req/s)
+pnpm run load-test:stress    # HTTP stress test (~1K req/s)
 pnpm run load-test:edge      # Edge cases validation
 
+# HTTP Max Throughput (3.3K-13.8K req/s)
+npx artillery run test/artillery/http-max-throughput.yml
+
 # WebSocket Tests
-npx artillery run test/artillery/websocket-test.yml           # Standard WS
-npx artillery run test/artillery/websocket-stress.yml         # 11K emit/s
-npx artillery run test/artillery/websocket-max-throughput.yml # 200K emit/s
+pnpm run load-test:ws        # Standard WS (100% success)
+npx artillery run test/artillery/websocket-max-throughput.yml  # 200K emit/s peak
 ```
 
 ### Performance Results

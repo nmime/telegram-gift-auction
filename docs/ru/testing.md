@@ -179,13 +179,16 @@ cd backend
 
 # HTTP тесты
 pnpm run load-test:smoke     # Быстрая 10с проверка
-pnpm run load-test           # Стандартный нагрузочный тест
-pnpm run load-test:stress    # Экстремальный стресс-тест
+pnpm run load-test           # Стандартный нагрузочный тест (197 req/s)
+pnpm run load-test:stress    # HTTP стресс-тест (~1K req/s)
 pnpm run load-test:edge      # Проверка краевых случаев
 
+# HTTP Максимальная пропускная способность (3.3K-13.8K req/s)
+npx artillery run test/artillery/http-max-throughput.yml
+
 # WebSocket тесты
-npx artillery run test/artillery/websocket-test.yml           # Стандартный WS (100% success)
-npx artillery run test/artillery/websocket-max-throughput.yml # 200K emit/s пик
+pnpm run load-test:ws        # Стандартный WS (100% success)
+npx artillery run test/artillery/websocket-max-throughput.yml  # 200K emit/s пик
 ```
 
 ### Результаты производительности
