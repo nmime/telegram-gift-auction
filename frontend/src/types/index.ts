@@ -111,8 +111,12 @@ export interface Bid {
 }
 
 export interface PlaceBidResponse {
-  bid: Bid;
-  auction: Auction;
+  success: boolean;
+  amount: number;
+  previousAmount?: number;
+  rank?: number;
+  isNewBid?: boolean;
+  error?: string;
 }
 
 export interface LeaderboardEntry {

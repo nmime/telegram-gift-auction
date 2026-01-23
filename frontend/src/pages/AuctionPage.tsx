@@ -192,16 +192,23 @@ export default function AuctionPage(): React.JSX.Element {
     setBidAmount('');
 
     try {
-      const { bid, auction: updatedAuction } = await api.placeBid(id, amount);
-      setAuction(updatedAuction);
-      setMyBids((prev) => {
-        const existing = prev.find((b) => b.id === bid.id);
-        if (existing) {
-          return prev.map((b) => (b.id === bid.id ? bid : b));
-        }
-        return [bid, ...prev];
-      });
-      showNotification(t('auction.bidPlacedAmount', { amount }), 'success');
+      const response = await api.placeBid(id, amount);
+
+      if (!response.success) {
+        // Revert optimistic update on failure
+        setLeaderboard(previousLeaderboard);
+        setMyBids(previousMyBids);
+        const message = response.error ?? t('errors.unknown');
+        setError(message);
+        showNotification(message, 'error');
+        return;
+      }
+
+      // Show success with rank info if available
+      const rankInfo = response.rank ? ` (${t('auction.rank')}: #${response.rank})` : '';
+      showNotification(t('auction.bidPlacedAmount', { amount: response.amount }) + rankInfo, 'success');
+
+      // Refresh all data to get updated auction, bids, and leaderboard
       await refreshBalance();
       await loadData();
     } catch (err) {
