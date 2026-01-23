@@ -59,6 +59,9 @@ COPY --from=builder /app/backend/asyncapi.html /app/backend/asyncapi.yaml ./back
 # Copy i18n translations if they exist
 COPY --from=builder /app/backend/i18n ./backend/i18n
 
+# Copy artillery test reports if they exist
+COPY --from=builder /app/backend/test/artillery/reports ./backend/test/artillery/reports
+
 WORKDIR /app/backend
 
 # Set environment

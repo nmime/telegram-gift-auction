@@ -53,9 +53,8 @@ async function bootstrap(): Promise<void> {
 
   app.setGlobalPrefix("api");
 
-  // Serve Artillery load test reports at /api/reports/ (only in dev/test environments)
-  // Note: test/ directory is at project root, two levels up from dist/
-  const reportsPath = path.join(__dirname, "..", "..", "test", "artillery", "reports");
+  // Serve Artillery load test reports at /api/reports/
+  const reportsPath = path.join(__dirname, "..", "test", "artillery", "reports");
   const reportsAvailable = fs.existsSync(reportsPath);
   if (reportsAvailable) {
     await app.register(fastifyStatic, {
