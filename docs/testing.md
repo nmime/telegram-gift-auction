@@ -177,16 +177,14 @@ cd backend
 
 # HTTP Tests
 pnpm run load-test:smoke     # Quick 10s validation
-pnpm run load-test           # Standard load test (197 req/s)
-pnpm run load-test:stress    # HTTP stress test (~1K req/s)
+pnpm run load-test           # Standard load test
+pnpm run load-test:stress    # Stress test (via -e stress environment)
+pnpm run load-test:http-max  # Max throughput (3.3K-13.8K req/s)
 pnpm run load-test:edge      # Edge cases validation
-
-# HTTP Max Throughput (3.3K-13.8K req/s)
-npx artillery run test/artillery/http-max-throughput.yml
 
 # WebSocket Tests
 pnpm run load-test:ws        # Standard WS (100% success)
-npx artillery run test/artillery/websocket-max-throughput.yml  # 200K emit/s peak
+pnpm run load-test:ws-max    # Max throughput (200K emit/s)
 ```
 
 ### Performance Results
@@ -224,17 +222,17 @@ Enable cluster mode: `CLUSTER_WORKERS=auto` in `.env`
 ╚══════════════════════════════════════════════════════════════╝
 ```
 
-### Test Files (6 tests)
+### Test Files (5 tests)
 
 ```
 test/artillery/
-├── load-test.yml                # HTTP standard load test (197 req/s)
-├── stress-test.yml              # HTTP stress test (mixed ops, ~1K req/s)
+├── load-test.yml                # HTTP load test (smoke/load/stress/soak envs)
 ├── http-max-throughput.yml      # HTTP max throughput (3.3K-13.8K req/s)
 ├── edge-cases.yml               # Validation and error handling
 ├── websocket-test.yml           # WebSocket standard (100% success)
 ├── websocket-max-throughput.yml # WebSocket max (200K emit/s peak)
 ├── functions.js                 # HTTP helpers
+├── edge-case-functions.js       # Edge case helpers
 ├── websocket-functions.js       # WS helpers
 ├── reports/                     # JSON + HTML reports
 └── BENCHMARK_REPORT.md          # Full benchmark report

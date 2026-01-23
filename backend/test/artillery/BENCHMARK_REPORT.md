@@ -47,14 +47,13 @@
 | `/api/auctions` | 0ms | 7ms | 1ms | 1ms | 2ms | 2ms |
 | `/api/auctions/{id}` | 0ms | 7ms | 0.7ms | 1ms | 1ms | 2ms |
 | `/api/auctions/{id}/bid` | 0ms | 15ms | **1.4ms** | 1ms | 2ms | 4ms |
-| `/api/auctions/{id}/fast-bid` | 1ms | 27ms | **2.4ms** | 2ms | 4ms | 6ms |
 | `/api/auctions/{id}/leaderboard` | 1ms | 18ms | 2ms | 2ms | 3ms | 4ms |
 | `/api/auctions/{id}/min-winning-bid` | 0ms | 5ms | 0.6ms | 1ms | 1ms | 2ms |
 | `/api/users/balance` | 0ms | 5ms | 0.8ms | 1ms | 1ms | 2ms |
 
 #### HTTP Status Codes Distribution
 - **200:** 21,985 (successful reads)
-- **201:** 13,000 (successful creates - fast-bid)
+- **201:** 13,000 (successful bids)
 - **400:** 9,190 (validation errors - expected)
 - **409:** 2,809 (concurrent conflicts - expected)
 
@@ -76,7 +75,7 @@ The stress test pushes HTTP throughput to single-core limits:
 ### Key HTTP Findings
 
 1. **Excellent Latency:** Mean 1.5ms across all endpoints
-2. **Standard Bid vs Fast-Bid:** Both perform excellently (1.4ms vs 2.4ms mean)
+2. **Bid Endpoint:** Uses high-performance Redis path (1.4ms mean)
 3. **Read Operations:** Sub-1ms for most read endpoints
 4. **Peak Throughput:** 3,362 req/sec achievable with pure read operations
 5. **Validation:** Proper 400/409 responses for invalid/concurrent requests
@@ -153,8 +152,7 @@ The stress test pushes HTTP throughput to single-core limits:
 │  Mean Latency:        1.5ms                                 │
 │  P95 Latency:         3ms                                   │
 │  P99 Latency:         5ms                                   │
-│  Bid Endpoint:        1.4ms mean, 4ms p99                   │
-│  Fast-Bid:            2.4ms mean, 6ms p99                   │
+│  Bid Endpoint:        1.4ms mean, 4ms p99 (Redis fast path) │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -182,7 +180,6 @@ The stress test pushes HTTP throughput to single-core limits:
 | Metric | Documented | Actual (2026-01-23) | Status |
 |--------|------------|---------------------|--------|
 | HTTP Bid Latency | 18ms mean | **1.4ms mean** | ✅ Much Better |
-| HTTP Fast-Bid Latency | 44ms mean | **2.4ms mean** | ✅ Much Better |
 | HTTP Request Rate | 138 req/s | **197 req/s** | ✅ Better |
 | **HTTP Peak (1 core)** | - | **3,362 req/sec** | 🚀 New |
 | **HTTP Peak (12 cores)** | - | **13,812 req/sec** | 🚀 New |
@@ -202,11 +199,10 @@ The stress test pushes HTTP throughput to single-core limits:
 - **Node.js:** Single process, NestJS with Fastify adapter
 - **Rate Limiting:** Bypassed for localhost (development mode)
 
-### Test Files (6 tests)
+### Test Files (5 tests)
 ```
 test/artillery/
-├── load-test.yml                # HTTP standard load test (197 req/s)
-├── stress-test.yml              # HTTP stress test (mixed ops, ~1K req/s)
+├── load-test.yml                # HTTP load test (smoke/load/stress/soak envs)
 ├── http-max-throughput.yml      # HTTP max throughput (3.3K-13.8K req/s)
 ├── edge-cases.yml               # Validation and error handling
 ├── websocket-test.yml           # WebSocket standard (100% success)
@@ -226,17 +222,17 @@ test/artillery/
 ```bash
 # HTTP Tests
 pnpm run load-test:smoke     # Quick 10s validation
-pnpm run load-test           # Standard load test (140s)
-pnpm run load-test:stress    # HTTP stress test (extreme load)
+pnpm run load-test           # Standard load test
+pnpm run load-test:stress    # Stress test (via -e stress)
+pnpm run load-test:http-max  # Max throughput (3.3K-13.8K req/s)
 pnpm run load-test:edge      # Edge cases validation
 
 # WebSocket Tests
-pnpm run load-test:ws                                          # Standard WS (3min)
-npx artillery run test/artillery/websocket-max-throughput.yml  # 200K emit/s peak
+pnpm run load-test:ws        # Standard WS (100% success)
+pnpm run load-test:ws-max    # Max throughput (200K emit/s peak)
 
 # Generate JSON reports + HTML
-npx artillery run test/artillery/load-test.yml --output test/artillery/reports/load-test.json
-node test/artillery/reports/generate-html-reports.js
+pnpm run load-test:report
 ```
 
 ---

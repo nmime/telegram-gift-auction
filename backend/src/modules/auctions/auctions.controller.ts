@@ -1,16 +1,14 @@
 import { Controller, Req, UseGuards } from "@nestjs/common";
 import { TypedRoute, TypedBody, TypedParam, TypedQuery } from "@nestia/core";
-import { FastifyRequest } from "fastify";
 import { AuctionsService } from "./auctions.service";
 import { BotService } from "./bot.service";
-import { AuthGuard, AuthenticatedRequest, getClientIp } from "@/common";
+import { AuthGuard, AuthenticatedRequest } from "@/common";
 import {
   ICreateAuction,
   IPlaceBid,
   IAuctionResponse,
   ILeaderboardResponse,
   IMinWinningBidResponse,
-  IPlaceBidResponse,
   IFastBidResponse,
   IAuditResponse,
 } from "./dto";
@@ -133,9 +131,10 @@ export class AuctionsController {
   }
 
   /**
-   * Place or increase bid
+   * Place or increase bid (high-performance Redis path)
    *
    * Places a new bid or increases an existing bid on an active auction.
+   * Uses Redis-cached fast path for maximum throughput.
    *
    * **Rules:**
    * - Minimum bid amount must be met
@@ -147,50 +146,11 @@ export class AuctionsController {
    * @security bearer
    * @param id Auction ID
    * @param body Bid amount
-   * @returns Placed bid and updated auction
+   * @returns Bid result with rank
    */
   @TypedRoute.Post(":id/bid")
   @UseGuards(AuthGuard)
   async placeBid(
-    @TypedParam("id") id: string,
-    @TypedBody() body: IPlaceBid,
-    @Req() req: AuthenticatedRequest,
-  ): Promise<IPlaceBidResponse> {
-    const clientIp = getClientIp(req as unknown as FastifyRequest);
-    const { bid, auction } = await this.auctionsService.placeBid(
-      id,
-      req.user.sub,
-      body,
-      clientIp,
-    );
-    return {
-      bid: {
-        id: bid._id.toString(),
-        amount: bid.amount,
-        status: bid.status,
-        createdAt: bid.createdAt,
-        updatedAt: bid.updatedAt,
-      },
-      auction: this.formatAuction(auction),
-    };
-  }
-
-  /**
-   * Place fast bid (high-performance Redis path)
-   *
-   * Places a bid using the Redis-cached fast path for maximum throughput.
-   * Returns a simplified response without full auction state.
-   * Falls back to standard bid if cache is not warmed.
-   *
-   * @tag auctions
-   * @security bearer
-   * @param id Auction ID
-   * @param body Bid amount
-   * @returns Fast bid result with rank
-   */
-  @TypedRoute.Post(":id/fast-bid")
-  @UseGuards(AuthGuard)
-  async placeFastBid(
     @TypedParam("id") id: string,
     @TypedBody() body: IPlaceBid,
     @Req() req: AuthenticatedRequest,

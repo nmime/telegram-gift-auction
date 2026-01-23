@@ -49,7 +49,6 @@ describe("AuctionsController", () => {
     findAll: Mock;
     findById: Mock;
     start: Mock;
-    placeBid: Mock;
     placeBidFast: Mock;
     getLeaderboard: Mock;
     getUserBids: Mock;
@@ -108,7 +107,6 @@ describe("AuctionsController", () => {
       findAll: vi.fn(),
       findById: vi.fn(),
       start: vi.fn(),
-      placeBid: vi.fn(),
       placeBidFast: vi.fn(),
       getLeaderboard: vi.fn(),
       getUserBids: vi.fn(),
@@ -956,92 +954,7 @@ describe("AuctionsController", () => {
     const validId = "507f1f77bcf86cd799439011";
     const validBidDto = { amount: 500 };
 
-    const mockBidResponse = {
-      bid: {
-        _id: new Types.ObjectId(),
-        amount: 500,
-        status: "active",
-        createdAt: mockDate,
-        updatedAt: mockDate,
-      },
-      auction: mockAuctionDocument,
-    };
-
-    const createMockRequest = () => ({
-      ...mockAuthenticatedRequest,
-      ip: "127.0.0.1",
-      headers: {
-        "x-real-ip": "127.0.0.1",
-        "x-forwarded-for": "127.0.0.1",
-      },
-      socket: {
-        remoteAddress: "127.0.0.1",
-      },
-    });
-
     it("should place bid successfully", async () => {
-      auctionsService.placeBid.mockResolvedValue(
-        mockBidResponse as unknown as {
-          bid: BidDocument;
-          auction: AuctionDocument;
-        },
-      );
-
-      const mockRequest = createMockRequest();
-
-      const result = await controller.placeBid(
-        validId,
-        validBidDto,
-        mockRequest,
-      );
-
-      expect(result.bid.amount).toBe(500);
-      expect(result.auction.id).toBeDefined();
-    });
-
-    it("should validate minimum bid amount", async () => {
-      auctionsService.placeBid.mockRejectedValue(
-        new BadRequestException("Minimum bid is 100"),
-      );
-
-      const lowBidDto = { amount: 50 };
-      const mockRequest = createMockRequest();
-
-      await expect(
-        controller.placeBid(validId, lowBidDto, mockRequest),
-      ).rejects.toThrow(BadRequestException);
-    });
-
-    it("should enforce minimum bid increment for existing bids", async () => {
-      auctionsService.placeBid.mockRejectedValue(
-        new BadRequestException("Minimum bid increment is 10"),
-      );
-
-      const mockRequest = createMockRequest();
-
-      await expect(
-        controller.placeBid(validId, validBidDto, mockRequest),
-      ).rejects.toThrow(BadRequestException);
-    });
-
-    it("should check user balance before placing bid", async () => {
-      auctionsService.placeBid.mockRejectedValue(
-        new BadRequestException("Insufficient balance"),
-      );
-
-      const mockRequest = createMockRequest();
-
-      await expect(
-        controller.placeBid(validId, { amount: 10000 }, mockRequest),
-      ).rejects.toThrow(BadRequestException);
-    });
-  });
-
-  describe("Place Fast Bid (POST /auctions/:id/fast-bid)", () => {
-    const validId = "507f1f77bcf86cd799439011";
-    const validBidDto = { amount: 500 };
-
-    it("should place fast bid successfully", async () => {
       const mockFastBidResult = {
         success: true,
         amount: 500,
@@ -1052,7 +965,7 @@ describe("AuctionsController", () => {
 
       auctionsService.placeBidFast.mockResolvedValue(mockFastBidResult);
 
-      const result = await controller.placeFastBid(
+      const result = await controller.placeBid(
         validId,
         validBidDto,
         mockAuthenticatedRequest,
@@ -1063,7 +976,7 @@ describe("AuctionsController", () => {
       expect(result.rank).toBe(1);
     });
 
-    it("should return rank after fast bid", async () => {
+    it("should return rank after placing bid", async () => {
       const mockFastBidResult = {
         success: true,
         amount: 500,
@@ -1073,7 +986,7 @@ describe("AuctionsController", () => {
 
       auctionsService.placeBidFast.mockResolvedValue(mockFastBidResult);
 
-      const result = await controller.placeFastBid(
+      const result = await controller.placeBid(
         validId,
         validBidDto,
         mockAuthenticatedRequest,
@@ -1082,7 +995,7 @@ describe("AuctionsController", () => {
       expect(result.rank).toBe(3);
     });
 
-    it("should handle fast bid errors gracefully", async () => {
+    it("should handle bid errors gracefully", async () => {
       const mockFastBidResult = {
         success: false,
         error: "Bid amount is already taken",
@@ -1090,7 +1003,7 @@ describe("AuctionsController", () => {
 
       auctionsService.placeBidFast.mockResolvedValue(mockFastBidResult);
 
-      const result = await controller.placeFastBid(
+      const result = await controller.placeBid(
         validId,
         validBidDto,
         mockAuthenticatedRequest,
@@ -1100,22 +1013,30 @@ describe("AuctionsController", () => {
       expect(result.error).toBeDefined();
     });
 
-    it("should fallback to standard bid if cache not warmed", async () => {
-      const mockFastBidResult = {
-        success: true,
-        amount: 500,
-        isNewBid: true,
-      };
-
-      auctionsService.placeBidFast.mockResolvedValue(mockFastBidResult);
-
-      const result = await controller.placeFastBid(
-        validId,
-        validBidDto,
-        mockAuthenticatedRequest,
+    it("should validate minimum bid amount", async () => {
+      auctionsService.placeBidFast.mockRejectedValue(
+        new BadRequestException("Minimum bid is 100"),
       );
 
-      expect(result.success).toBe(true);
+      const lowBidDto = { amount: 50 };
+
+      await expect(
+        controller.placeBid(validId, lowBidDto, mockAuthenticatedRequest),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it("should check user balance before placing bid", async () => {
+      auctionsService.placeBidFast.mockRejectedValue(
+        new BadRequestException("Insufficient balance"),
+      );
+
+      await expect(
+        controller.placeBid(
+          validId,
+          { amount: 10000 },
+          mockAuthenticatedRequest,
+        ),
+      ).rejects.toThrow(BadRequestException);
     });
   });
 });

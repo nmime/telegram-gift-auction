@@ -178,7 +178,7 @@ scenarios:
       # Calculate bid amount
       - function: "calculateBidAmount"
 
-      # Place bid
+      # Place bid (fast-bid endpoint)
       - post:
           url: "/api/auctions/{{ targetAuctionId }}/bid"
           headers:
@@ -233,7 +233,7 @@ scenarios:
           expect:
             - statusCode: 200
 
-      # Rapid bid loop
+      # Rapid bid loop (fast-bid endpoint)
       - loop:
           - function: "generateBidAmount"
           - post:
@@ -280,7 +280,7 @@ scenarios:
       - loop:
           - function: "generateBidAmount"
           - post:
-              url: "/api/auctions/{{ auctionId }}/fast-bid"
+              url: "/api/auctions/{{ auctionId }}/bid"
               headers:
                 Authorization: "Bearer {{ token }}"
               json:
