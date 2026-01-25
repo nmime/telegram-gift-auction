@@ -3,7 +3,9 @@ import {
   OnModuleInit,
   OnModuleDestroy,
   Logger,
+  Inject,
 } from "@nestjs/common";
+import Redis from "ioredis";
 import { InjectModel } from "@nestjs/mongoose";
 import { Model, Types } from "mongoose";
 import { randomInt } from "crypto";
@@ -19,6 +21,7 @@ import {
 } from "@/schemas";
 import { AuctionsService } from "./auctions.service";
 import { isPrimaryWorker, getWorkerId } from "@/common";
+import { redisClient } from "@/modules/redis";
 
 interface BotState {
   auctionId: string;
@@ -31,8 +34,12 @@ interface BotState {
 export class BotService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(BotService.name);
   private activeBots = new Map<string, BotState>();
+  private readonly BOT_START_CHANNEL = "bot-service:start";
+  private readonly BOT_STOP_CHANNEL = "bot-service:stop";
+  private subscriber: Redis | null = null;
 
   constructor(
+    @Inject(redisClient) private readonly redis: Redis,
     @InjectModel(User.name) private userModel: Model<UserDocument>,
     @InjectModel(Auction.name) private auctionModel: Model<AuctionDocument>,
     @InjectModel(Bid.name) private bidModel: Model<BidDocument>,
@@ -47,21 +54,100 @@ export class BotService implements OnModuleInit, OnModuleDestroy {
       );
       return;
     }
+
+    await this.setupPubSubSubscription();
     await this.restoreBotsForActiveAuctions();
+  }
+
+  private async setupPubSubSubscription(): Promise<void> {
+    try {
+      this.subscriber = this.redis.duplicate();
+
+      this.subscriber.on("message", (channel: string, message: string) => {
+        void this.handlePubSubMessage(channel, message);
+      });
+
+      await this.subscriber.subscribe(
+        this.BOT_START_CHANNEL,
+        this.BOT_STOP_CHANNEL,
+      );
+
+      this.logger.log("Primary worker subscribed to bot pub/sub channels");
+    } catch (error: unknown) {
+      this.logger.error("Failed to setup pub/sub subscription", error);
+    }
+  }
+
+  private async handlePubSubMessage(
+    channel: string,
+    message: string,
+  ): Promise<void> {
+    try {
+      const data = JSON.parse(message) as {
+        auctionId: string;
+        botCount?: number;
+      };
+
+      if (channel === this.BOT_START_CHANNEL) {
+        const { auctionId, botCount } = data;
+        if (botCount !== undefined) {
+          this.logger.debug("Received bot start message via pub/sub", {
+            auctionId,
+            botCount,
+          });
+          await this.startBotsInternal(auctionId, botCount);
+        }
+      } else if (channel === this.BOT_STOP_CHANNEL) {
+        const { auctionId } = data;
+        this.logger.debug("Received bot stop message via pub/sub", {
+          auctionId,
+        });
+        this.stopBots(auctionId);
+      }
+    } catch (error: unknown) {
+      this.logger.error("Failed to handle pub/sub message", {
+        channel,
+        message,
+        error,
+      });
+    }
   }
 
   onModuleDestroy(): void {
     this.stopAllBots();
+
+    if (this.subscriber !== null) {
+      this.subscriber
+        .unsubscribe(this.BOT_START_CHANNEL, this.BOT_STOP_CHANNEL)
+        .then(() => this.subscriber?.quit())
+        .catch(() => {
+          // Intentionally ignore errors during cleanup
+        })
+        .finally(() => {
+          this.subscriber = null;
+        });
+    }
   }
 
   async startBots(auctionId: string, botCount: number): Promise<void> {
     if (!isPrimaryWorker()) {
       this.logger.debug(
-        `Worker ${String(getWorkerId())}: Delegating bot start to primary worker`,
+        `Worker ${String(getWorkerId())}: Delegating bot start to primary worker via pub/sub`,
+      );
+      await this.redis.publish(
+        this.BOT_START_CHANNEL,
+        JSON.stringify({ auctionId, botCount }),
       );
       return;
     }
 
+    await this.startBotsInternal(auctionId, botCount);
+  }
+
+  private async startBotsInternal(
+    auctionId: string,
+    botCount: number,
+  ): Promise<void> {
     if (this.activeBots.has(auctionId)) {
       return;
     }
@@ -104,6 +190,18 @@ export class BotService implements OnModuleInit, OnModuleDestroy {
   }
 
   stopBots(auctionId: string): void {
+    if (!isPrimaryWorker()) {
+      this.logger.debug(
+        `Worker ${String(getWorkerId())}: Delegating bot stop to primary worker via pub/sub`,
+      );
+      this.redis
+        .publish(this.BOT_STOP_CHANNEL, JSON.stringify({ auctionId }))
+        .catch((error: unknown) => {
+          this.logger.error("Failed to publish bot stop message", error);
+        });
+      return;
+    }
+
     const state = this.activeBots.get(auctionId);
     if (state !== undefined) {
       state.active = false;
