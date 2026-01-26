@@ -369,7 +369,7 @@ export default function CreateAuctionPage(): React.JSX.Element {
           </div>
         )}
 
-        <div className="flex gap-4">
+        <div className="flex gap-4" style={{ marginBottom: '32px' }}>
           <button
             type="button"
             className="btn btn-secondary"
