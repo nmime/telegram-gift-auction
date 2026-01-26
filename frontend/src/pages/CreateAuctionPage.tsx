@@ -36,22 +36,22 @@ export default function CreateAuctionPage(): React.JSX.Element {
   };
 
   const updateRound = (index: number, field: keyof RoundConfig, value: number) => {
-    const sanitizedValue = Math.max(1, value);
     setRounds(
       rounds.map((round, i) =>
-        i === index ? { ...round, [field]: sanitizedValue } : round
+        i === index ? { ...round, [field]: value } : round
       )
     );
   };
 
   const handleNumberInput = (
     setter: (value: number) => void,
-    value: string,
-    min = 1
+    value: string
   ) => {
     const parsed = parseInt(value, 10);
     if (!isNaN(parsed)) {
-      setter(Math.max(min, parsed));
+      setter(parsed);
+    } else if (value === '' || value === '-') {
+      setter(0);
     }
   };
 
@@ -313,7 +313,7 @@ export default function CreateAuctionPage(): React.JSX.Element {
                 inputMode="numeric"
                 className="input"
                 value={maxExtensions}
-                onChange={(e) => handleNumberInput(setMaxExtensions, e.target.value, 0)}
+                onChange={(e) => handleNumberInput(setMaxExtensions, e.target.value)}
                 onWheel={(e) => e.currentTarget.blur()}
                 min={0}
               />
@@ -342,7 +342,7 @@ export default function CreateAuctionPage(): React.JSX.Element {
                   inputMode="numeric"
                   className="input"
                   value={botCount}
-                  onChange={(e) => handleNumberInput(setBotCount, e.target.value, 0)}
+                  onChange={(e) => handleNumberInput(setBotCount, e.target.value)}
                   onWheel={(e) => e.currentTarget.blur()}
                   min={0}
                   max={50}

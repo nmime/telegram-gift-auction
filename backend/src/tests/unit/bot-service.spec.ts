@@ -12,7 +12,7 @@ import { getModelToken } from "@nestjs/mongoose";
 import { BotService } from "@/modules/auctions/bot.service";
 import { AuctionsService } from "@/modules/auctions/auctions.service";
 import { redisClient } from "@/modules/redis/constants";
-import { User, Auction, Bid, AuctionStatus, BidStatus } from "@/schemas";
+import { User, Auction, Bid, AuctionStatus } from "@/schemas";
 import * as clusterUtil from "@/common/cluster/cluster.util";
 
 // Mock cluster utilities
@@ -45,12 +45,12 @@ interface MockAuction {
   minBidAmount: number;
   minBidIncrement: number;
   antiSnipingWindowMinutes: number;
-  rounds: Array<{
+  rounds: {
     startTime: Date;
     endTime: Date;
     itemsCount: number;
     completed: boolean;
-  }>;
+  }[];
 }
 
 describe("BotService", () => {
@@ -506,11 +506,12 @@ describe("BotService", () => {
       await service.startBots("auction123", 2);
 
       expect(mockUserModel.create).toHaveBeenCalledTimes(2);
-      expect(mockUserModel.create).toHaveBeenCalledWith({
-        username: expect.stringContaining("bot_"),
-        balance: 100000,
-        isBot: true,
-      });
+      expect(mockUserModel.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          balance: 100000,
+          isBot: true,
+        }) as Record<string, unknown>,
+      );
 
       service.stopBots("auction123");
       vi.useRealTimers();

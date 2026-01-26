@@ -59,6 +59,67 @@ export class BotService implements OnModuleInit, OnModuleDestroy {
     await this.restoreBotsForActiveAuctions();
   }
 
+  onModuleDestroy(): void {
+    this.stopAllBots();
+
+    if (this.subscriber !== null) {
+      this.subscriber
+        .unsubscribe(this.BOT_START_CHANNEL, this.BOT_STOP_CHANNEL)
+        .then(async () => await this.subscriber?.quit())
+        .catch(() => {
+          // Intentionally ignore errors during cleanup
+        })
+        .finally(() => {
+          this.subscriber = null;
+        });
+    }
+  }
+
+  async startBots(auctionId: string, botCount: number): Promise<void> {
+    if (!isPrimaryWorker()) {
+      this.logger.debug(
+        `Worker ${String(getWorkerId())}: Delegating bot start to primary worker via pub/sub`,
+      );
+      await this.redis.publish(
+        this.BOT_START_CHANNEL,
+        JSON.stringify({ auctionId, botCount }),
+      );
+      return;
+    }
+
+    await this.startBotsInternal(auctionId, botCount);
+  }
+
+  stopBots(auctionId: string): void {
+    if (!isPrimaryWorker()) {
+      this.logger.debug(
+        `Worker ${String(getWorkerId())}: Delegating bot stop to primary worker via pub/sub`,
+      );
+      this.redis
+        .publish(this.BOT_STOP_CHANNEL, JSON.stringify({ auctionId }))
+        .catch((error: unknown) => {
+          this.logger.error("Failed to publish bot stop message", error);
+        });
+      return;
+    }
+
+    const state = this.activeBots.get(auctionId);
+    if (state !== undefined) {
+      state.active = false;
+      if (state.intervalId !== null) {
+        clearInterval(state.intervalId);
+      }
+      this.activeBots.delete(auctionId);
+      this.logger.log("Bots stopped for auction", auctionId);
+    }
+  }
+
+  stopAllBots(): void {
+    for (const auctionId of this.activeBots.keys()) {
+      this.stopBots(auctionId);
+    }
+  }
+
   private async setupPubSubSubscription(): Promise<void> {
     try {
       this.subscriber = this.redis.duplicate();
@@ -113,37 +174,6 @@ export class BotService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
-  onModuleDestroy(): void {
-    this.stopAllBots();
-
-    if (this.subscriber !== null) {
-      this.subscriber
-        .unsubscribe(this.BOT_START_CHANNEL, this.BOT_STOP_CHANNEL)
-        .then(() => this.subscriber?.quit())
-        .catch(() => {
-          // Intentionally ignore errors during cleanup
-        })
-        .finally(() => {
-          this.subscriber = null;
-        });
-    }
-  }
-
-  async startBots(auctionId: string, botCount: number): Promise<void> {
-    if (!isPrimaryWorker()) {
-      this.logger.debug(
-        `Worker ${String(getWorkerId())}: Delegating bot start to primary worker via pub/sub`,
-      );
-      await this.redis.publish(
-        this.BOT_START_CHANNEL,
-        JSON.stringify({ auctionId, botCount }),
-      );
-      return;
-    }
-
-    await this.startBotsInternal(auctionId, botCount);
-  }
-
   private async startBotsInternal(
     auctionId: string,
     botCount: number,
@@ -187,36 +217,6 @@ export class BotService implements OnModuleInit, OnModuleDestroy {
     setTimeout(() => {
       void this.makeInitialBids(state);
     }, 1000);
-  }
-
-  stopBots(auctionId: string): void {
-    if (!isPrimaryWorker()) {
-      this.logger.debug(
-        `Worker ${String(getWorkerId())}: Delegating bot stop to primary worker via pub/sub`,
-      );
-      this.redis
-        .publish(this.BOT_STOP_CHANNEL, JSON.stringify({ auctionId }))
-        .catch((error: unknown) => {
-          this.logger.error("Failed to publish bot stop message", error);
-        });
-      return;
-    }
-
-    const state = this.activeBots.get(auctionId);
-    if (state !== undefined) {
-      state.active = false;
-      if (state.intervalId !== null) {
-        clearInterval(state.intervalId);
-      }
-      this.activeBots.delete(auctionId);
-      this.logger.log("Bots stopped for auction", auctionId);
-    }
-  }
-
-  stopAllBots(): void {
-    for (const auctionId of this.activeBots.keys()) {
-      this.stopBots(auctionId);
-    }
   }
 
   private async restoreBotsForActiveAuctions(): Promise<void> {
