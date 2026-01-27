@@ -4,29 +4,55 @@ import type { RoundConfig } from '../types';
 import { useNotification } from '../context/NotificationContext';
 import * as api from '../api';
 
+// Store numeric inputs as strings for proper editing experience
+interface NumericInputs {
+  totalItems: string;
+  minBidAmount: string;
+  minBidIncrement: string;
+  antiSnipingWindowMinutes: string;
+  antiSnipingExtensionMinutes: string;
+  maxExtensions: string;
+  botCount: string;
+}
+
 export default function CreateAuctionPage(): React.JSX.Element {
   const navigate = useNavigate();
   const { showNotification } = useNotification();
 
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [totalItems, setTotalItems] = useState(10);
-  const [rounds, setRounds] = useState<RoundConfig[]>([
-    { itemsCount: 5, durationMinutes: 5 },
-    { itemsCount: 5, durationMinutes: 5 },
+  const [numericInputs, setNumericInputs] = useState<NumericInputs>({
+    totalItems: '10',
+    minBidAmount: '100',
+    minBidIncrement: '10',
+    antiSnipingWindowMinutes: '2',
+    antiSnipingExtensionMinutes: '2',
+    maxExtensions: '6',
+    botCount: '5',
+  });
+  const [rounds, setRounds] = useState<{ itemsCount: string; durationMinutes: string }[]>([
+    { itemsCount: '5', durationMinutes: '5' },
+    { itemsCount: '5', durationMinutes: '5' },
   ]);
-  const [minBidAmount, setMinBidAmount] = useState(100);
-  const [minBidIncrement, setMinBidIncrement] = useState(10);
-  const [antiSnipingWindowMinutes, setAntiSnipingWindowMinutes] = useState(2);
-  const [antiSnipingExtensionMinutes, setAntiSnipingExtensionMinutes] = useState(2);
-  const [maxExtensions, setMaxExtensions] = useState(6);
   const [botsEnabled, setBotsEnabled] = useState(true);
-  const [botCount, setBotCount] = useState(5);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
+  // Parse string to number, defaulting to 0 for empty/invalid
+  const parseNum = (val: string): number => {
+    const parsed = parseInt(val, 10);
+    return isNaN(parsed) ? 0 : parsed;
+  };
+
+  const updateNumericInput = (field: keyof NumericInputs, value: string) => {
+    // Allow only digits (and empty string for clearing)
+    if (value === '' || /^\d+$/.test(value)) {
+      setNumericInputs((prev) => ({ ...prev, [field]: value }));
+    }
+  };
+
   const addRound = () => {
-    setRounds([...rounds, { itemsCount: 1, durationMinutes: 5 }]);
+    setRounds([...rounds, { itemsCount: '1', durationMinutes: '5' }]);
   };
 
   const removeRound = (index: number) => {
@@ -35,27 +61,25 @@ export default function CreateAuctionPage(): React.JSX.Element {
     }
   };
 
-  const updateRound = (index: number, field: keyof RoundConfig, value: number) => {
-    const sanitizedValue = Math.max(1, value);
-    setRounds(
-      rounds.map((round, i) =>
-        i === index ? { ...round, [field]: sanitizedValue } : round
-      )
-    );
-  };
-
-  const handleNumberInput = (
-    setter: (value: number) => void,
-    value: string,
-    min = 1
-  ) => {
-    const parsed = parseInt(value, 10);
-    if (!isNaN(parsed)) {
-      setter(Math.max(min, parsed));
+  const updateRound = (index: number, field: 'itemsCount' | 'durationMinutes', value: string) => {
+    if (value === '' || /^\d+$/.test(value)) {
+      setRounds(
+        rounds.map((round, i) =>
+          i === index ? { ...round, [field]: value } : round
+        )
+      );
     }
   };
 
-  const totalRoundItems = rounds.reduce((sum, r) => sum + r.itemsCount, 0);
+  const totalItems = parseNum(numericInputs.totalItems);
+  const minBidAmount = parseNum(numericInputs.minBidAmount);
+  const minBidIncrement = parseNum(numericInputs.minBidIncrement);
+  const antiSnipingWindowMinutes = parseNum(numericInputs.antiSnipingWindowMinutes);
+  const antiSnipingExtensionMinutes = parseNum(numericInputs.antiSnipingExtensionMinutes);
+  const maxExtensions = parseNum(numericInputs.maxExtensions);
+  const botCount = parseNum(numericInputs.botCount);
+
+  const totalRoundItems = rounds.reduce((sum, r) => sum + parseNum(r.itemsCount), 0);
 
   const validateForm = (): string | null => {
     if (!title.trim()) {
@@ -107,11 +131,16 @@ export default function CreateAuctionPage(): React.JSX.Element {
     setError('');
 
     try {
+      const parsedRounds: RoundConfig[] = rounds.map((r) => ({
+        itemsCount: parseNum(r.itemsCount),
+        durationMinutes: parseNum(r.durationMinutes),
+      }));
+
       const auction = await api.createAuction({
         title: title.trim(),
         description: description.trim() || undefined,
         totalItems,
-        rounds,
+        rounds: parsedRounds,
         minBidAmount,
         minBidIncrement,
         antiSnipingWindowMinutes,
@@ -167,13 +196,11 @@ export default function CreateAuctionPage(): React.JSX.Element {
           <div className="form-group">
             <label>Total Items</label>
             <input
-              type="number"
+              type="text"
               inputMode="numeric"
               className="input"
-              value={totalItems}
-              onChange={(e) => handleNumberInput(setTotalItems, e.target.value)}
-              onWheel={(e) => e.currentTarget.blur()}
-              min={1}
+              value={numericInputs.totalItems}
+              onChange={(e) => updateNumericInput('totalItems', e.target.value)}
             />
           </div>
         </div>
@@ -209,25 +236,21 @@ export default function CreateAuctionPage(): React.JSX.Element {
               <div style={{ flex: 1 }}>
                 <label style={{ fontSize: '12px', color: 'rgba(255,255,255,0.6)' }}>Items</label>
                 <input
-                  type="number"
+                  type="text"
                   inputMode="numeric"
                   className="input"
                   value={round.itemsCount}
-                  onChange={(e) => updateRound(index, 'itemsCount', parseInt(e.target.value, 10) || 1)}
-                  onWheel={(e) => e.currentTarget.blur()}
-                  min={1}
+                  onChange={(e) => updateRound(index, 'itemsCount', e.target.value)}
                 />
               </div>
               <div style={{ flex: 1 }}>
                 <label style={{ fontSize: '12px', color: 'rgba(255,255,255,0.6)' }}>Duration (min)</label>
                 <input
-                  type="number"
+                  type="text"
                   inputMode="numeric"
                   className="input"
                   value={round.durationMinutes}
-                  onChange={(e) => updateRound(index, 'durationMinutes', parseInt(e.target.value, 10) || 1)}
-                  onWheel={(e) => e.currentTarget.blur()}
-                  min={1}
+                  onChange={(e) => updateRound(index, 'durationMinutes', e.target.value)}
                 />
               </div>
               {rounds.length > 1 && (
@@ -251,26 +274,22 @@ export default function CreateAuctionPage(): React.JSX.Element {
             <div className="form-group">
               <label>Min Bid Amount (Stars)</label>
               <input
-                type="number"
+                type="text"
                 inputMode="numeric"
                 className="input"
-                value={minBidAmount}
-                onChange={(e) => handleNumberInput(setMinBidAmount, e.target.value)}
-                onWheel={(e) => e.currentTarget.blur()}
-                min={1}
+                value={numericInputs.minBidAmount}
+                onChange={(e) => updateNumericInput('minBidAmount', e.target.value)}
               />
             </div>
 
             <div className="form-group">
               <label>Min Bid Increment (Stars)</label>
               <input
-                type="number"
+                type="text"
                 inputMode="numeric"
                 className="input"
-                value={minBidIncrement}
-                onChange={(e) => handleNumberInput(setMinBidIncrement, e.target.value)}
-                onWheel={(e) => e.currentTarget.blur()}
-                min={1}
+                value={numericInputs.minBidIncrement}
+                onChange={(e) => updateNumericInput('minBidIncrement', e.target.value)}
               />
             </div>
           </div>
@@ -283,39 +302,33 @@ export default function CreateAuctionPage(): React.JSX.Element {
             <div className="form-group">
               <label>Window (min)</label>
               <input
-                type="number"
+                type="text"
                 inputMode="numeric"
                 className="input"
-                value={antiSnipingWindowMinutes}
-                onChange={(e) => handleNumberInput(setAntiSnipingWindowMinutes, e.target.value)}
-                onWheel={(e) => e.currentTarget.blur()}
-                min={1}
+                value={numericInputs.antiSnipingWindowMinutes}
+                onChange={(e) => updateNumericInput('antiSnipingWindowMinutes', e.target.value)}
               />
             </div>
 
             <div className="form-group">
               <label>Extension (min)</label>
               <input
-                type="number"
+                type="text"
                 inputMode="numeric"
                 className="input"
-                value={antiSnipingExtensionMinutes}
-                onChange={(e) => handleNumberInput(setAntiSnipingExtensionMinutes, e.target.value)}
-                onWheel={(e) => e.currentTarget.blur()}
-                min={1}
+                value={numericInputs.antiSnipingExtensionMinutes}
+                onChange={(e) => updateNumericInput('antiSnipingExtensionMinutes', e.target.value)}
               />
             </div>
 
             <div className="form-group">
               <label>Max Extensions</label>
               <input
-                type="number"
+                type="text"
                 inputMode="numeric"
                 className="input"
-                value={maxExtensions}
-                onChange={(e) => handleNumberInput(setMaxExtensions, e.target.value, 0)}
-                onWheel={(e) => e.currentTarget.blur()}
-                min={0}
+                value={numericInputs.maxExtensions}
+                onChange={(e) => updateNumericInput('maxExtensions', e.target.value)}
               />
             </div>
           </div>
@@ -338,14 +351,11 @@ export default function CreateAuctionPage(): React.JSX.Element {
               <div className="form-group" style={{ margin: 0 }}>
                 <label>Bot Count</label>
                 <input
-                  type="number"
+                  type="text"
                   inputMode="numeric"
                   className="input"
-                  value={botCount}
-                  onChange={(e) => handleNumberInput(setBotCount, e.target.value, 0)}
-                  onWheel={(e) => e.currentTarget.blur()}
-                  min={0}
-                  max={50}
+                  value={numericInputs.botCount}
+                  onChange={(e) => updateNumericInput('botCount', e.target.value)}
                   style={{ width: '100px' }}
                 />
               </div>
@@ -359,7 +369,7 @@ export default function CreateAuctionPage(): React.JSX.Element {
           </div>
         )}
 
-        <div className="flex gap-4">
+        <div className="flex gap-4" style={{ marginBottom: '32px' }}>
           <button
             type="button"
             className="btn btn-secondary"

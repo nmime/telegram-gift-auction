@@ -8,8 +8,8 @@ export default defineConfig(async ({ mode }) => {
   const plugins: PluginOption[] = [react()]
 
   if (useHttps) {
-    const mkcert = (await import('vite-plugin-mkcert')).default
-    plugins.push(mkcert({ hosts: ['localhost', '127.0.0.1'] }))
+    const mkcertModule = await import('vite-plugin-mkcert') as { default: (options: { hosts: string[] }) => PluginOption }
+    plugins.push(mkcertModule.default({ hosts: ['localhost', '127.0.0.1'] }))
   }
 
   return {
