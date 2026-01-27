@@ -62,6 +62,14 @@ export default function Footer(): React.JSX.Element {
         >
           GitHub
         </a>
+        <a
+          href="https://drive.google.com/file/d/1LDe0RLi3uc7IIbew3JpeaXCRfDLKn0le/view?usp=sharing"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="footer-link"
+        >
+          {t('footer.demoVideo')}
+        </a>
       </div>
       <div className="footer-author">
         <a
